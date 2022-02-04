@@ -32,16 +32,16 @@ enum class HouseSystem {
 };
 
 struct HouseData {
-	HouseSystem System;
 	AstroPoint Asc;
 	AstroPoint MC;
-	AstroPoint Cusps[13];
+	AstroPoint Cusps[12];
 	AstroPoint Vertex;
 	AstroPoint EquAsc;
 	AstroPoint Armc;
 	AstroPoint CoAsc1;
 	AstroPoint CoAsc2;
 	AstroPoint PolarAsc;
+	HouseSystem System;
 };
 
 class AstroCalculator {

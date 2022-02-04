@@ -64,7 +64,7 @@ enum class AstroPointFlags {
 DEFINE_ENUM_FLAG_OPERATORS(AstroPointFlags);
 
 struct AstroPoint final {
-	AstroPoint(double value) : Value(value) {}
+	AstroPoint(double value, AstroPointFlags flags = AstroPointFlags::None) : Value(value), Flags(flags) {}
 	AstroPoint() = default;
 
 	operator double() const {
@@ -84,7 +84,7 @@ struct AstroPoint final {
 	static double Diff(AstroPoint const& p1, AstroPoint const& p2);
 
 	double Value;
-	AstroPointFlags Flags{ AstroPointFlags::None };
+	AstroPointFlags Flags;
 };
 
 

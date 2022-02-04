@@ -99,7 +99,10 @@ StationData AstroCalculator::CalcPlanetStation(PlanetType planet, DateTime start
 HouseData AstroCalculator::CalcHouses(DateTime dt, double latitude, double longitude, HouseSystem system) {
 	HouseData houses;
 	double ascmc[10];
-	swe_houses(dt, latitude, longitude, (int)system, (double*)houses.Cusps, ascmc);
+	double cusps[13];
+	swe_houses(dt, latitude, longitude, (int)system, cusps, ascmc);
+	for (int i = 0; i < 12; i++)
+		houses.Cusps[i] = cusps[i + 1];
 
 	houses.System = system;
 	houses.Asc = ascmc[0];

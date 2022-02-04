@@ -43,7 +43,7 @@ AstroPoint AstroPoint::ZeroSign() const {
 }
 
 AstroPoint AstroPoint::Opposite() const {
-	return AstroPoint(Value + 180).Normalize();
+	return AstroPoint(Value - 180).Normalize();
 }
 
 AstroPoint& AstroPoint::Normalize() {

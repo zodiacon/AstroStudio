@@ -51,21 +51,32 @@ bool ChartDrawing::Draw(CairoSurface& surface) {
 	}
 
 	//
+	// draw houses
+	//
+	ctx.LineWidth(1).SourceColor(StandardColors::Gray);
+	for (int i = 0; i < 12; i++) {
+		if (i % 3 == 0)
+			continue;
+		ctx.MoveTo(500, 500);
+		ctx.LineTo(PointByAngle(CairoPoint(500, 500), 430, m_data.Houses().Cusps[i])).Stroke();
+	}
+
+	//
 	// draw planets
 	//
 	double r = 370;
 	auto asc = m_data.Houses().Asc;
 	ctx.FontSize(30);
-	for (int i = 0; i < m_data.PlanetsCount() && i < 5; i++) {
+	for (int i = 0; i < m_data.PlanetsCount(); i++) {
 		auto& pp = m_data.Planet(i);
 		auto x = 500 + r * std::cos(Rad(pp.Longitude - asc + 180));
 		auto y = 500 - r * std::sin(Rad(pp.Longitude - asc + 180));
-		ctx.Circle(x, y, 4).SourceColor(StandardColors::Blue).Fill();
-		x += 20 * std::cos(Rad(pp.Longitude - asc + 180));
-		y -= 20 * std::sin(Rad(pp.Longitude - asc + 180));
+		ctx.Circle(x, y, 4).SourceColor(StandardColors::DarkBlue).Fill();
+		x += 25 * std::cos(Rad(pp.Longitude - asc + 180));
+		y -= 25 * std::sin(Rad(pp.Longitude - asc + 180));
 		CStringA glyph(Helpers::GetPlanetGlyphAsString(pp.Planet));
 		auto ext = ctx.TextExtents(glyph);
-		ctx.MoveTo(x - ext.width / 2, y + ext.width / 2).ShowText(glyph);
+		ctx.MoveTo(x - ext.width / 2, y + ext.width / 2).SourceColor(StandardColors::Black).ShowText(glyph);
 		ctx.NewPath();
 	}
 
