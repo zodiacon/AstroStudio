@@ -8,6 +8,7 @@ struct PlanetPosition {
 	double Speed;
 	double Latitude;
 	double LatitudeSpeed;
+	PlanetType Planet;
 };
 
 struct PlanetPhenom {
@@ -31,6 +32,7 @@ enum class HouseSystem {
 };
 
 struct HouseData {
+	HouseSystem System;
 	AstroPoint Asc;
 	AstroPoint MC;
 	AstroPoint Cusps[13];
@@ -45,7 +47,7 @@ struct HouseData {
 class AstroCalculator {
 public:
 	AstroCalculator();
-	PlanetPosition CalcPlanet(PlanetType type, DateTime const& dt, bool withSpeed = true) const;
+	PlanetPosition CalcPlanet(PlanetType planet, DateTime const& dt, bool withSpeed = true) const;
 	static HouseData CalcHouses(DateTime dt, double latitude, double longitude, HouseSystem system);
 
 	IngressData CalcPlanetIngress(PlanetType planet, DateTime start, bool reverse = false) const;

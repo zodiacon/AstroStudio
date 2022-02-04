@@ -10,5 +10,6 @@
 #include <vector>
 #include "swephexp.h"
 #include <unordered_map>
+#include <map>
 
 #endif //PCH_H

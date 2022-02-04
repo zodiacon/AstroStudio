@@ -34,10 +34,11 @@ AstroCalculator::AstroCalculator() : m_SweFlags(SEFLG_MOSEPH) {
 	}
 }
 
-PlanetPosition AstroCalculator::CalcPlanet(PlanetType type, DateTime const& dt, bool withSpeed) const {
+PlanetPosition AstroCalculator::CalcPlanet(PlanetType planet, DateTime const& dt, bool withSpeed) const {
 	double xx[6];
-	swe_calc_ut(dt, (int)type, m_SweFlags | (withSpeed ? SEFLG_SPEED : 0), xx, _error);
+	swe_calc_ut(dt, (int)planet, m_SweFlags | (withSpeed ? SEFLG_SPEED : 0), xx, _error);
 	PlanetPosition pp;
+	pp.Planet = planet;
 	pp.Longitude = xx[0];
 	pp.Latitude = xx[1];
 	if (withSpeed) {
@@ -100,6 +101,7 @@ HouseData AstroCalculator::CalcHouses(DateTime dt, double latitude, double longi
 	double ascmc[10];
 	swe_houses(dt, latitude, longitude, (int)system, (double*)houses.Cusps, ascmc);
 
+	houses.System = system;
 	houses.Asc = ascmc[0];
 	houses.MC = ascmc[1];
 	houses.Armc = ascmc[2];

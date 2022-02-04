@@ -51,6 +51,9 @@
     <ClCompile Include="ChartDrawing.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="ChartView.cpp">
+      <Filter>Views</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="pch.h">
@@ -85,6 +88,9 @@
     </ClInclude>
     <ClInclude Include="ChartDrawing.h">
       <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="ChartView.h">
+      <Filter>Views</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
@@ -139,6 +145,9 @@
       <Filter>Resource Files\Icons</Filter>
     </Image>
     <Image Include="res\pin.ico">
+      <Filter>Resource Files\Icons</Filter>
+    </Image>
+    <Image Include="res\Chart.ico">
       <Filter>Resource Files\Icons</Filter>
     </Image>
   </ItemGroup>

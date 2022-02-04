@@ -41,3 +41,15 @@ bool AstroPoint::IsBetween(AstroPoint const& start, AstroPoint const& end) {
 AstroPoint AstroPoint::ZeroSign() const {
 	return AstroPoint((int)Sign() * 30);
 }
+
+AstroPoint AstroPoint::Opposite() const {
+	return AstroPoint(Value + 180).Normalize();
+}
+
+AstroPoint& AstroPoint::Normalize() {
+	if (Value < 0)
+		Value += 360 * (1 - int(Value) / 360);
+	else if (Value >= 360)
+		Value -= 360 * (int(Value) / 360);
+	return *this;
+}

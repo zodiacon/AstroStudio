@@ -9,6 +9,7 @@
 #include "MainFrm.h"
 #include "Helpers.h"
 #include "ToolbarHelper.h"
+#include "ChartView.h"
 
 #define WINDOW_MENU_POSITION	5
 
@@ -44,7 +45,11 @@ LRESULT CMainFrame::OnCreate(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/
 
 	CImageList images;
 	images.Create(16, 16, ILC_COLOR32 | ILC_MASK, 8, 4);
-	images.AddIcon(AtlLoadIconImage(IDI_EPHEMERIS));
+	UINT icons[] = {
+		IDI_EPHEMERIS, IDI_CHART,
+	};
+	for(auto icon : icons)
+		images.AddIcon(AtlLoadIconImage(icon, 0, 16, 16));
 	m_view.SetImageList(images);
 
 	// register object for message filtering and idle updates
@@ -79,6 +84,14 @@ LRESULT CMainFrame::OnToolEphemeris(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*h
 	auto pView = new CEphemerisView(this);
 	pView->Create(m_view, rcDefault, NULL, WS_CHILD | WS_VISIBLE | WS_CLIPSIBLINGS | WS_CLIPCHILDREN, 0);
 	m_view.AddPage(pView->m_hWnd, _T("Ephemeris"), 0, pView);
+
+	return 0;
+}
+
+LRESULT CMainFrame::OnNewChart(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/) {
+	auto pView = new CChartView(this);
+	pView->Create(m_view, rcDefault, NULL, WS_CHILD | WS_VISIBLE | WS_CLIPSIBLINGS | WS_CLIPCHILDREN, 0);
+	m_view.AddPage(pView->m_hWnd, _T("Chart"), 1, pView);
 
 	return 0;
 }
@@ -160,3 +173,10 @@ BOOL CMainFrame::TrackPopupMenu(HMENU hMenu, DWORD flags, int x, int y) {
 CUpdateUIBase& CMainFrame::GetUI() {
 	return *this;
 }
+
+LRESULT CMainFrame::OnGetMinMaxInfo(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM lParam, BOOL& /*bHandled*/) {
+	auto mmi = reinterpret_cast<MINMAXINFO*>(lParam);
+	mmi->ptMinTrackSize.x = mmi->ptMinTrackSize.y = 600;
+	return 0;
+}
+

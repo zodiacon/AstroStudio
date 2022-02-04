@@ -26,7 +26,8 @@ enum class PlanetType {
 	Ceres,
 	Pallas,
 	Juno,
-	Vesta
+	Vesta,
+	NumPlanets,
 };
 
 struct PlanetInfo {
@@ -76,6 +77,8 @@ struct AstroPoint final {
 	double Seconds() const;
 	AstroPoint NextSign() const;
 	AstroPoint ZeroSign() const;
+	AstroPoint Opposite() const;
+	AstroPoint& Normalize();
 
 	bool IsBetween(AstroPoint const& start, AstroPoint const& end);
 	static double Diff(AstroPoint const& p1, AstroPoint const& p2);

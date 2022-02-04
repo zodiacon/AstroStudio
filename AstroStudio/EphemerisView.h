@@ -58,7 +58,6 @@ protected:
 		CHAIN_MSG_MAP(CViewBase<CEphemerisView>)
 	ALT_MSG_MAP(1)
 		COMMAND_ID_HANDLER(ID_EDIT_COPY, OnEditCopy)
-
 	END_MSG_MAP()
 
 	enum class ColumnType {

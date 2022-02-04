@@ -126,9 +126,9 @@ WCHAR Helpers::GetRetroGlyph() {
 
 COLORREF Helpers::Darken(COLORREF color, int offset) {
 	auto r = GetRValue(color), g = GetGValue(color), b = GetBValue(color);
-	r = max(0, r - offset);
-	g = max(0, g - offset);
-	b = max(0, b - offset);
+	r = std::max(0, r - offset);
+	g = std::max(0, g - offset);
+	b = std::max(0, b - offset);
 
 	return RGB(r, g, b);
 }

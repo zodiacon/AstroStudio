@@ -53,6 +53,10 @@ IDR_MAINFRAME MENU
 BEGIN
     POPUP "&File"
     BEGIN
+        POPUP "&New"
+        BEGIN
+            MENUITEM "&Chart...",                   ID_NEW_CHART
+        END
         MENUITEM "&Open...\tCtrl+O",            ID_FILE_OPEN
         MENUITEM "&Save\tCtrl+S",               ID_FILE_SAVE
         MENUITEM "Save &As...",                 ID_FILE_SAVE_AS
@@ -130,6 +134,8 @@ IDI_GRID                ICON                    "res\\grid.ico"
 IDI_COPY                ICON                    "res\\clip_copy.ico"
 
 IDI_PIN                 ICON                    "res\\pin.ico"
+
+IDI_CHART               ICON                    "res\\Chart.ico"
 
 
 /////////////////////////////////////////////////////////////////////////////

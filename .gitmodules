@@ -1,0 +1,3 @@
+[submodule "modules/CairoGfx"]
+	path = modules/CairoGfx
+	url = https://github.com/zodiacon/CairoGfx.git
