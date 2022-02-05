@@ -163,6 +163,7 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClInclude Include="Aspects.h" />
     <ClInclude Include="AstroCalculator.h" />
     <ClInclude Include="AstroPoint.h" />
     <ClInclude Include="ChartData.h" />
@@ -170,6 +171,7 @@
     <ClInclude Include="pch.h" />
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="Aspects.cpp" />
     <ClCompile Include="AstroCalculator.cpp" />
     <ClCompile Include="AstroPoint.cpp" />
     <ClCompile Include="ChartData.cpp" />

@@ -10,6 +10,7 @@ public:
 	ChartData& Clear();
 	int PlanetsCount() const;
 	PlanetPosition const& Planet(int index) const;
+	std::vector<PlanetPosition> const& AllPlanets() const;
 
 	HouseData& Houses();
 	HouseData const& Houses() const;

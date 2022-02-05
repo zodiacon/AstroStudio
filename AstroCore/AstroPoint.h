@@ -18,7 +18,7 @@ enum class PlanetType {
 	Pluto,
 	MeanNode,
 	TrueNode,
-	MeanApog,
+	Lilith,
 	OscuApog,
 	Earth,
 	Chiron,
@@ -79,9 +79,10 @@ struct AstroPoint final {
 	AstroPoint ZeroSign() const;
 	AstroPoint Opposite() const;
 	AstroPoint& Normalize();
-
 	bool IsBetween(AstroPoint const& start, AstroPoint const& end);
+
 	static double Diff(AstroPoint const& p1, AstroPoint const& p2);
+	static AstroPoint MidPoint(AstroPoint const& p1, AstroPoint const& p2);
 
 	double Value;
 	AstroPointFlags Flags;

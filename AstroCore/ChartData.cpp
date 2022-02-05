@@ -34,3 +34,7 @@ PlanetPosition const& ChartData::Planet(int index) const {
     assert(index >= 0 && index < m_Planets.size());
     return m_Planets[index];
 }
+
+std::vector<PlanetPosition> const& ChartData::AllPlanets() const {
+    return m_Planets;
+}

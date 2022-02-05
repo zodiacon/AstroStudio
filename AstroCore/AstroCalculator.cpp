@@ -21,7 +21,7 @@ std::unordered_map<PlanetType, double> monthlyCycle{
 	{ PlanetType::TrueNode, 500 },
 	{ PlanetType::Chiron, 4 * 360},
 	{ PlanetType::OscuApog, 6 },
-	{ PlanetType::MeanApog, 200 },
+	{ PlanetType::Lilith, 200 },
 };
 
 AstroCalculator::AstroCalculator() : m_SweFlags(SEFLG_MOSEPH) {

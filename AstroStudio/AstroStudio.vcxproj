@@ -216,6 +216,7 @@
     <ClCompile Include="AstroStudio.cpp" />
     <ClCompile Include="ChartDrawing.cpp" />
     <ClCompile Include="ChartView.cpp" />
+    <ClCompile Include="DefaultFont.cpp" />
     <ClCompile Include="EphemerisView.cpp" />
     <ClCompile Include="Helpers.cpp" />
     <ClCompile Include="MainFrm.cpp" />
@@ -225,6 +226,7 @@
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">Create</PrecompiledHeader>
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Create</PrecompiledHeader>
     </ClCompile>
+    <ClCompile Include="PlanetSpacer.cpp" />
     <ClCompile Include="View.cpp" />
   </ItemGroup>
   <ItemGroup>
@@ -232,10 +234,12 @@
     <ClInclude Include="AstroFont.h" />
     <ClInclude Include="ChartDrawing.h" />
     <ClInclude Include="ChartView.h" />
+    <ClInclude Include="DefaultFont.h" />
     <ClInclude Include="EphemerisView.h" />
     <ClInclude Include="Helpers.h" />
     <ClInclude Include="Interfaces.h" />
     <ClInclude Include="MainFrm.h" />
+    <ClInclude Include="PlanetSpacer.h" />
     <ClInclude Include="resource.h" />
     <ClInclude Include="pch.h" />
     <ClInclude Include="View.h" />

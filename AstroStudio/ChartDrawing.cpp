@@ -2,6 +2,8 @@
 #include "ChartDrawing.h"
 #include <cmath>
 #include "Helpers.h"
+#include "PlanetSpacer.h"
+#include "DefaultFont.h"
 
 bool ChartDrawing::Draw(CairoSurface& surface) {
 	auto scale = surface.Width() / 1000.0;
@@ -53,34 +55,71 @@ bool ChartDrawing::Draw(CairoSurface& surface) {
 	//
 	// draw houses
 	//
-	ctx.LineWidth(1).SourceColor(StandardColors::Gray);
-	for (int i = 0; i < 12; i++) {
-		if (i % 3 == 0)
-			continue;
-		ctx.MoveTo(500, 500);
-		ctx.LineTo(PointByAngle(CairoPoint(500, 500), 430, m_data.Houses().Cusps[i])).Stroke();
+	if (m_params.DrawHouseLines) {
+		ctx.LineWidth(1).SourceColor(StandardColors::Gray);
+		for (int i = 0; i < 12; i++) {
+			if (i % 3 == 0)
+				continue;
+			ctx.MoveTo(500, 500);
+			ctx.LineTo(PointByAngle(CairoPoint(500, 500), 430, m_data.Houses().Cusps[i])).Stroke();
+		}
 	}
 
 	//
 	// draw planets
 	//
-	double r = 370;
+	double r = 395;
 	auto asc = m_data.Houses().Asc;
+	PlanetSpacer spacer(m_data.AllPlanets());
+	spacer.Space(5);
+
 	ctx.FontSize(30);
-	for (int i = 0; i < m_data.PlanetsCount(); i++) {
-		auto& pp = m_data.Planet(i);
-		auto x = 500 + r * std::cos(Rad(pp.Longitude - asc + 180));
-		auto y = 500 - r * std::sin(Rad(pp.Longitude - asc + 180));
-		ctx.Circle(x, y, 4).SourceColor(StandardColors::DarkBlue).Fill();
-		x += 25 * std::cos(Rad(pp.Longitude - asc + 180));
-		y -= 25 * std::sin(Rad(pp.Longitude - asc + 180));
-		CStringA glyph(Helpers::GetPlanetGlyphAsString(pp.Planet));
+	for(auto& pp : spacer.NewPositions()) {
+		auto pt = PointByAngle(CairoPoint(500, 500), r, pp.Longitude);
+		auto x = pt.X, y = pt.Y;
+		CStringA glyph(DefaultFont::Get().GetPlanetGlyphAsString(pp.Planet));
 		auto ext = ctx.TextExtents(glyph);
 		ctx.MoveTo(x - ext.width / 2, y + ext.width / 2).SourceColor(StandardColors::Black).ShowText(glyph);
 		ctx.NewPath();
 	}
 
+	r = 370;
+	for (auto& pp : m_data.AllPlanets()) {
+		auto pt = PointByAngle(CairoPoint(500, 500), r, pp.Longitude);
+		ctx.Circle(pt.X, pt.Y, 4).SourceColor(StandardColors::DarkBlue).Fill();
+	}
+
+	//
+	// draw aspects
+	//
+	if (m_params.DrawAspects) {
+		for (auto& aspect : m_aspects) {
+			if (aspect.Type == AspectType::Conjunction)
+				continue;
+
+			auto pt1 = PointByAngle(CairoPoint(500, 500), r, aspect.Planet1.Longitude);
+			auto pt2 = PointByAngle(CairoPoint(500, 500), r, aspect.Planet2.Longitude);
+			CairoColor color(m_params.AspectColor);
+			double width = m_params.MinorAspectWidth;
+			if (aspect.IsMajor())
+				width = m_params.MajorAspectWidth;
+			if (aspect.IsSoft())
+				color = m_params.SoftAspectColor;
+			else if (aspect.IsHard())
+				color = m_params.HardAspectColor;
+
+			ctx.MoveTo(pt1).SourceColor(color).LineWidth(width).LineTo(pt2).Stroke();
+			ctx.MoveTo((pt1.X + pt2.X) / 2, (pt1.Y + pt2.Y) / 2).FontSize(20).SourceColor(StandardColors::Black).
+				ShowText(CStringA(DefaultFont::Get().GetAspectGlyphAsString(aspect.Type)));
+		}
+	}
+
 	return true;
+}
+
+ChartDrawing& ChartDrawing::DrawingParameters(ChartDrawingParameters const& params) {
+	m_params = params;
+	return *this;
 }
 
 ChartDrawing& ChartDrawing::Chart(ChartData const& data) {
@@ -90,6 +129,11 @@ ChartDrawing& ChartDrawing::Chart(ChartData const& data) {
 
 ChartData const& ChartDrawing::Chart() const {
 	return m_data;
+}
+
+ChartDrawing& ChartDrawing::Aspects(std::vector<AspectData>&& aspects) {
+	m_aspects = std::move(aspects);
+	return *this;
 }
 
 CairoPoint ChartDrawing::PointByAngle(CairoPoint const& center, double radius, double angle) const {

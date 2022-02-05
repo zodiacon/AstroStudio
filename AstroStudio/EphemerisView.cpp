@@ -33,7 +33,7 @@ CString CEphemerisView::GetColumnText(HWND h, int row, int col) {
 			pp.Position.Longitude.Flags |= (pp.Position.Speed < 0 ? AstroPointFlags::Retro : AstroPointFlags::None);
 			text = Helpers::FormatLongitude(pp.Position.Longitude, m_FormatOptions);
 			text = ((m_FormatOptions & FormatOptions::UseGlyphs) == FormatOptions::UseGlyphs ? 
-				(PCWSTR)Helpers::GetPlanetGlyphAsString(pp.Planet) : L"") + CString(L" ") + text;
+				(PCWSTR)DefaultFont::Get().GetPlanetGlyphAsString(pp.Planet) : L"") + CString(L" ") + text;
 			break;
 	}
 	return text;
@@ -105,8 +105,10 @@ CString CEphemerisView::GetRowPhenom(int row) const {
 				if (!item.PhenomText.IsEmpty())
 					item.PhenomText += L" | ";
 				auto ingress = m_Calc.CalcPlanetIngress(c.Planet, item.Date, c.Position.Speed < 0);
-				item.PhenomGlyph += Helpers::GetPlanetGlyphAsString(c.Planet) + CString(L" ") + Helpers::GetSignGlyphAsString(c.Position.Longitude.Sign());
-				item.PhenomText += Helpers::GetPlanetName(c.Planet) + CString(L" to ") + Helpers::GetZodiacSignName(c.Position.Longitude.Sign()).Left(3);
+				item.PhenomGlyph += DefaultFont::Get().GetPlanetGlyphAsString(c.Planet) + CString(L" ") + 
+					DefaultFont::Get().GetSignGlyphAsString(c.Position.Longitude.Sign());
+				item.PhenomText += Helpers::GetPlanetName(c.Planet) + CString(L" to ") + 
+					Helpers::GetZodiacSignName(c.Position.Longitude.Sign()).Left(3);
 				auto dt = L" (" + Helpers::FormatDateTime(ingress.Time, DateTimeFormatOptions::TimeOnly) + L")";
 				item.PhenomGlyph += dt;
 				item.PhenomText += dt;
@@ -123,11 +125,11 @@ CString CEphemerisView::GetRowPhenom(int row) const {
 				if (!item.PhenomText.IsEmpty())
 					item.PhenomText += L" | ";
 				if (direct) {
-					item.PhenomGlyph += Helpers::GetPlanetGlyphAsString(c.Planet) + CString(L" ") + Helpers::GetDirectGlyphAsString();
+					item.PhenomGlyph += DefaultFont::Get().GetPlanetGlyphAsString(c.Planet) + CString(L" ") + DefaultFont::Get().GetDirectGlyphAsString();
 					item.PhenomText += Helpers::GetPlanetName(c.Planet) + CString(L" D");
 				}
 				else {
-					item.PhenomGlyph += Helpers::GetPlanetGlyphAsString(c.Planet) + CString(L" ") + Helpers::GetRetroGlyphAsString();
+					item.PhenomGlyph += DefaultFont::Get().GetPlanetGlyphAsString(c.Planet) + CString(L" ") + DefaultFont::Get().GetRetroGlyphAsString();
 					item.PhenomText += Helpers::GetPlanetName(c.Planet) + CString(L" R");
 				}
 				auto dt = L" (" + Helpers::FormatDateTime(station.Time, DateTimeFormatOptions::TimeOnly) + L")";
@@ -188,7 +190,7 @@ LRESULT CEphemerisView::OnCreate(UINT, WPARAM, LPARAM, BOOL&) {
 
 	m_Planets = Helpers::GetStandardPlanets();
 	m_Planets.push_back(PlanetType::Chiron);
-	m_Planets.push_back(PlanetType::MeanApog);
+	m_Planets.push_back(PlanetType::Lilith);
 	//m_Planets.push_back(PlanetType::OscuApog);
 	m_Planets.push_back(PlanetType::TrueNode);
 

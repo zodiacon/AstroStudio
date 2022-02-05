@@ -30,14 +30,14 @@ CString Helpers::FormatDateTime(DateTime const& dt, DateTimeFormatOptions option
 	return text;
 }
 
-CString Helpers::FormatLongitude(AstroPoint const& value, FormatOptions options) {
+CString Helpers::FormatLongitude(AstroPoint const& value, FormatOptions options, AstroFontBase const& font) {
 	CString text;
 	text.Format(L"%02d%s %s %02d%s",
 		(int)value.DegreeInSign(),
 		(options & FormatOptions::ShowDegreeGlyph) == FormatOptions::ShowDegreeGlyph ? (PCWSTR)CString((WCHAR)
 			((options & FormatOptions::UseGlyphs) == FormatOptions::UseGlyphs ? 59 : 0xb0)) : L"",
 		(options & FormatOptions::UseGlyphs) == FormatOptions::UseGlyphs ?
-		(PCWSTR)GetSignGlyphAsString(value.Sign()) : (PCWSTR)GetZodiacSignName(value.Sign()).Left(3),
+		(PCWSTR)font.GetSignGlyphAsString(value.Sign()) : (PCWSTR)GetZodiacSignName(value.Sign()).Left(3),
 		(int)(value.Minutes() + .5),
 		(options & FormatOptions::ShowDegreeGlyph) == FormatOptions::ShowDegreeGlyph ? (PCWSTR)CString((WCHAR)39) : L"");
 	if ((options & FormatOptions::ShowSeconds) == FormatOptions::ShowSeconds) {
@@ -50,26 +50,6 @@ CString Helpers::FormatLongitude(AstroPoint const& value, FormatOptions options)
 	}
 	return text;
 }
-
-WCHAR Helpers::GetSignGlyph(ZodiacSign sign) {
-	static const WCHAR glyphs[] = L"asdfghjklzxc";
-	return glyphs[(int)sign];
-}
-
-CString Helpers::GetSignGlyphAsString(ZodiacSign sign) {
-	return CString(GetSignGlyph(sign));
-}
-
-WCHAR Helpers::GetPlanetGlyph(PlanetType planet) {
-	static const WCHAR planets[] = L"QWERTYUIOP\x8b{\xa0\xa0\x89M";
-	ATLASSERT((int)planet < _countof(planets));
-	return planets[(int)planet];
-}
-
-CString Helpers::GetPlanetGlyphAsString(PlanetType planet) {
-	return CString(GetPlanetGlyph(planet));
-}
-
 PCWSTR Helpers::GetPlanetName(PlanetType type) {
 	static PCWSTR names[] = {
 		L"Sun", L"Moon", L"Mercury", L"Venus", L"Mars", L"Jupiter", L"Saturn", L"Uranus", L"Neptune", L"Pluto",
@@ -106,22 +86,6 @@ std::vector<PlanetType> Helpers::GetStandardPlanets() {
 			planets.push_back(type);
 	}
 	return planets;
-}
-
-CString Helpers::GetRetroGlyphAsString() {
-	return L">";
-}
-
-CString Helpers::GetDirectGlyphAsString() {
-	return L"*";
-}
-
-WCHAR Helpers::GetDirectGlyph() {
-	return '*';
-}
-
-WCHAR Helpers::GetRetroGlyph() {
-	return '>';
 }
 
 COLORREF Helpers::Darken(COLORREF color, int offset) {

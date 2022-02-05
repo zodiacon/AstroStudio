@@ -2,6 +2,7 @@
 #include "ChartView.h"
 #include "ChartDrawing.h"
 #include "Helpers.h"
+#include "Aspects.h"
 
 void CChartView::OnFinalMessage(HWND) {
 	delete this;
@@ -13,12 +14,21 @@ LRESULT CChartView::OnEraseBkgnd(UINT, WPARAM, LPARAM, BOOL&) {
 
 LRESULT CChartView::OnCreate(UINT, WPARAM, LPARAM, BOOL&) {
 	m_DrawingSize = std::min(::GetSystemMetrics(SM_CXSCREEN), ::GetSystemMetrics(SM_CYSCREEN));
-	DateTime dt(1971, 7, 1, 18, 10, 0, true);
+	//DateTime dt(1971, 7, 1, 18, 10, 0, true);
+	auto dt = DateTime::Now();
 	m_Data.Houses() = m_Calc.CalcHouses(dt, 47, 28 + 5 / 6.0, HouseSystem::Koch);
 
-	for (auto p : Helpers::GetStandardPlanets()) {
+	auto planets = Helpers::GetStandardPlanets();
+	planets.push_back(PlanetType::Chiron);
+	planets.push_back(PlanetType::TrueNode);
+	planets.push_back(PlanetType::Lilith);
+
+	for (auto p : planets) {
 		m_Data.AddPlanets({ m_Calc.CalcPlanet(p, dt) });
 	}
+	AspectCalculator ac;
+	auto aspects = ac.Calculate(m_Data.AllPlanets());
+	m_Drawing.Aspects(std::move(aspects));
 	m_Drawing.Chart(m_Data);
 
 	return 0;

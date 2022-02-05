@@ -53,3 +53,7 @@ AstroPoint& AstroPoint::Normalize() {
 		Value -= 360 * (int(Value) / 360);
 	return *this;
 }
+
+AstroPoint AstroPoint::MidPoint(AstroPoint const& p1, AstroPoint const& p2) {
+	return AstroPoint((p1 + p2) / 2).Normalize();
+}
