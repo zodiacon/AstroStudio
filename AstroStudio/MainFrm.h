@@ -46,9 +46,9 @@ private:
 	void InitMenu();
 
 	// Inherited via IMainFrame
-	virtual HWND GetHwnd() const override;
-	virtual BOOL TrackPopupMenu(HMENU hMenu, DWORD flags, int x, int y) override;
-	virtual CUpdateUIBase& GetUI() override;
+	HWND GetHwnd() const override;
+	BOOL TrackPopupMenu(HMENU hMenu, DWORD flags, int x, int y) override;
+	CUpdateUIBase& GetUI() override;
 
 	// Handler prototypes (uncomment arguments if needed):
 	//	LRESULT MessageHandler(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, BOOL& /*bHandled*/)

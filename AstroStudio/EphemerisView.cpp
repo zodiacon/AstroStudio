@@ -32,7 +32,7 @@ CString CEphemerisView::GetColumnText(HWND h, int row, int col) {
 			auto& pp = item.Planets[index];
 			pp.Position.Longitude.Flags |= (pp.Position.Speed < 0 ? AstroPointFlags::Retro : AstroPointFlags::None);
 			text = Helpers::FormatLongitude(pp.Position.Longitude, m_FormatOptions);
-			text = ((m_FormatOptions & FormatOptions::UseGlyphs) == FormatOptions::UseGlyphs ? 
+			text = ((m_FormatOptions & FormatOptions::UseGlyphs) == FormatOptions::UseGlyphs ?
 				(PCWSTR)DefaultFont::Get().GetPlanetGlyphAsString(pp.Planet) : L"") + CString(L" ") + text;
 			break;
 	}
@@ -52,14 +52,17 @@ DWORD CEphemerisView::OnItemPrePaint(int, LPNMCUSTOMDRAW cd) {
 }
 
 DWORD CEphemerisView::OnSubItemPrePaint(int, LPNMCUSTOMDRAW cd) {
+	if ((int)cd->dwItemSpec >= m_Items.size())
+		return CDRF_DODEFAULT;
+
 	auto lv = (NMLVCUSTOMDRAW*)cd;
+	auto colType = GetColumnManager(m_List)->GetColumnTag<ColumnType>(lv->iSubItem);
 	CDCHandle dc(cd->hdc);
 
-	auto colType = GetColumnManager(m_List)->GetColumnTag<ColumnType>(lv->iSubItem);
-
 	lv->clrTextBk = CLR_INVALID;
+	auto& item = m_Items[(int)cd->dwItemSpec];
+	bool highlight = item.Date == DateTime::Today();
 	if (colType >= ColumnType::Planet) {
-		auto& item = m_Items[(int)cd->dwItemSpec];
 		if (m_ColorOptions.PaintSigns) {
 			int element = int(item.Planets[lv->iSubItem - 1].Position.Longitude.Sign()) % 4;
 			lv->clrTextBk = m_ColorOptions.ElementBackColor[element];
@@ -72,7 +75,12 @@ DWORD CEphemerisView::OnSubItemPrePaint(int, LPNMCUSTOMDRAW cd) {
 					lv->clrTextBk = m_ColorOptions.RetroBackColor;
 			}
 		}
+		if (highlight)
+			lv->clrTextBk = Helpers::Lighten(lv->clrTextBk, 25);
 	}
+	else if (highlight && colType == ColumnType::Time)
+		lv->clrTextBk = RGB(220, 220, 0);
+
 	dc.SelectFont(colType != ColumnType::Time && (m_FormatOptions & FormatOptions::UseGlyphs) == FormatOptions::UseGlyphs ? m_Font : m_StdFont);
 	return CDRF_NEWFONT | CDRF_SKIPPOSTPAINT;
 }
@@ -105,9 +113,9 @@ CString CEphemerisView::GetRowPhenom(int row) const {
 				if (!item.PhenomText.IsEmpty())
 					item.PhenomText += L" | ";
 				auto ingress = m_Calc.CalcPlanetIngress(c.Planet, item.Date, c.Position.Speed < 0);
-				item.PhenomGlyph += DefaultFont::Get().GetPlanetGlyphAsString(c.Planet) + CString(L" ") + 
+				item.PhenomGlyph += DefaultFont::Get().GetPlanetGlyphAsString(c.Planet) + CString(L" ") +
 					DefaultFont::Get().GetSignGlyphAsString(c.Position.Longitude.Sign());
-				item.PhenomText += Helpers::GetPlanetName(c.Planet) + CString(L" to ") + 
+				item.PhenomText += Helpers::GetPlanetName(c.Planet) + CString(L" to ") +
 					Helpers::GetZodiacSignName(c.Position.Longitude.Sign()).Left(3);
 				auto dt = L" (" + Helpers::FormatDateTime(ingress.Time, DateTimeFormatOptions::TimeOnly) + L")";
 				item.PhenomGlyph += dt;
@@ -118,7 +126,7 @@ CString CEphemerisView::GetRowPhenom(int row) const {
 			//
 			bool direct = c.Position.Speed > 0 && p.Position.Speed < 0;
 			bool retro = c.Position.Speed < 0 && p.Position.Speed > 0;
-			if(direct || retro) {
+			if (direct || retro) {
 				auto station = m_Calc.CalcPlanetStation(c.Planet, item.Date);
 				if (!item.PhenomGlyph.IsEmpty())
 					item.PhenomGlyph += L" | ";
@@ -142,12 +150,12 @@ CString CEphemerisView::GetRowPhenom(int row) const {
 }
 
 void CEphemerisView::CreateFonts() {
-	if(m_Font)
+	if (m_Font)
 		m_Font.DeleteObject();
 	m_Font.CreatePointFont(m_FontSize, L"HamburgSymbols");
-	if(m_StdFont)
+	if (m_StdFont)
 		m_StdFont.DeleteObject();
-	m_StdFont.CreatePointFont(m_FontSize, L"Tahoma");
+	m_StdFont.CreatePointFont(m_FontSize, L"Consolas");
 }
 
 void CEphemerisView::UpdateViewUI() {
@@ -161,13 +169,16 @@ void CEphemerisView::UpdateViewUI() {
 void CEphemerisView::AutoSizeColumns() {
 	m_List.SetRedraw(FALSE);
 	int count = m_List.GetHeader().GetItemCount();
-	for (int i = 0; i < count; i++)
+	for (int i = 0; i < count; i++) {
 		m_List.SetColumnWidth(i, LVSCW_AUTOSIZE);
+		if (m_List.GetColumnWidth(i) < 100)
+			m_List.SetColumnWidth(i, 100);
+	}
 	m_List.SetRedraw(TRUE);
 }
 
 LRESULT CEphemerisView::OnCreate(UINT, WPARAM, LPARAM, BOOL&) {
-	m_hWndClient = m_List.Create(m_hWnd, rcDefault, nullptr, 
+	m_hWndClient = m_List.Create(m_hWnd, rcDefault, nullptr,
 		WS_CHILD | WS_VISIBLE | WS_CLIPSIBLINGS | WS_CLIPCHILDREN
 		| LVS_OWNERDATA | LVS_REPORT | LVS_SHOWSELALWAYS | LVS_NOSORTHEADER);
 	m_List.SetExtendedListViewStyle(LVS_EX_FULLROWSELECT | LVS_EX_DOUBLEBUFFER);
@@ -176,13 +187,13 @@ LRESULT CEphemerisView::OnCreate(UINT, WPARAM, LPARAM, BOOL&) {
 	m_List.SetImageList(images, LVSIL_SMALL);
 
 	ToolBarButtonInfo buttons[] = {
-	{ ID_VIEW_GLYPHS, IDI_GLYPH, BTNS_CHECK, L"Glyphs" },
-	{ ID_VIEW_SECONDS, IDI_CLOCK, BTNS_CHECK, L"Seconds" },
-	{ 0 },
-	{ ID_FONT_BIGGER, IDI_FONT_BIGGER },
-	{ ID_FONT_SMALLER, IDI_FONT_SMALLER },
-	{ ID_FONT_SIZE_DEFAULT, IDI_FONT_SIZE_DEFAULT },
-	{ ID_VIEW_GRIDLINES, IDI_GRID, BTNS_CHECK },
+		{ ID_VIEW_GLYPHS, IDI_GLYPH, BTNS_CHECK, L"Glyphs" },
+		{ ID_VIEW_SECONDS, IDI_CLOCK, BTNS_CHECK, L"Seconds" },
+		{ 0 },
+		{ ID_FONT_BIGGER, IDI_FONT_BIGGER },
+		{ ID_FONT_SMALLER, IDI_FONT_SMALLER },
+		{ ID_FONT_SIZE_DEFAULT, IDI_FONT_SIZE_DEFAULT },
+		{ ID_VIEW_GRIDLINES, IDI_GRID, BTNS_CHECK },
 	};
 
 	CreateAndInitToolBar(buttons, _countof(buttons));
@@ -194,13 +205,13 @@ LRESULT CEphemerisView::OnCreate(UINT, WPARAM, LPARAM, BOOL&) {
 	//m_Planets.push_back(PlanetType::OscuApog);
 	m_Planets.push_back(PlanetType::TrueNode);
 
-	m_FormatOptions = FormatOptions::UseGlyphs | FormatOptions::ShowDegreeGlyph | FormatOptions::ShowSeconds;
+	m_FormatOptions = FormatOptions::UseGlyphs | FormatOptions::ShowDegreeGlyph;
 
 	auto cm = GetColumnManager(m_List);
-	cm->AddColumn(L"Date/Time", LVCFMT_LEFT, 120, ColumnType::Time);
+	cm->AddColumn(L"Date", LVCFMT_LEFT, 120, ColumnType::Time);
 	int i = 0;
 	for (auto& p : m_Planets) {
-		cm->AddColumn(Helpers::GetPlanetName(p), LVCFMT_LEFT, 120, ColumnType(int(ColumnType::Planet) + i++));
+		cm->AddColumn(Helpers::GetPlanetName(p), LVCFMT_LEFT, 100, ColumnType(int(ColumnType::Planet) + i++));
 	}
 	cm->AddColumn(L"Phenomena", LVCFMT_LEFT, 160, ColumnType::Phenom);
 	cm->UpdateColumns();

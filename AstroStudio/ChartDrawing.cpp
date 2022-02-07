@@ -12,7 +12,7 @@ bool ChartDrawing::Draw(CairoSurface& surface) {
 	ctx.Clear(m_params.BackColor);
 
 	double startAngle = m_data.Houses().Asc.NextSign() + 150 + m_data.Houses().Asc.DegreeInSign();
-	ctx.FontSize(20);
+	ctx.FontSize(24);
 	char text[] = "asdfghjklzxc";
 	CFont font;
 	font.CreatePointFont(100, L"HamburgSymbols");
@@ -97,6 +97,13 @@ bool ChartDrawing::Draw(CairoSurface& surface) {
 			if (aspect.Type == AspectType::Conjunction)
 				continue;
 
+			if (!m_params.DrawVeryMinorAspects && (aspect.Type == AspectType::Septile || aspect.Type == AspectType::BiSeptile ||
+				aspect.Type == AspectType::Quintile || aspect.Type == AspectType::BiQuintile))
+				continue;
+
+			if (!m_params.DrawNonStandardPlanetAspects && (aspect.Planet1.Planet > PlanetType::Pluto || aspect.Planet2.Planet > PlanetType::Pluto))
+				continue;
+
 			auto pt1 = PointByAngle(CairoPoint(500, 500), r, aspect.Planet1.Longitude);
 			auto pt2 = PointByAngle(CairoPoint(500, 500), r, aspect.Planet2.Longitude);
 			CairoColor color(m_params.AspectColor);
@@ -122,12 +129,24 @@ ChartDrawing& ChartDrawing::DrawingParameters(ChartDrawingParameters const& para
 	return *this;
 }
 
+ChartDrawingParameters const& ChartDrawing::DrawingParameters() const {
+	return m_params;
+}
+
+ChartDrawingParameters& ChartDrawing::DrawingParameters() {
+	return m_params;
+}
+
 ChartDrawing& ChartDrawing::Chart(ChartData const& data) {
 	m_data = data;
 	return *this;
 }
 
 ChartData const& ChartDrawing::Chart() const {
+	return m_data;
+}
+
+ChartData& ChartDrawing::Chart() {
 	return m_data;
 }
 

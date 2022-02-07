@@ -29,5 +29,6 @@ struct Helpers abstract final {
 	static CString GetZodiacSignName(ZodiacSign sign);
 	static std::vector<PlanetType> GetStandardPlanets();
 	static COLORREF Darken(COLORREF color, int offset);
+	static COLORREF Lighten(COLORREF color, int offset);
 };
 

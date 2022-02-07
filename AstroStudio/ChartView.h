@@ -16,7 +16,7 @@ public:
 
 protected:
 	BEGIN_MSG_MAP(CChartView)
-		MESSAGE_HANDLER(WM_ERASEBKGND, OnEraseBkgnd)
+		//MESSAGE_HANDLER(WM_ERASEBKGND, OnEraseBkgnd)
 		MESSAGE_HANDLER(WM_PAINT, OnPaint)
 		MESSAGE_HANDLER(WM_CREATE, OnCreate)
 		CHAIN_MSG_MAP(CViewBase<CChartView>)
@@ -25,6 +25,9 @@ protected:
 	END_MSG_MAP()
 
 private:
+	void DisplayPlanets(CDCHandle dc, int x, int y);
+	void DisplayHouses(CDCHandle dc, int x, int y);
+
 	LRESULT OnEraseBkgnd(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, BOOL& /*bHandled*/);
 	LRESULT OnCreate(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, BOOL& /*bHandled*/);
 	LRESULT OnPaint(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, BOOL& /*bHandled*/);

@@ -3,9 +3,39 @@
 #include "ChartDrawing.h"
 #include "Helpers.h"
 #include "Aspects.h"
+#include "DefaultFont.h"
 
 void CChartView::OnFinalMessage(HWND) {
 	delete this;
+}
+
+void CChartView::DisplayPlanets(CDCHandle dc, int x, int y) {
+	CFont font;
+	font.CreatePointFont(110, L"HamburgSymbols");
+	dc.SelectFont(font);
+
+	for (auto& p : m_Data.AllPlanets()) {
+		dc.TextOut(x, y, DefaultFont::Get().GetPlanetGlyphAsString(p.Planet), -1);
+		dc.TextOut(x + 20, y, Helpers::FormatLongitude(p.Longitude, FormatOptions::ShowDegreeGlyph | FormatOptions::ShowSeconds | FormatOptions::UseGlyphs), -1);
+		y += 22;
+	}
+}
+
+void CChartView::DisplayHouses(CDCHandle dc, int x, int y) {
+	CFont font, font2;
+	font.CreatePointFont(110, L"HamburgSymbols");
+	font2.CreatePointFont(110, L"Consolas");
+
+	int i = 1;
+	for (auto& cusp : m_Data.Houses().Cusps) {
+		dc.SelectFont(font2);
+		CString text;
+		text.Format(L"H %2d:", i++);
+		dc.TextOut(x, y - 3, text, text.GetLength());
+		dc.SelectFont(font);
+		dc.TextOut(x + 50, y, Helpers::FormatLongitude(cusp, FormatOptions::ShowDegreeGlyph | FormatOptions::ShowSeconds | FormatOptions::UseGlyphs), -1);
+		y += 22;
+	}
 }
 
 LRESULT CChartView::OnEraseBkgnd(UINT, WPARAM, LPARAM, BOOL&) {
@@ -54,6 +84,10 @@ LRESULT CChartView::OnPaint(UINT, WPARAM, LPARAM, BOOL&) {
 	ctx.Scale(size / m_DrawingSize, size / m_DrawingSize);
 	ctx.Source(m_Surface, 0, 0);
 	ctx.Paint();
+
+	int x = (int)size + 30;
+	DisplayPlanets(dc.m_hDC, x, 40);
+	DisplayHouses(dc.m_hDC, x, 50 + m_Data.PlanetsCount() * 25);
 
 	return 0;
 }

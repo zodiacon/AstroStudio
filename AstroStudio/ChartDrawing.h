@@ -21,6 +21,8 @@ struct ChartDrawingParameters {
 	bool DrawMinorAspects{ false };
 	bool FillZodiacBelts{ true };
 	bool DrawHouseLines{ true };
+	bool DrawVeryMinorAspects{ false };
+	bool DrawNonStandardPlanetAspects{ false };
 };
 
 class ChartDrawing {
@@ -30,8 +32,10 @@ public:
 	virtual bool Draw(CairoSurface& surface);
 	ChartDrawing& DrawingParameters(ChartDrawingParameters const&);
 	ChartDrawingParameters const& DrawingParameters() const;
+	ChartDrawingParameters& DrawingParameters();
 	ChartDrawing& Chart(ChartData const& data);
 	ChartData const& Chart() const;
+	ChartData& Chart();
 	ChartDrawing& Aspects(std::vector<AspectData>&& aspects);
 
 private:

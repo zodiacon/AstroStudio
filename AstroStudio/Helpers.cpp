@@ -96,3 +96,12 @@ COLORREF Helpers::Darken(COLORREF color, int offset) {
 
 	return RGB(r, g, b);
 }
+
+COLORREF Helpers::Lighten(COLORREF color, int offset) {
+	auto r = GetRValue(color), g = GetGValue(color), b = GetBValue(color);
+	r = std::min(255, r + offset);
+	g = std::min(255, g + offset);
+	b = std::min(255, b + offset);
+
+	return RGB(r, g, b);
+}
