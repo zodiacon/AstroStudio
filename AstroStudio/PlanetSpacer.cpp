@@ -11,6 +11,7 @@ void PlanetSpacer::Space(double minDegrees) {
 		});
 
 	bool done;
+	int loops = 10;
 	do {
 		done = true;
 		int size = (int)pos.size();
@@ -27,7 +28,7 @@ void PlanetSpacer::Space(double minDegrees) {
 				pos[j].Longitude.Normalize();
 			}
 		}
-	} while (!done);
+	} while (!done && --loops > 0);
 
 	m_newPositions = std::move(pos);
 }

@@ -21,8 +21,15 @@ public:
 
 protected:
 	BEGIN_MSG_MAP(CMainFrame)
+		NOTIFY_CODE_HANDLER(TBVN_PAGEACTIVATED, OnPageActivated)
 		MESSAGE_HANDLER(WM_CREATE, OnCreate)
 		MESSAGE_HANDLER(WM_DESTROY, OnDestroy)
+		if (uMsg == WM_COMMAND && m_view.GetPageCount() > 0) {
+			auto view = (IView*)m_view.GetPageData(m_view.GetActivePage());
+			bHandled = view->ProcessCommand((UINT)wParam);
+			if (bHandled)
+				return TRUE;
+		}
 		COMMAND_ID_HANDLER(ID_APP_EXIT, OnFileExit)
 		COMMAND_ID_HANDLER(ID_VIEW_STATUS_BAR, OnViewStatusBar)
 		COMMAND_ID_HANDLER(ID_APP_ABOUT, OnAppAbout)
@@ -30,13 +37,8 @@ protected:
 		COMMAND_ID_HANDLER(ID_NEW_CHART, OnNewChart)
 		COMMAND_ID_HANDLER(ID_TOOL_EPHEMERIS, OnToolEphemeris)
 		MESSAGE_HANDLER(WM_GETMINMAXINFO, OnGetMinMaxInfo)
-		NOTIFY_CODE_HANDLER(TBVN_PAGEACTIVATED, OnPageActivated)
 		COMMAND_ID_HANDLER(ID_WINDOW_CLOSE_ALL, OnWindowCloseAll)
 		COMMAND_RANGE_HANDLER(ID_WINDOW_TABFIRST, ID_WINDOW_TABLAST, OnWindowActivate)
-		if (uMsg == WM_COMMAND && m_view.GetPageCount() > 0) {
-			auto view = (IView*)m_view.GetPageData(m_view.GetActivePage());
-			bHandled = view->ProcessCommand((UINT)wParam);
-		}
 		CHAIN_MSG_MAP(CAutoUpdateUI<CMainFrame>)
 		CHAIN_MSG_MAP(CFrameWindowImpl<CMainFrame>)
 		CHAIN_MSG_MAP(COwnerDrawnMenu<CMainFrame>)
@@ -70,4 +72,5 @@ private:
 
 	CTabView m_view;
 	int m_CurrentPage{ -1 };
+	ULONG_PTR m_GdiPlusToken{ 0 };
 };

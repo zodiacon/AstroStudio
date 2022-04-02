@@ -13,8 +13,8 @@ ChartData& ChartData::RemovePlanets(std::initializer_list<PlanetType> planets) {
     return *this;
 }
 
-HouseData& ChartData::Houses() {
-    return m_Houses;
+void ChartData::Houses(HouseData const& houses) {
+    m_Houses = houses;
 }
 
 HouseData const& ChartData::Houses() const {

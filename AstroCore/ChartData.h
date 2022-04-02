@@ -1,7 +1,6 @@
 #pragma once
 
 #include "AstroCalculator.h"
-#include <queue>
 
 class ChartData {
 public:
@@ -12,7 +11,7 @@ public:
 	PlanetPosition const& Planet(int index) const;
 	std::vector<PlanetPosition> const& AllPlanets() const;
 
-	HouseData& Houses();
+	void Houses(HouseData const& data);
 	HouseData const& Houses() const;
 
 private:

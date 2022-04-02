@@ -53,11 +53,15 @@ public:
 	IngressData CalcPlanetIngress(PlanetType planet, DateTime start, bool reverse = false) const;
 	StationData CalcPlanetStation(PlanetType planet, DateTime start) const;
 
+	int Harmonic() const;
+	int Harmonic(int harmonic);
+
 	double Epsilon{ .00001 };
 	int MaxIterations{ 1000 };
 
 private:
 	static inline bool s_init{ false };
 	int m_SweFlags;
+	int m_Harmonic{ 1 };
 };
 

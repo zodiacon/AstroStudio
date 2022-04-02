@@ -9,6 +9,19 @@ void CChartView::OnFinalMessage(HWND) {
 	delete this;
 }
 
+void CChartView::Chart(ChartData const& chart) {
+	m_Data = chart;
+	Invalidate();
+}
+
+void CChartView::Chart(ChartData data) {
+	m_Data = std::move(data);
+}
+
+ChartData const& CChartView::Chart() const {
+	return m_Data;
+}
+
 void CChartView::DisplayPlanets(CDCHandle dc, int x, int y) {
 	CFont font;
 	font.CreatePointFont(110, L"HamburgSymbols");
@@ -44,9 +57,9 @@ LRESULT CChartView::OnEraseBkgnd(UINT, WPARAM, LPARAM, BOOL&) {
 
 LRESULT CChartView::OnCreate(UINT, WPARAM, LPARAM, BOOL&) {
 	m_DrawingSize = std::min(::GetSystemMetrics(SM_CXSCREEN), ::GetSystemMetrics(SM_CYSCREEN));
-	//DateTime dt(1971, 7, 1, 18, 10, 0, true);
-	auto dt = DateTime::Now();
-	m_Data.Houses() = m_Calc.CalcHouses(dt, 47, 28 + 5 / 6.0, HouseSystem::Koch);
+	//auto dt = DateTime::Now();
+	DateTime dt(1971, 7, 1, 18, 10, 0, true);
+	m_Data.Houses(AstroCalculator::CalcHouses(dt, 47, 28 + 5 / 6.0, HouseSystem::Koch));
 
 	auto planets = Helpers::GetStandardPlanets();
 	planets.push_back(PlanetType::Chiron);
@@ -64,34 +77,57 @@ LRESULT CChartView::OnCreate(UINT, WPARAM, LPARAM, BOOL&) {
 	return 0;
 }
 
-LRESULT CChartView::OnPaint(UINT, WPARAM, LPARAM, BOOL&) {
-	CPaintDC dc(m_hWnd);
-	CairoSurface target(dc.m_hDC);
-	CairoCtx ctx(target);
+void CChartView::DoPaint(CDCHandle dc) {
+	//CairoSurface target(dc.m_hDC);
+	//CairoCtx ctx(target);
 
-	if (!m_Surface) {
-		m_Surface = CairoSurface::CreateImage(CairoFormat::ARGB32, m_DrawingSize, m_DrawingSize);
-	}
-	if (m_RedrawNeeded) {
-		m_Drawing.Draw(m_Surface);
-		m_RedrawNeeded = false;
-	}
+	//if (!m_Surface) {
+	//	m_Surface = CairoSurface::CreateImage(CairoFormat::ARGB32, m_DrawingSize, m_DrawingSize);
+	//}
+	//if (m_RedrawNeeded) {
+	//	m_Drawing.Draw(m_Surface);
+	//	m_RedrawNeeded = false;
+	//}
 
 	CRect rc;
 	GetClientRect(&rc);
-	auto size = (double)std::min(rc.right, rc.bottom);
-	ctx.Translate(0, (rc.bottom - size) / 2);
-	ctx.Scale(size / m_DrawingSize, size / m_DrawingSize);
-	ctx.Source(m_Surface, 0, 0);
-	ctx.Paint();
+	auto size = std::min(rc.right, rc.bottom);
+	int x = size + 30;
 
-	int x = (int)size + 30;
+	using namespace Gdiplus;
+
+	//ctx.Translate(0, (rc.bottom - size) / 2);
+	//ctx.Scale(size / m_DrawingSize, size / m_DrawingSize);
+	//ctx.Source(m_Surface, 0, 0);
+	//ctx.Paint();
+
+	//dc.FillRect(CRect(x - 30, 0, rc.right, rc.bottom), ::GetSysColorBrush(COLOR_WINDOW));
+	if (!m_Bitmap)
+		m_Bitmap.reset(new Bitmap(2000, 2000));
+
+	{
+		Graphics g(m_Bitmap.get());
+		m_Drawing.Draw(g, 2000);
+	}
+	Graphics g(dc.m_hDC);
+	g.DrawImage(m_Bitmap.get(), Rect(0, 0, size, size));
+	
 	DisplayPlanets(dc.m_hDC, x, 40);
 	DisplayHouses(dc.m_hDC, x, 50 + m_Data.PlanetsCount() * 25);
-
-	return 0;
 }
 
 LRESULT CChartView::OnEditCopy(WORD, WORD, HWND, BOOL&) {
 	return LRESULT();
+}
+
+LRESULT CChartView::OnPaint(UINT, WPARAM, LPARAM, BOOL&) {
+	CPaintDC dc(m_hWnd);
+	DoPaint(dc.m_hDC);
+	return 0;
+}
+
+LRESULT CChartView::OnSize(UINT, WPARAM, LPARAM, BOOL& handled) {
+	//m_RedrawNeeded;
+	handled = FALSE;
+	return 0;
 }

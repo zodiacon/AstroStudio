@@ -39,6 +39,7 @@ public:
 
 	CString GetColumnText(HWND, int row, int col);
 	bool IsSortable(HWND, int col) const;
+	bool OnRightClickList(HWND, int row, int col, POINT const& pt);
 
 	DWORD OnPrePaint(int, LPNMCUSTOMDRAW cd);
 	DWORD OnItemPrePaint(int, LPNMCUSTOMDRAW cd);
@@ -57,6 +58,7 @@ protected:
 		CHAIN_MSG_MAP(CCustomDraw<CEphemerisView>)
 		CHAIN_MSG_MAP(CViewBase<CEphemerisView>)
 	ALT_MSG_MAP(1)
+		COMMAND_ID_HANDLER(ID_NEW_CHART, OnNewChart)
 		COMMAND_ID_HANDLER(ID_EDIT_COPY, OnEditCopy)
 	END_MSG_MAP()
 
@@ -94,6 +96,7 @@ private:
 	LRESULT OnChangeFontSize(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/);
 	LRESULT OnViewGridLines(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/);
 	LRESULT OnEditCopy(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/);
+	LRESULT OnNewChart(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/);
 
 	CListViewCtrl m_List;
 	AstroCalculator m_Calc;

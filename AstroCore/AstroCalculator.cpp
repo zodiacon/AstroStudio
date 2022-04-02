@@ -6,7 +6,7 @@
 
 static char _error[256];
 
-std::unordered_map<PlanetType, double> monthlyCycle{
+const std::unordered_map<PlanetType, double> monthlyCycle{
 	{ PlanetType::Moon, 1.8},
 	{ PlanetType::Sun, 27 },
 	{ PlanetType::Mercury, 20 },
@@ -39,7 +39,8 @@ PlanetPosition AstroCalculator::CalcPlanet(PlanetType planet, DateTime const& dt
 	swe_calc_ut(dt, (int)planet, m_SweFlags | (withSpeed ? SEFLG_SPEED : 0), xx, _error);
 	PlanetPosition pp;
 	pp.Planet = planet;
-	pp.Longitude = xx[0];
+	pp.Longitude = xx[0] * Harmonic();
+	pp.Longitude.Normalize();
 	pp.Latitude = xx[1];
 	if (withSpeed) {
 		pp.Speed = xx[3];
@@ -49,12 +50,12 @@ PlanetPosition AstroCalculator::CalcPlanet(PlanetType planet, DateTime const& dt
 }
 
 IngressData AstroCalculator::CalcPlanetIngress(PlanetType planet, DateTime start, bool reverse) const {
-	double eps = Epsilon;
-	PlanetPosition data = CalcPlanet(planet, start);
-	ZodiacSign sign = data.Longitude.Sign();
-	AstroPoint targetNext = data.Longitude.NextSign();
-	AstroPoint targetPrev = data.Longitude.ZeroSign();
-	double avg = std::min(monthlyCycle[planet], fabs(monthlyCycle[planet]) /
+	const double eps = Epsilon;
+	auto data = CalcPlanet(planet, start);
+	auto sign = data.Longitude.Sign();
+	const AstroPoint targetNext = data.Longitude.NextSign();
+	const AstroPoint targetPrev = data.Longitude.ZeroSign();
+	double avg = std::min(monthlyCycle.at(planet), fabs(monthlyCycle.at(planet)) /
 		std::max(AstroPoint::Diff(data.Longitude, targetNext), AstroPoint::Diff(data.Longitude, targetPrev)));
 	double dir = reverse ? -1 : 1;
 	DateTime run = start;
@@ -89,11 +90,21 @@ StationData AstroCalculator::CalcPlanetStation(PlanetType planet, DateTime start
 	do {
 		if (fabs(data.Speed) < eps)
 			break;
-		start = start.AddDays(fabs(data.Speed) / 2 * monthlyCycle[planet] / 2);
+		start = start.AddDays(fabs(data.Speed) / 2 * monthlyCycle.at(planet) / 2);
 		data = CalcPlanet(planet, start);
 	} while (++iter < MaxIterations / 4);
 
 	return StationData{ planet, start, data.Longitude, data.Speed > 0 };
+}
+
+int AstroCalculator::Harmonic() const {
+	return m_Harmonic;
+}
+
+int AstroCalculator::Harmonic(int harmonic) {
+	if (harmonic < 1)
+		harmonic = 1;
+	return m_Harmonic = harmonic;
 }
 
 HouseData AstroCalculator::CalcHouses(DateTime dt, double latitude, double longitude, HouseSystem system) {

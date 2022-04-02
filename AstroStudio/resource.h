@@ -25,8 +25,9 @@
 #define IDI_GRID                        214
 #define IDI_COPY                        215
 #define IDI_PIN                         216
-#define IDI_ICON2                       217
 #define IDI_CHART                       217
+#define IDR_MENU1                       218
+#define IDR_CONTEXT                     218
 #define ID_WINDOW_CLOSE                 32772
 #define ID_WINDOW_CLOSE_ALL             32773
 #define ID_OPTIONS_ALWAYSONTOP          32775
@@ -40,7 +41,7 @@
 // 
 #ifdef APSTUDIO_INVOKED
 #ifndef APSTUDIO_READONLY_SYMBOLS
-#define _APS_NEXT_RESOURCE_VALUE        218
+#define _APS_NEXT_RESOURCE_VALUE        219
 #define _APS_NEXT_COMMAND_VALUE         32781
 #define _APS_NEXT_CONTROL_VALUE         1000
 #define _APS_NEXT_SYMED_VALUE           107

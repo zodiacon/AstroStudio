@@ -11,6 +11,8 @@
 #include "ToolbarHelper.h"
 #include "ChartView.h"
 
+#pragma comment(lib, "gdiplus")
+
 #define WINDOW_MENU_POSITION	5
 
 BOOL CMainFrame::PreTranslateMessage(MSG* pMsg) {
@@ -25,12 +27,21 @@ BOOL CMainFrame::OnIdle() {
 }
 
 LRESULT CMainFrame::OnCreate(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, BOOL& /*bHandled*/) {
+	static bool gdiPlusInit = false;
+	if (!gdiPlusInit) {
+		gdiPlusInit = true;
+		Gdiplus::GdiplusStartupInput input;
+		Gdiplus::GdiplusStartupOutput output;
+		ATLVERIFY(Gdiplus::Ok == Gdiplus::GdiplusStartup(&m_GdiPlusToken, &input, &output));
+	}
 	ATLVERIFY(Helpers::LoadAstroFont(IDR_FONT));
 	AddMenu(GetMenu());
 	InitMenu();
 
 	ToolBarButtonInfo buttons[] = {
 		{ ID_TOOL_EPHEMERIS, IDI_EPHEMERIS },
+		{ 0 },
+		{ ID_NEW_CHART, IDI_CHART },
 	};
 	CreateSimpleReBar(ATL_SIMPLE_REBAR_NOBORDER_STYLE);
 	auto tb = ToolbarHelper::CreateAndInitToolBar(m_hWnd, buttons, _countof(buttons));
@@ -156,6 +167,7 @@ void CMainFrame::InitMenu() {
 		{ ID_EDIT_COPY, IDI_COPY },
 		{ ID_OPTIONS_ALWAYSONTOP, IDI_PIN },
 		{ ID_TOOL_EPHEMERIS, IDI_EPHEMERIS },
+		{ ID_NEW_CHART, IDI_CHART },
 	};
 
 	for (auto& cmd : commands)
@@ -167,7 +179,7 @@ HWND CMainFrame::GetHwnd() const {
 }
 
 BOOL CMainFrame::TrackPopupMenu(HMENU hMenu, DWORD flags, int x, int y) {
-	return 0;
+	return ShowContextMenu(hMenu, flags, x, y);
 }
 
 CUpdateUIBase& CMainFrame::GetUI() {

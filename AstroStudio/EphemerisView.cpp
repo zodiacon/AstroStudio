@@ -43,6 +43,12 @@ bool CEphemerisView::IsSortable(HWND, int col) const {
 	return false;
 }
 
+bool CEphemerisView::OnRightClickList(HWND, int row, int col, POINT const& pt) {
+	CMenu menu;
+	menu.LoadMenu(IDR_CONTEXT);
+	return GetFrame()->TrackPopupMenu(menu.GetSubMenu(0), 0, pt.x, pt.y);
+}
+
 DWORD CEphemerisView::OnPrePaint(int, LPNMCUSTOMDRAW cd) {
 	return CDRF_NOTIFYITEMDRAW;
 }
@@ -219,7 +225,7 @@ LRESULT CEphemerisView::OnCreate(UINT, WPARAM, LPARAM, BOOL&) {
 	m_StartTime = DateTime::Today();
 	m_StartTime = m_StartTime.AddDays(-m_StartTime.Day() + 1);
 	m_Items.reserve(500);
-	m_List.SetItemCount(444);
+	m_List.SetItemCount(1444);
 
 	return 0;
 }
@@ -268,4 +274,8 @@ LRESULT CEphemerisView::OnViewGridLines(WORD, WORD, HWND, BOOL&) {
 
 LRESULT CEphemerisView::OnEditCopy(WORD, WORD, HWND, BOOL&) {
 	return LRESULT();
+}
+
+LRESULT CEphemerisView::OnNewChart(WORD, WORD, HWND, BOOL&) {
+	return 0;
 }
