@@ -14,7 +14,6 @@ public:
 	using CViewBase::CViewBase;
 
 	void OnFinalMessage(HWND /*hWnd*/) override;
-	void Chart(ChartData const& chart);
 	void Chart(ChartData data);
 	ChartData const& Chart() const;
 
@@ -32,8 +31,8 @@ public:
 	END_MSG_MAP()
 
 private:
-	void DisplayPlanets(CDCHandle dc, int x, int y);
-	void DisplayHouses(CDCHandle dc, int x, int y);
+	void DisplayPlanets(CDCHandle dc, int x, int y) const;
+	void DisplayHouses(CDCHandle dc, int x, int y) const;
 
 	LRESULT OnEraseBkgnd(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, BOOL& /*bHandled*/);
 	LRESULT OnCreate(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, BOOL& /*bHandled*/);
@@ -42,7 +41,6 @@ private:
 	LRESULT OnSize(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, BOOL& /*bHandled*/);
 
 	ChartDrawing m_Drawing;
-	CairoSurface m_Surface;
 	ChartData m_Data;
 	AstroCalculator m_Calc;
 	std::unique_ptr<Gdiplus::Bitmap> m_Bitmap;

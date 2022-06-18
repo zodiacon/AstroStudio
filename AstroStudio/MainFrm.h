@@ -51,6 +51,7 @@ private:
 	HWND GetHwnd() const override;
 	BOOL TrackPopupMenu(HMENU hMenu, DWORD flags, int x, int y) override;
 	CUpdateUIBase& GetUI() override;
+	IView* AddChartView(ChartData data, PCWSTR title = nullptr);
 
 	// Handler prototypes (uncomment arguments if needed):
 	//	LRESULT MessageHandler(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, BOOL& /*bHandled*/)

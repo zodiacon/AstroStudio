@@ -31,7 +31,6 @@ extern CAppModule _Module;
 #include <vector>
 #include <unordered_map>
 #include <map>
-#include "CairoGfx.h"
 #include <algorithm>
 #include <gdiplus.h>
 

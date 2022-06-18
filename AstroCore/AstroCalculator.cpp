@@ -1,10 +1,11 @@
 #include "pch.h"
 #include "AstroCalculator.h"
 #include "DateTime.h"
+#include "ChartData.h"
 #include <assert.h>
 #include <utility>
 
-static char _error[256];
+static char s_error[256];
 
 const std::unordered_map<PlanetType, double> monthlyCycle{
 	{ PlanetType::Moon, 1.8},
@@ -36,7 +37,7 @@ AstroCalculator::AstroCalculator() : m_SweFlags(SEFLG_MOSEPH) {
 
 PlanetPosition AstroCalculator::CalcPlanet(PlanetType planet, DateTime const& dt, bool withSpeed) const {
 	double xx[6];
-	swe_calc_ut(dt, (int)planet, m_SweFlags | (withSpeed ? SEFLG_SPEED : 0), xx, _error);
+	swe_calc_ut(dt, (int)planet, m_SweFlags | (withSpeed ? SEFLG_SPEED : 0), xx, s_error);
 	PlanetPosition pp;
 	pp.Planet = planet;
 	pp.Longitude = xx[0] * Harmonic();
@@ -105,6 +106,16 @@ int AstroCalculator::Harmonic(int harmonic) {
 	if (harmonic < 1)
 		harmonic = 1;
 	return m_Harmonic = harmonic;
+}
+
+bool AstroCalculator::Calculate(ChartData& data) {
+	auto const& info = data.Info();
+	data.Houses(CalcHouses(info.Time, info.Latitude, info.Longitude, data.Houses().System));
+	for (auto& p : data.AllPlanets()) {
+		p = CalcPlanet(p.Planet, info.Time);
+	}
+
+	return true;
 }
 
 HouseData AstroCalculator::CalcHouses(DateTime dt, double latitude, double longitude, HouseSystem system) {

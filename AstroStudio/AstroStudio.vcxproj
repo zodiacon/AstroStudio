@@ -272,9 +272,6 @@
     <ProjectReference Include="..\AstroCore\AstroCore.vcxproj">
       <Project>{ada16f7e-a264-43bb-a6ed-86203f5972e9}</Project>
     </ProjectReference>
-    <ProjectReference Include="..\CairoGfx\CairoGfx.vcxproj">
-      <Project>{00ad013a-42c6-4196-83ff-a8cbfdecb4e0}</Project>
-    </ProjectReference>
     <ProjectReference Include="..\WTLHelper\WTLHelper.vcxproj">
       <Project>{ae53419f-a769-4548-8e15-e311904df7df}</Project>
     </ProjectReference>

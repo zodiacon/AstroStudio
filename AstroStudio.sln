@@ -11,8 +11,6 @@ Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "WTLHelper", "WTLHelper\WTLH
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "sweph", "sweph\sweph.vcxproj", "{0446ACAE-23C8-4784-966B-12A791088538}"
 EndProject
-Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "CairoGfx", "CairoGfx\CairoGfx.vcxproj", "{00AD013A-42C6-4196-83FF-A8CBFDECB4E0}"
-EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|ARM64 = Debug|ARM64
@@ -71,18 +69,6 @@ Global
 		{0446ACAE-23C8-4784-966B-12A791088538}.Release|x64.Build.0 = Release|x64
 		{0446ACAE-23C8-4784-966B-12A791088538}.Release|x86.ActiveCfg = Release|Win32
 		{0446ACAE-23C8-4784-966B-12A791088538}.Release|x86.Build.0 = Release|Win32
-		{00AD013A-42C6-4196-83FF-A8CBFDECB4E0}.Debug|ARM64.ActiveCfg = Debug|x64
-		{00AD013A-42C6-4196-83FF-A8CBFDECB4E0}.Debug|ARM64.Build.0 = Debug|x64
-		{00AD013A-42C6-4196-83FF-A8CBFDECB4E0}.Debug|x64.ActiveCfg = Debug|x64
-		{00AD013A-42C6-4196-83FF-A8CBFDECB4E0}.Debug|x64.Build.0 = Debug|x64
-		{00AD013A-42C6-4196-83FF-A8CBFDECB4E0}.Debug|x86.ActiveCfg = Debug|Win32
-		{00AD013A-42C6-4196-83FF-A8CBFDECB4E0}.Debug|x86.Build.0 = Debug|Win32
-		{00AD013A-42C6-4196-83FF-A8CBFDECB4E0}.Release|ARM64.ActiveCfg = Release|x64
-		{00AD013A-42C6-4196-83FF-A8CBFDECB4E0}.Release|ARM64.Build.0 = Release|x64
-		{00AD013A-42C6-4196-83FF-A8CBFDECB4E0}.Release|x64.ActiveCfg = Release|x64
-		{00AD013A-42C6-4196-83FF-A8CBFDECB4E0}.Release|x64.Build.0 = Release|x64
-		{00AD013A-42C6-4196-83FF-A8CBFDECB4E0}.Release|x86.ActiveCfg = Release|Win32
-		{00AD013A-42C6-4196-83FF-A8CBFDECB4E0}.Release|x86.Build.0 = Release|Win32
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

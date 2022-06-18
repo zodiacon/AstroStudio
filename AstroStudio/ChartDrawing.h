@@ -2,39 +2,30 @@
 
 #include "ChartData.h"
 #include "Aspects.h"
+#include <array>
 
 struct ChartDrawingParameters {
-	CairoColor BackColor{ StandardColors::White };
-	CairoColor ElementColor[4]{
-		StandardColors::OrangeRed,
-		StandardColors::LightGoldenrodYellow,
-		StandardColors::LightGreen,
-		StandardColors::LightBlue
-	};
-
-	Gdiplus::Color GdiplusElementColor[4] {
+	Gdiplus::Color BackColor{ Gdiplus::Color::WhiteSmoke };
+	std::array<Gdiplus::Color, 4> ElementColor {
 		Gdiplus::Color(Gdiplus::Color::OrangeRed),
 		Gdiplus::Color(Gdiplus::Color::LightGoldenrodYellow),
 		Gdiplus::Color(Gdiplus::Color::LightGreen),
 		Gdiplus::Color(Gdiplus::Color::LightBlue)
 	};
-	CairoColor SoftAspectColor{ StandardColors::Blue };
-	CairoColor HardAspectColor{ StandardColors::Red };
-	CairoColor AspectColor{ StandardColors::Black };
 
-	Gdiplus::Color GdiplusSoftAspectColor{ Gdiplus::Color::Blue };
-	Gdiplus::Color GdiplusHardAspectColor{ Gdiplus::Color::Red };
-	Gdiplus::Color GdiplusAspectColor{ Gdiplus::Color::Black };
+	Gdiplus::Color SoftAspectColor{ Gdiplus::Color::Blue };
+	Gdiplus::Color HardAspectColor{ Gdiplus::Color::Red };
+	Gdiplus::Color MinorAspectColor{ Gdiplus::Color::Purple };
+	Gdiplus::Color AspectColor{ Gdiplus::Color::Black };
 
-	double MajorAspectWidth{ 1.2 };
-	double MinorAspectWidth{ .7 };
+	float MajorAspectWidth{ 3 };
+	float MinorAspectWidth{ 1.5f };
 	float ZodiacBeltWidth{ 40 };
 
 	bool DrawAspects{ true };
-	bool DrawMinorAspects{ false };
 	bool FillZodiacBelts{ true };
 	bool DrawHouseLines{ true };
-	bool DrawVeryMinorAspects{ false };
+	bool DrawVeryMinorAspects{ true };
 	bool DrawNonStandardPlanetAspects{ false };
 };
 
@@ -42,7 +33,6 @@ class ChartDrawing {
 public:
 	ChartDrawing() = default;
 
-	virtual bool Draw(CairoSurface& surface);
 	virtual bool Draw(Gdiplus::Graphics& g, int size);
 	ChartDrawing& DrawingParameters(ChartDrawingParameters const&);
 	ChartDrawingParameters const& DrawingParameters() const;
@@ -53,7 +43,6 @@ public:
 	ChartDrawing& Aspects(std::vector<AspectData>&& aspects);
 
 private:
-	CairoPoint PointByAngle(CairoPoint const& center, double radius, double angle) const;
 	Gdiplus::PointF PointByAngle(Gdiplus::PointF const& center, float radius, double angle) const;
 
 	ChartDrawingParameters m_params;

@@ -21,12 +21,20 @@ HouseData const& ChartData::Houses() const {
     return m_Houses;
 }
 
+ChartInfo& ChartData::Info() {
+    return m_Info;
+}
+
+ChartInfo const& ChartData::Info() const {
+    return m_Info;
+}
+
 ChartData& ChartData::Clear() {
     m_Planets.clear();
     return *this;
 }
 
-int ChartData::PlanetsCount() const {
+int ChartData::PlanetCount() const {
     return (int)m_Planets.size();
 }
 
@@ -36,5 +44,9 @@ PlanetPosition const& ChartData::Planet(int index) const {
 }
 
 std::vector<PlanetPosition> const& ChartData::AllPlanets() const {
+    return m_Planets;
+}
+
+std::vector<PlanetPosition>& ChartData::AllPlanets() {
     return m_Planets;
 }

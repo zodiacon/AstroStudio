@@ -1,5 +1,6 @@
 #include "pch.h"
 #include "EphemerisView.h"
+#include "ChartData.h"
 
 void CEphemerisView::OnFinalMessage(HWND) {
 	delete this;
@@ -277,5 +278,12 @@ LRESULT CEphemerisView::OnEditCopy(WORD, WORD, HWND, BOOL&) {
 }
 
 LRESULT CEphemerisView::OnNewChart(WORD, WORD, HWND, BOOL&) {
+	auto const& item = m_Items[m_List.GetSelectionMark()];
+	ChartData data;
+	for (auto& p : item.Planets)
+		data.AddPlanets({ p.Position });
+	data.Houses(AstroCalculator::CalcHouses(item.Date, 32, 34, HouseSystem::Koch));
+	GetFrame()->AddChartView(std::move(data), L"Chart 1");
+
 	return 0;
 }

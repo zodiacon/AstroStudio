@@ -44,6 +44,8 @@ struct HouseData {
 	HouseSystem System;
 };
 
+class ChartData;
+
 class AstroCalculator {
 public:
 	AstroCalculator();
@@ -55,6 +57,8 @@ public:
 
 	int Harmonic() const;
 	int Harmonic(int harmonic);
+
+	bool Calculate(ChartData& data);
 
 	double Epsilon{ .00001 };
 	int MaxIterations{ 1000 };
