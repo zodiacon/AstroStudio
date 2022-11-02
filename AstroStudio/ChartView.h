@@ -1,20 +1,20 @@
 #pragma once
 
-#include "ViewBase.h"
 #include "ChartDrawing.h"
 #include "ChartData.h"
+#include <FrameView.h>
+#include "Interfaces.h"
 
 class CChartView :
-	public CViewBase<CChartView>,
+	public CFrameView<CChartView, IMainFrame>,
+	public IView,
 	public CDoubleBufferImpl<CChartView> {
 public:
-	using BaseView = CViewBase<CChartView, CDoubleBufferWindowImpl<CChartView>>;
-	DECLARE_WND_CLASS(nullptr)
-
-	using CViewBase::CViewBase;
+	using CFrameView::CFrameView;
 
 	void OnFinalMessage(HWND /*hWnd*/) override;
 	void Chart(ChartData data);
+	void ChartForNow();
 	ChartData const& Chart() const;
 
 	void DoPaint(CDCHandle dc);
@@ -24,8 +24,8 @@ public:
 		MESSAGE_HANDLER(WM_PAINT, OnPaint)
 		//MESSAGE_HANDLER(WM_ERASEBKGND, OnEraseBkgnd)
 		MESSAGE_HANDLER(WM_CREATE, OnCreate)
-		CHAIN_MSG_MAP(CViewBase<CChartView>)
 		//CHAIN_MSG_MAP(CDoubleBufferImpl<CChartView>)
+		CHAIN_MSG_MAP(BaseFrame)
 	ALT_MSG_MAP(1)
 		COMMAND_ID_HANDLER(ID_EDIT_COPY, OnEditCopy)
 	END_MSG_MAP()

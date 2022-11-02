@@ -18,6 +18,10 @@ protected:
 		return ProcessWindowMessage(static_cast<T*>(this)->m_hWnd, WM_COMMAND, cmd, 0, result, 1);
 	}
 
+	void OnFinalMessage(HWND /*hWnd*/) override {
+		delete this;
+	}
+
 	BOOL OnIdle() override {
 		CAutoUpdateUI<T>::UIUpdateToolBar();
 		return FALSE;

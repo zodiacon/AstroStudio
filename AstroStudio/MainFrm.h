@@ -5,14 +5,16 @@
 #pragma once
 
 #include "Interfaces.h"
-#include "OwnerDrawnMenu.h"
+#include <OwnerDrawnMenu.h>
+#include <CustomTabView.h>
 
 class CMainFrame :
 	public CFrameWindowImpl<CMainFrame>,
 	public CAutoUpdateUI<CMainFrame>,
 	public IMainFrame,
 	public COwnerDrawnMenu<CMainFrame>,
-	public CMessageFilter, public CIdleHandler {
+	public CMessageFilter, 
+	public CIdleHandler {
 public:
 	DECLARE_FRAME_WND_CLASS(L"AstroStudioMainWindow", IDR_MAINFRAME)
 
@@ -22,22 +24,17 @@ public:
 protected:
 	BEGIN_MSG_MAP(CMainFrame)
 		NOTIFY_CODE_HANDLER(TBVN_PAGEACTIVATED, OnPageActivated)
-		MESSAGE_HANDLER(WM_CREATE, OnCreate)
-		MESSAGE_HANDLER(WM_DESTROY, OnDestroy)
-		if (uMsg == WM_COMMAND && m_view.GetPageCount() > 0) {
-			auto view = (IView*)m_view.GetPageData(m_view.GetActivePage());
-			bHandled = view->ProcessCommand((UINT)wParam);
-			if (bHandled)
-				return TRUE;
-		}
 		COMMAND_ID_HANDLER(ID_APP_EXIT, OnFileExit)
 		COMMAND_ID_HANDLER(ID_VIEW_STATUS_BAR, OnViewStatusBar)
 		COMMAND_ID_HANDLER(ID_APP_ABOUT, OnAppAbout)
 		COMMAND_ID_HANDLER(ID_WINDOW_CLOSE, OnWindowClose)
-		COMMAND_ID_HANDLER(ID_NEW_CHART, OnNewChart)
 		COMMAND_ID_HANDLER(ID_TOOL_EPHEMERIS, OnToolEphemeris)
+		COMMAND_TABVIEW_HANDLER(m_view, 1)
+		COMMAND_ID_HANDLER(ID_NEW_CHART, OnNewChart)
 		MESSAGE_HANDLER(WM_GETMINMAXINFO, OnGetMinMaxInfo)
 		COMMAND_ID_HANDLER(ID_WINDOW_CLOSE_ALL, OnWindowCloseAll)
+		MESSAGE_HANDLER(WM_CREATE, OnCreate)
+		MESSAGE_HANDLER(WM_DESTROY, OnDestroy)
 		COMMAND_RANGE_HANDLER(ID_WINDOW_TABFIRST, ID_WINDOW_TABLAST, OnWindowActivate)
 		CHAIN_MSG_MAP(CAutoUpdateUI<CMainFrame>)
 		CHAIN_MSG_MAP(CFrameWindowImpl<CMainFrame>)
@@ -71,7 +68,7 @@ private:
 	LRESULT OnPageActivated(int /*idCtrl*/, LPNMHDR /*pnmh*/, BOOL& /*bHandled*/);
 	LRESULT OnNewChart(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/);
 
-	CTabView m_view;
+	CCustomTabView m_view;
 	int m_CurrentPage{ -1 };
 	ULONG_PTR m_GdiPlusToken{ 0 };
 };

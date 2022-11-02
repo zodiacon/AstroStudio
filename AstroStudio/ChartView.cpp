@@ -11,8 +11,8 @@ void CChartView::OnFinalMessage(HWND) {
 
 void CChartView::Chart(ChartData data) {
 	m_Data = std::move(data);
-	//DateTime dt(1971, 7, 1, 18, 10, 0, true);
-	//m_Data.Houses(AstroCalculator::CalcHouses(dt, 47, 28 + 5 / 6.0, HouseSystem::Koch));
+	auto dt = DateTime::Now();
+	m_Data.Houses(AstroCalculator::CalcHouses(dt, 47, 28 + 5 / 6.0, HouseSystem::Koch));
 
 	//auto planets = Helpers::GetStandardPlanets();
 	//planets.push_back(PlanetType::Chiron);
@@ -73,7 +73,6 @@ LRESULT CChartView::OnEraseBkgnd(UINT, WPARAM, LPARAM, BOOL&) {
 
 LRESULT CChartView::OnCreate(UINT, WPARAM, LPARAM, BOOL&) {
 	m_DrawingSize = std::min(::GetSystemMetrics(SM_CXSCREEN), ::GetSystemMetrics(SM_CYSCREEN));
-	//auto dt = DateTime::Now();
 
 	return 0;
 }
@@ -112,7 +111,7 @@ LRESULT CChartView::OnPaint(UINT, WPARAM, LPARAM, BOOL&) {
 }
 
 LRESULT CChartView::OnSize(UINT, WPARAM, LPARAM, BOOL& handled) {
-	//m_RedrawNeeded;
-	handled = FALSE;
+	m_RedrawNeeded = true;
+	Invalidate();
 	return 0;
 }

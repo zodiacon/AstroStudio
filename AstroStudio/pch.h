@@ -29,6 +29,7 @@ extern CAppModule _Module;
 #include <strsafe.h>
 #include <memory>
 #include <vector>
+#include <string>
 #include <unordered_map>
 #include <map>
 #include <algorithm>

@@ -1,3 +1,6 @@
 [submodule "modules/CairoGfx"]
 	path = modules/CairoGfx
 	url = https://github.com/zodiacon/CairoGfx.git
+[submodule "WTLHelper"]
+	path = WTLHelper
+	url = https://github.com/zodiacon/WTLHelper

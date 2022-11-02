@@ -4,13 +4,14 @@
 
 #pragma once
 
-#include "ViewBase.h"
-#include "VirtualListView.h"
+#include <VirtualListView.h>
 #include "AstroCalculator.h"
 #include "AstroPoint.h"
 #include "DateTime.h"
 #include "Helpers.h"
+#include <FrameView.h>
 #include "resource.h"
+#include "Interfaces.h"
 
 struct ColorOptions {
 	COLORREF RetroBackColor{ RGB(220, 220, 220) };
@@ -26,16 +27,12 @@ struct ColorOptions {
 };
 
 class CEphemerisView : 
-	public CViewBase<CEphemerisView>,
+	public CFrameView<CEphemerisView, IMainFrame>,
+	public IView,
 	public CCustomDraw<CEphemerisView>,
 	public CVirtualListView<CEphemerisView> {
 public:
-	DECLARE_WND_CLASS(nullptr)
-
-	using CViewBase::CViewBase;
-
-	BOOL PreTranslateMessage(MSG* pMsg);
-	void OnFinalMessage(HWND /*hWnd*/) override;
+	using CFrameView::CFrameView;
 
 	CString GetColumnText(HWND, int row, int col);
 	bool IsSortable(HWND, int col) const;
@@ -54,9 +51,9 @@ protected:
 		COMMAND_ID_HANDLER(ID_FONT_SIZE_DEFAULT, OnChangeFontSize)
 		COMMAND_ID_HANDLER(ID_VIEW_GRIDLINES, OnViewGridLines)
 		MESSAGE_HANDLER(WM_CREATE, OnCreate)
-		CHAIN_MSG_MAP(CVirtualListView<CEphemerisView>)
 		CHAIN_MSG_MAP(CCustomDraw<CEphemerisView>)
-		CHAIN_MSG_MAP(CViewBase<CEphemerisView>)
+		CHAIN_MSG_MAP(CVirtualListView<CEphemerisView>)
+		CHAIN_MSG_MAP(BaseFrame)
 	ALT_MSG_MAP(1)
 		COMMAND_ID_HANDLER(ID_NEW_CHART, OnNewChart)
 		COMMAND_ID_HANDLER(ID_EDIT_COPY, OnEditCopy)
@@ -97,6 +94,7 @@ private:
 	LRESULT OnViewGridLines(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/);
 	LRESULT OnEditCopy(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/);
 	LRESULT OnNewChart(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/);
+	LRESULT OnCustomDraw(int /*idCtrl*/, LPNMHDR /*pnmh*/, BOOL& /*bHandled*/);
 
 	CListViewCtrl m_List;
 	AstroCalculator m_Calc;

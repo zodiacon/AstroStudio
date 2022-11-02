@@ -29,8 +29,8 @@ public:
     static void DayOfYearToDayAndMonth(long DayOfYear, bool bLeap, long& DayOfMonth, long& Month) noexcept;
     static CalendarDate JulianToGregorian(long Year, long Month, long Day) noexcept;
     static CalendarDate GregorianToJulian(long Year, long Month, long Day) noexcept;
-    [[nodiscard]] static DateTime Now();
-    [[nodiscard]] static DateTime Today();
+    [[nodiscard]] static DateTime Now(bool local = false);
+    [[nodiscard]] static DateTime Today(bool local = false);
 
     constexpr static bool AfterPapalReform(long Year, long Month, double Day) {
         return ((Year > 1582) || ((Year == 1582) && (Month > 10)) || ((Year == 1582) && (Month == 10) && (Day >= 15)));

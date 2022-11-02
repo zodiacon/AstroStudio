@@ -12,7 +12,7 @@ DateTime::DateTime(long Year, long Month, double Day, bool bGregorianCalendar) n
 	Set(Year, Month, Day, 0, 0, 0, bGregorianCalendar);
 }
 
-DateTime::DateTime(long Year, long Month, double Day, double Hour, double Minute, double Second, bool bGregorianCalendar) noexcept 
+DateTime::DateTime(long Year, long Month, double Day, double Hour, double Minute, double Second, bool bGregorianCalendar) noexcept
 	: m_Julian(0), m_GregorianCalendar(false) {
 	Set(Year, Month, Day, Hour, Minute, Second, bGregorianCalendar);
 }
@@ -308,15 +308,21 @@ DateTime DateTime::AddDays(double days) const {
 	return DateTime(m_Julian + days, m_GregorianCalendar);
 }
 
-DateTime DateTime::Today() {
+DateTime DateTime::Today(bool local) {
 	SYSTEMTIME st;
-	::GetSystemTime(&st);
+	if (local)
+		::GetLocalTime(&st);
+	else
+		::GetSystemTime(&st);
 	return DateTime(st.wYear, st.wMonth, st.wDay, 0, 0, 0, true);
 }
 
-DateTime DateTime::Now() {
+DateTime DateTime::Now(bool local) {
 	SYSTEMTIME st;
-	::GetSystemTime(&st);
+	if (local)
+		::GetLocalTime(&st);
+	else
+		::GetSystemTime(&st);
 	return DateTime(st.wYear, st.wMonth, st.wDay, st.wHour, st.wMinute, st.wSecond + st.wMilliseconds / 1000.0, true);
 }
 

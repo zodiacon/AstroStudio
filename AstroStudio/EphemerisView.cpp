@@ -1,10 +1,7 @@
 #include "pch.h"
 #include "EphemerisView.h"
 #include "ChartData.h"
-
-void CEphemerisView::OnFinalMessage(HWND) {
-	delete this;
-}
+#include <ToolbarHelper.h>
 
 CString CEphemerisView::GetColumnText(HWND h, int row, int col) {
 	auto type = GetColumnManager(h)->GetColumnTag<ColumnType>(col);
@@ -47,7 +44,7 @@ bool CEphemerisView::IsSortable(HWND, int col) const {
 bool CEphemerisView::OnRightClickList(HWND, int row, int col, POINT const& pt) {
 	CMenu menu;
 	menu.LoadMenu(IDR_CONTEXT);
-	return GetFrame()->TrackPopupMenu(menu.GetSubMenu(0), 0, pt.x, pt.y);
+	return Frame()->TrackPopupMenu(menu.GetSubMenu(0), 0, pt.x, pt.y);
 }
 
 DWORD CEphemerisView::OnPrePaint(int, LPNMCUSTOMDRAW cd) {
@@ -68,7 +65,7 @@ DWORD CEphemerisView::OnSubItemPrePaint(int, LPNMCUSTOMDRAW cd) {
 
 	lv->clrTextBk = CLR_INVALID;
 	auto& item = m_Items[(int)cd->dwItemSpec];
-	bool highlight = item.Date == DateTime::Today();
+	bool highlight = item.Date == DateTime::Today(true);
 	if (colType >= ColumnType::Planet) {
 		if (m_ColorOptions.PaintSigns) {
 			int element = int(item.Planets[lv->iSubItem - 1].Position.Longitude.Sign()) % 4;
@@ -166,11 +163,12 @@ void CEphemerisView::CreateFonts() {
 }
 
 void CEphemerisView::UpdateViewUI() {
-	UISetCheck(ID_VIEW_GLYPHS, (m_FormatOptions & FormatOptions::UseGlyphs) == FormatOptions::UseGlyphs);
-	UISetCheck(ID_VIEW_SECONDS, (m_FormatOptions & FormatOptions::ShowSeconds) == FormatOptions::ShowSeconds);
-	UIEnable(ID_FONT_BIGGER, m_FontSize < 180);
-	UIEnable(ID_FONT_SMALLER, m_FontSize > 70);
-	UISetCheck(ID_VIEW_GRIDLINES, (m_List.GetExtendedListViewStyle() & LVS_EX_GRIDLINES) != 0);
+	auto ui = Frame()->GetUI();
+	ui.UISetCheck(ID_VIEW_GLYPHS, (m_FormatOptions & FormatOptions::UseGlyphs) == FormatOptions::UseGlyphs);
+	ui.UISetCheck(ID_VIEW_SECONDS, (m_FormatOptions & FormatOptions::ShowSeconds) == FormatOptions::ShowSeconds);
+	ui.UIEnable(ID_FONT_BIGGER, m_FontSize < 180);
+	ui.UIEnable(ID_FONT_SMALLER, m_FontSize > 70);
+	ui.UISetCheck(ID_VIEW_GRIDLINES, (m_List.GetExtendedListViewStyle() & LVS_EX_GRIDLINES) != 0);
 }
 
 void CEphemerisView::AutoSizeColumns() {
@@ -203,7 +201,10 @@ LRESULT CEphemerisView::OnCreate(UINT, WPARAM, LPARAM, BOOL&) {
 		{ ID_VIEW_GRIDLINES, IDI_GRID, BTNS_CHECK },
 	};
 
-	CreateAndInitToolBar(buttons, _countof(buttons));
+	CreateSimpleReBar(ATL_SIMPLE_REBAR_NOBORDER_STYLE);
+	auto tb = ToolbarHelper::CreateAndInitToolBar(m_hWndToolBar, buttons, _countof(buttons));
+	AddSimpleReBarBand(tb);
+	Frame()->GetUI().UIAddToolBar(tb);
 	CreateFonts();
 
 	m_Planets = Helpers::GetStandardPlanets();
@@ -226,7 +227,7 @@ LRESULT CEphemerisView::OnCreate(UINT, WPARAM, LPARAM, BOOL&) {
 	m_StartTime = DateTime::Today();
 	m_StartTime = m_StartTime.AddDays(-m_StartTime.Day() + 1);
 	m_Items.reserve(500);
-	m_List.SetItemCount(1444);
+	m_List.SetItemCount(1000);
 
 	return 0;
 }
@@ -283,7 +284,8 @@ LRESULT CEphemerisView::OnNewChart(WORD, WORD, HWND, BOOL&) {
 	for (auto& p : item.Planets)
 		data.AddPlanets({ p.Position });
 	data.Houses(AstroCalculator::CalcHouses(item.Date, 32, 34, HouseSystem::Koch));
-	GetFrame()->AddChartView(std::move(data), L"Chart 1");
+	Frame()->AddChartView(std::move(data), L"Chart 1");
 
 	return 0;
 }
+
