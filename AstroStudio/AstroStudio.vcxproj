@@ -272,9 +272,6 @@
     <ProjectReference Include="..\AstroCore\AstroCore.vcxproj">
       <Project>{ada16f7e-a264-43bb-a6ed-86203f5972e9}</Project>
     </ProjectReference>
-    <ProjectReference Include="..\WTLHelper\WTLHelper.vcxproj">
-      <Project>{ae53419f-a769-4548-8e15-e311904df7df}</Project>
-    </ProjectReference>
   </ItemGroup>
   <ItemGroup>
     <Font Include="res\HamburgSymbols.ttf" />
