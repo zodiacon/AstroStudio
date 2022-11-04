@@ -81,6 +81,8 @@ void CChartView::DoPaint(CDCHandle dc) {
 	CRect rc;
 	GetClientRect(&rc);
 	auto size = std::min(rc.right, rc.bottom);
+	dc.FillRect(&rc, ::GetSysColorBrush(COLOR_WINDOW));
+
 	int x = size + 30;
 
 	using namespace Gdiplus;
@@ -88,14 +90,14 @@ void CChartView::DoPaint(CDCHandle dc) {
 	if (!m_Bitmap)
 		m_Bitmap.reset(new Bitmap(m_DrawingSize, m_DrawingSize));
 
-	if(m_RedrawNeeded) {
+	if (m_RedrawNeeded) {
 		Graphics g(m_Bitmap.get());
 		m_Drawing.Draw(g, m_DrawingSize);
 		m_RedrawNeeded = false;
 	}
 	Graphics g(dc.m_hDC);
 	g.DrawImage(m_Bitmap.get(), Rect(0, 0, size, size));
-	
+
 	DisplayPlanets(dc.m_hDC, x, 40);
 	DisplayHouses(dc.m_hDC, x, 50 + m_Data.PlanetCount() * 25);
 }
@@ -112,6 +114,6 @@ LRESULT CChartView::OnPaint(UINT, WPARAM, LPARAM, BOOL&) {
 
 LRESULT CChartView::OnSize(UINT, WPARAM, LPARAM, BOOL& handled) {
 	m_RedrawNeeded = true;
-	Invalidate();
+	Invalidate(FALSE);
 	return 0;
 }
