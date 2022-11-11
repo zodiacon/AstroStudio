@@ -281,12 +281,16 @@ LRESULT CEphemerisView::OnEditCopy(WORD, WORD, HWND, BOOL&) {
 LRESULT CEphemerisView::OnNewChart(WORD, WORD, HWND, BOOL&) {
 	auto const& item = m_Items[m_List.GetSelectionMark()];
 	ChartData data;
+	auto& info = data.Info();
+	info.Time = item.Date;
+	info.Latitude = 47;
+	info.Longitude = 32;
 	for (auto& p : item.Planets)
 		data.AddPlanets({ p.Position });
-	AstroCalculator calc;
+
 	data.Info().Latitude = 34;
 	data.Info().Longitude = 47;
-	calc.Calculate(data);
+	data.Houses(m_Calc.CalcHouses(info.Time, info.Latitude, info.Longitude, data.GetHouseSystem()));
 	Frame()->AddChartView(std::move(data), L"Chart 1");
 
 	return 0;

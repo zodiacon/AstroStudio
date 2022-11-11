@@ -19,9 +19,10 @@ enum class DayOfWeek {
 class DateTime final {
 public:
     DateTime() noexcept;
-    DateTime(long Year, long Month, double Day, bool bGregorianCalendar) noexcept;
-    DateTime(long Year, long Month, double Day, double Hour, double Minute, double Second, bool bGregorianCalendar) noexcept;
-    DateTime(double JD, bool bGregorianCalendar) noexcept;
+    DateTime(long Year, long Month, double Day, bool bGregorianCalendar = true) noexcept;
+    DateTime(long Year, long Month, double Day, double Hour, double Minute, double Second, bool bGregorianCalendar = true) noexcept;
+    DateTime(double JD, bool bGregorianCalendar = true) noexcept;
+    DateTime(SYSTEMTIME const& st) noexcept;
 
     //Static Methods
     static double DateToJD(long Year, long Month, double Day, bool bGregorianCalendar) noexcept;
@@ -51,7 +52,11 @@ public:
     [[nodiscard]] long Hour() const noexcept;
     [[nodiscard]] long Minute() const noexcept;
     [[nodiscard]] double Second() const noexcept;
-    void Set(long Year, long Month, double Day, double Hour, double Minute, double Second, bool bGregorianCalendar) noexcept;
+    void Set(long Year, long Month, double Day, double Hour, double Minute, double Second, bool bGregorianCalendar = true) noexcept;
+    void Set(SYSTEMTIME const& st, bool bGregorianCalendar = true) noexcept;
+    void SetDate(long Year, long Month, double Day) noexcept;
+    void SetTime(long hour, long minute, long second) noexcept;
+
     void Set(double JD, bool bGregorianCalendar) noexcept;
     void SetInGregorianCalendar(bool bGregorianCalendar) noexcept;
     void Get(long& Year, long& Month, long& Day, long& Hour, long& Minute, double& Second) const noexcept;
@@ -63,6 +68,8 @@ public:
     [[nodiscard]] bool InGregorianCalendar() const noexcept { return m_GregorianCalendar; };
     [[nodiscard]] double FractionalYear() const noexcept;
     [[nodiscard]] DateTime AddDays(double days) const;
+
+    SYSTEMTIME AsSystemTime() const;
 
 protected:
     //Member variables

@@ -54,6 +54,21 @@ void DateTime::Set(long Year, long Month, double Day, double Hour, double Minute
 	Set(DateToJD(Year, Month, dblDay, bGregorianCalendar), bGregorianCalendar);
 }
 
+void DateTime::Set(SYSTEMTIME const& st, bool bGregorianCalendar) noexcept {
+	const double dblDay = st.wDay + (st.wHour / 24) + (st.wMinute / 1440) + (st.wSecond / 86400);
+	Set(DateToJD(st.wYear, st.wMonth, dblDay, bGregorianCalendar), bGregorianCalendar);
+}
+
+void DateTime::SetDate(long Year, long Month, double Day) noexcept {
+	const double dblDay = Day + ((double)Hour() / 24) + ((double)Minute() / 1440) + ((double)Second() / 86400);
+	Set(DateToJD(Year, Month, dblDay, m_GregorianCalendar), m_GregorianCalendar);
+}
+
+void DateTime::SetTime(long hour, long minute, long second) noexcept {
+	const double dblDay = Day() + ((double)hour / 24) + ((double)minute / 1440) + ((double)second / 86400);
+	Set(DateToJD(Year(), Month(), dblDay, m_GregorianCalendar), m_GregorianCalendar);
+}
+
 void DateTime::Get(long& Year, long& Month, long& Day, long& Hour, long& Minute, double& Second) const noexcept {
 	const double JD = m_Julian + 0.5;
 	double tempZ = 0;
@@ -326,3 +341,15 @@ DateTime DateTime::Now(bool local) {
 	return DateTime(st.wYear, st.wMonth, st.wDay, st.wHour, st.wMinute, st.wSecond + st.wMilliseconds / 1000.0, true);
 }
 
+SYSTEMTIME DateTime::AsSystemTime() const {
+	SYSTEMTIME st;
+	st.wYear = (WORD)Year();
+	st.wMonth = (WORD)Month();
+	st.wDay = (WORD)Day();
+	st.wHour = (WORD)Hour();
+	st.wMinute = (WORD)Minute();
+	st.wSecond = (WORD)Second();
+	st.wDayOfWeek = (WORD)GetDayOfWeek();
+	st.wMilliseconds = 0;
+	return st;
+}

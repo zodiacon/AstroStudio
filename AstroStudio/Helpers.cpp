@@ -50,6 +50,12 @@ CString Helpers::FormatLongitude(AstroPoint const& value, FormatOptions options,
 	}
 	return text;
 }
+
+CString Helpers::FormatLatitude(double lat) {
+	CString text;
+	text.Format(L"%d%c %02d' %c", int(abs(lat)), 0xb0, int(60 * (abs(lat) - int(abs(lat)))), lat < 0 ? 'S' : 'N');
+	return text;
+}
 PCWSTR Helpers::GetPlanetName(PlanetType type) {
 	static PCWSTR names[] = {
 		L"Sun", L"Moon", L"Mercury", L"Venus", L"Mars", L"Jupiter", L"Saturn", L"Uranus", L"Neptune", L"Pluto",

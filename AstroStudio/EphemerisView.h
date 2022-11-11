@@ -76,6 +76,7 @@ private:
 		PlanetType Planet;
 		PlanetPosition Position;
 	};
+
 	struct RowData {
 		DateTime Date;
 		std::vector<PlanetData> Planets;
@@ -94,10 +95,10 @@ private:
 	LRESULT OnViewGridLines(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/);
 	LRESULT OnEditCopy(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/);
 	LRESULT OnNewChart(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/);
-	LRESULT OnCustomDraw(int /*idCtrl*/, LPNMHDR /*pnmh*/, BOOL& /*bHandled*/);
 
 	CListViewCtrl m_List;
 	AstroCalculator m_Calc;
+	ChartInfo m_ChartInfo;
 	DateTime m_StartTime;
 	double m_Increment{ 1 };
 	CFont m_Font, m_StdFont;

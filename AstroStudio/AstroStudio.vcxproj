@@ -221,6 +221,7 @@
     <ClCompile Include="EphemerisView.cpp" />
     <ClCompile Include="Helpers.cpp" />
     <ClCompile Include="MainFrm.cpp" />
+    <ClCompile Include="NetworkHelper.cpp" />
     <ClCompile Include="pch.cpp">
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">Create</PrecompiledHeader>
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Create</PrecompiledHeader>
@@ -230,6 +231,7 @@
     <ClCompile Include="PlanetSpacer.cpp" />
     <ClCompile Include="StringHelper.cpp" />
     <ClCompile Include="View.cpp" />
+    <ClCompile Include="WinHttp.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="AboutDlg.h" />
@@ -241,13 +243,16 @@
     <ClInclude Include="EphemerisView.h" />
     <ClInclude Include="Helpers.h" />
     <ClInclude Include="Interfaces.h" />
+    <ClInclude Include="Json.h" />
     <ClInclude Include="MainFrm.h" />
+    <ClInclude Include="NetworkHelper.h" />
     <ClInclude Include="PlanetSpacer.h" />
     <ClInclude Include="resource.h" />
     <ClInclude Include="pch.h" />
     <ClInclude Include="StringHelper.h" />
     <ClInclude Include="View.h" />
     <ClInclude Include="ViewBase.h" />
+    <ClInclude Include="WinHttp.h" />
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="AstroStudio.rc" />

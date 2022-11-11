@@ -10,6 +10,7 @@
 #include "Helpers.h"
 #include "ToolbarHelper.h"
 #include "ChartView.h"
+#include "NetworkHelper.h"
 
 #pragma comment(lib, "gdiplus")
 
@@ -28,6 +29,11 @@ BOOL CMainFrame::OnIdle() {
 }
 
 LRESULT CMainFrame::OnCreate(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, BOOL& /*bHandled*/) {
+	::TrySubmitThreadpoolCallback([](auto, auto ctx) {
+		auto frame = (CMainFrame*)ctx;
+		NetworkHelper::FillInfoFromLocal(frame->m_DefaultChartInfo);
+		}, this, nullptr);
+
 	static bool gdiPlusInit = false;
 	if (!gdiPlusInit) {
 		gdiPlusInit = true;

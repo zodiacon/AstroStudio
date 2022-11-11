@@ -111,6 +111,9 @@ LRESULT CChartView::OnEditCopy(WORD, WORD, HWND, BOOL&) {
 
 LRESULT CChartView::OnRecalc(UINT, WPARAM, LPARAM, BOOL&) {
 	m_Calc.Calculate(m_Data);
+	AspectCalculator ac;
+	auto aspects = ac.Calculate(m_Data.AllPlanets());
+	m_Drawing.Aspects(std::move(aspects));
 	m_RedrawNeeded = true;
 	Invalidate(FALSE);
 	return 0;

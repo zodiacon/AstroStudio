@@ -7,6 +7,12 @@ ChartData& ChartData::AddPlanets(std::initializer_list<PlanetPosition> planets) 
     return *this;
 }
 
+ChartData& ChartData::AddPlanets(std::initializer_list<PlanetType> planets) {
+    for (auto& p : planets)
+        m_Planets.push_back(PlanetPosition{ .Planet = p });
+    return *this;
+}
+
 ChartData& ChartData::RemovePlanets(std::initializer_list<PlanetType> planets) {
     for (auto planet : planets)
         m_Planets.erase(std::find_if(m_Planets.begin(), m_Planets.end(), [&](auto& pp) { return pp.Planet == planet; }));

@@ -46,6 +46,8 @@ PlanetPosition AstroCalculator::CalcPlanet(PlanetType planet, DateTime const& dt
 	if (withSpeed) {
 		pp.Speed = xx[3];
 		pp.LatitudeSpeed = xx[4];
+		if (pp.Speed < 0)
+			pp.Longitude.Flags |= AstroPointFlags::Retro;
 	}
 	return pp;
 }

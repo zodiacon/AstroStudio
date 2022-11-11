@@ -80,6 +80,6 @@ public:
 private:
 	static inline bool s_init{ false };
 	int m_SweFlags;
-	int m_Harmonic{ 3 };
+	int m_Harmonic{ 1 };
 };
 

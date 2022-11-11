@@ -71,4 +71,5 @@ private:
 	CCustomTabView m_view;
 	int m_CurrentPage{ -1 };
 	ULONG_PTR m_GdiPlusToken{ 0 };
+	ChartInfo m_DefaultChartInfo;
 };

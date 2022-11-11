@@ -6,9 +6,9 @@ class DateTime;
 
 enum class FormatOptions {
 	None = 0,
-	ShowSeconds = 1,
 	UseGlyphs = 2,
 	ShowDegreeGlyph = 4,
+	ShowSeconds = ShowDegreeGlyph | 1,
 	Default = ShowDegreeGlyph | UseGlyphs,
 };
 DEFINE_ENUM_FLAG_OPERATORS(FormatOptions);
@@ -25,6 +25,7 @@ struct Helpers abstract final {
 	static bool LoadAstroFont(UINT id);
 	static CString FormatDateTime(DateTime const& dt, DateTimeFormatOptions options = DateTimeFormatOptions::Default);
 	static CString FormatLongitude(AstroPoint const& longitude, FormatOptions options = FormatOptions::Default, AstroFontBase const& font = DefaultFont::Get());
+	static CString FormatLatitude(double lat);
 	static PCWSTR GetPlanetName(PlanetType type);
 	static CString GetZodiacSignName(ZodiacSign sign);
 	static std::vector<PlanetType> GetStandardPlanets();

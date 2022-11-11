@@ -26,6 +26,7 @@ struct ChartInfo {
 class ChartData {
 public:
 	ChartData& AddPlanets(std::initializer_list<PlanetPosition> planets);
+	ChartData& AddPlanets(std::initializer_list<PlanetType> planets);
 	ChartData& RemovePlanets(std::initializer_list<PlanetType> planets);
 	ChartData& Clear();
 	int PlanetCount() const;
