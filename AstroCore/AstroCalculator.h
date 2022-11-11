@@ -27,8 +27,23 @@ struct StationData : PlanetPhenom {
 };
 
 enum class HouseSystem {
-	Placidus = 'P', Koch = 'K', Porphyrius = 'O', Regiomontanus = 'R', Campanus = 'C',
-	Equal = 'E', Morinus = 'M', Topocentric = 'T', Alcabitus = 'B', Horizontal = 'H'
+	Placidus = 'P', 
+	Koch = 'K', 
+	Porphyrius = 'O', 
+	Regiomontanus = 'R', 
+	Campanus = 'C',
+	Equal = 'A', 
+	Morinus = 'M', 
+	Topocentric = 'T', 
+	Alcabitus = 'B', 
+	Horizontal = 'H',
+	Krusinski = 'U', 
+	EqualWholeSign = 'W',
+	CarterPoliEqu = 'F',
+	EqualMC = 'D',
+	Sunshine = 'I',
+	SunshineAlt = 'i',
+	APCHouses = 'Y',
 };
 
 struct HouseData {
@@ -41,7 +56,6 @@ struct HouseData {
 	AstroPoint CoAsc1;
 	AstroPoint CoAsc2;
 	AstroPoint PolarAsc;
-	HouseSystem System;
 };
 
 class ChartData;
@@ -50,7 +64,7 @@ class AstroCalculator {
 public:
 	AstroCalculator();
 	PlanetPosition CalcPlanet(PlanetType planet, DateTime const& dt, bool withSpeed = true) const;
-	static HouseData CalcHouses(DateTime dt, double latitude, double longitude, HouseSystem system);
+	HouseData CalcHouses(DateTime dt, double latitude, double longitude, HouseSystem system);
 
 	IngressData CalcPlanetIngress(PlanetType planet, DateTime start, bool reverse = false) const;
 	StationData CalcPlanetStation(PlanetType planet, DateTime start) const;
@@ -66,6 +80,6 @@ public:
 private:
 	static inline bool s_init{ false };
 	int m_SweFlags;
-	int m_Harmonic{ 1 };
+	int m_Harmonic{ 3 };
 };
 

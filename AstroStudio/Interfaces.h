@@ -17,3 +17,5 @@ struct IView {
 		return false;
 	}
 };
+
+const UINT WM_RECALC = WM_APP + 1;

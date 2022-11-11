@@ -12,6 +12,9 @@ constexpr double Rad(double angle) {
 }
 
 bool ChartDrawing::Draw(Gdiplus::Graphics& g, int size) {
+	if (m_data == nullptr)
+		return false;
+
 	using namespace Gdiplus;
 
 	Matrix xform;
@@ -31,9 +34,9 @@ bool ChartDrawing::Draw(Gdiplus::Graphics& g, int size) {
 	// draw MC/IC line
 	//
 
-	g.DrawLine(&pen, PointByAngle(center, 495, m_data.Houses().MC), PointByAngle(center, 495, m_data.Houses().MC.Opposite()));
+	g.DrawLine(&pen, PointByAngle(center, 495, m_data->Houses().MC), PointByAngle(center, 495, m_data->Houses().MC.Opposite()));
 
-	double startAngle = m_data.Houses().Asc.NextSign() + 120 + m_data.Houses().Asc.DegreeInSign();
+	double startAngle = m_data->Houses().Asc.NextSign() + 120 + m_data->Houses().Asc.DegreeInSign();
 	static const WCHAR text[] = L"asdfghjklzxc";
 	Font font(L"HamburgSymbols", 17);
 	
@@ -82,7 +85,7 @@ bool ChartDrawing::Draw(Gdiplus::Graphics& g, int size) {
 		for (int i = 0; i < 12; i++) {
 			if (i % 3 == 0)
 				continue;
-			g.DrawLine(&pen, center, PointByAngle(center, innerZodiac.Width / 2, m_data.Houses().Cusps[i]));
+			g.DrawLine(&pen, center, PointByAngle(center, innerZodiac.Width / 2, m_data->Houses().Cusps[i]));
 		}
 	}
 
@@ -90,8 +93,8 @@ bool ChartDrawing::Draw(Gdiplus::Graphics& g, int size) {
 	// draw planets
 	//
 	float r = 420;
-	auto asc = m_data.Houses().Asc;
-	PlanetSpacer spacer(m_data.AllPlanets());
+	auto asc = m_data->Houses().Asc;
+	PlanetSpacer spacer(m_data->AllPlanets());
 	spacer.Space();
 
 	Font planetFont(L"HamburgSymbols", 20);
@@ -104,7 +107,7 @@ bool ChartDrawing::Draw(Gdiplus::Graphics& g, int size) {
 
 	r = 395;
 	SolidBrush blueBrush(Color::Blue);
-	for (auto& pp : m_data.AllPlanets()) {
+	for (auto& pp : m_data->AllPlanets()) {
 		auto pt = PointByAngle(center, r, pp.Longitude);
 		g.FillEllipse(&blueBrush, RectF(pt.X - 3, pt.Y - 3, 6, 6));
 	}
@@ -167,16 +170,12 @@ ChartDrawingParameters& ChartDrawing::DrawingParameters() {
 	return m_params;
 }
 
-ChartDrawing& ChartDrawing::Chart(ChartData const& data) {
+ChartDrawing& ChartDrawing::Chart(ChartData* data) {
 	m_data = data;
 	return *this;
 }
 
-ChartData const& ChartDrawing::Chart() const {
-	return m_data;
-}
-
-ChartData& ChartDrawing::Chart() {
+ChartData* ChartDrawing::Chart() const {
 	return m_data;
 }
 
@@ -186,6 +185,6 @@ ChartDrawing& ChartDrawing::Aspects(std::vector<AspectData>&& aspects) {
 }
 
 Gdiplus::PointF ChartDrawing::PointByAngle(Gdiplus::PointF const& center, float radius, double angle) const {
-	angle = Rad(angle - m_data.Houses().Asc + 180);
+	angle = Rad(angle - m_data->Houses().Asc + 180);
 	return Gdiplus::PointF(center.X + radius * (float)std::cos(angle), center.Y - radius * (float)std::sin(angle));
 }

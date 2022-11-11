@@ -110,7 +110,7 @@ int AstroCalculator::Harmonic(int harmonic) {
 
 bool AstroCalculator::Calculate(ChartData& data) {
 	auto const& info = data.Info();
-	data.Houses(CalcHouses(info.Time, info.Latitude, info.Longitude, data.Houses().System));
+	data.Houses(CalcHouses(info.Time, info.Latitude, info.Longitude, data.GetHouseSystem()));
 	for (auto& p : data.AllPlanets()) {
 		p = CalcPlanet(p.Planet, info.Time);
 	}
@@ -126,15 +126,14 @@ HouseData AstroCalculator::CalcHouses(DateTime dt, double latitude, double longi
 	for (int i = 0; i < 12; i++)
 		houses.Cusps[i] = cusps[i + 1];
 
-	houses.System = system;
-	houses.Asc = ascmc[0];
-	houses.MC = ascmc[1];
-	houses.Armc = ascmc[2];
-	houses.Vertex = ascmc[3];
-	houses.EquAsc = ascmc[4];
-	houses.CoAsc1 = ascmc[5];
-	houses.CoAsc2 = ascmc[6];
-	houses.PolarAsc = ascmc[7];
+	houses.Asc = ascmc[0] * m_Harmonic;
+	houses.MC = ascmc[1] * m_Harmonic;
+	houses.Armc = ascmc[2] * m_Harmonic;
+	houses.Vertex = ascmc[3] * m_Harmonic;
+	houses.EquAsc = ascmc[4] * m_Harmonic;
+	houses.CoAsc1 = ascmc[5] * m_Harmonic;
+	houses.CoAsc2 = ascmc[6] * m_Harmonic;
+	houses.PolarAsc = ascmc[7] * m_Harmonic;
 
 	return houses;
 }

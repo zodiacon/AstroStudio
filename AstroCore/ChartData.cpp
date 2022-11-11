@@ -50,3 +50,11 @@ std::vector<PlanetPosition> const& ChartData::AllPlanets() const {
 std::vector<PlanetPosition>& ChartData::AllPlanets() {
     return m_Planets;
 }
+
+HouseSystem ChartData::GetHouseSystem() const {
+    return m_HouseSystem;
+}
+
+void ChartData::SetHouseSystem(HouseSystem system) {
+    m_HouseSystem = system;
+}

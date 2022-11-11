@@ -34,11 +34,14 @@ public:
 	std::vector<PlanetPosition>& AllPlanets();
 
 	void Houses(HouseData const& data);
+	void SetHouseSystem(HouseSystem system);
+	HouseSystem GetHouseSystem() const;
 	HouseData const& Houses() const;
 	ChartInfo& Info();
 	ChartInfo const& Info() const;
 
 private:
+	HouseSystem m_HouseSystem{ HouseSystem::Koch };
 	HouseData m_Houses{};
 	std::vector<PlanetPosition> m_Planets;
 	ChartInfo m_Info{};

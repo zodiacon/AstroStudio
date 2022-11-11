@@ -60,6 +60,12 @@
     <ClCompile Include="DefaultFont.cpp">
       <Filter>Helpers</Filter>
     </ClCompile>
+    <ClCompile Include="ChartDetailsView.cpp">
+      <Filter>Views</Filter>
+    </ClCompile>
+    <ClCompile Include="StringHelper.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="pch.h">
@@ -103,6 +109,12 @@
     </ClInclude>
     <ClInclude Include="DefaultFont.h">
       <Filter>Helpers</Filter>
+    </ClInclude>
+    <ClInclude Include="ChartDetailsView.h">
+      <Filter>Views</Filter>
+    </ClInclude>
+    <ClInclude Include="StringHelper.h">
+      <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

@@ -283,7 +283,10 @@ LRESULT CEphemerisView::OnNewChart(WORD, WORD, HWND, BOOL&) {
 	ChartData data;
 	for (auto& p : item.Planets)
 		data.AddPlanets({ p.Position });
-	data.Houses(AstroCalculator::CalcHouses(item.Date, 32, 34, HouseSystem::Koch));
+	AstroCalculator calc;
+	data.Info().Latitude = 34;
+	data.Info().Longitude = 47;
+	calc.Calculate(data);
 	Frame()->AddChartView(std::move(data), L"Chart 1");
 
 	return 0;

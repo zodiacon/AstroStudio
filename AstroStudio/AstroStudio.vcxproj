@@ -214,6 +214,7 @@
     <ClCompile Include="AboutDlg.cpp" />
     <ClCompile Include="AstroFont.cpp" />
     <ClCompile Include="AstroStudio.cpp" />
+    <ClCompile Include="ChartDetailsView.cpp" />
     <ClCompile Include="ChartDrawing.cpp" />
     <ClCompile Include="ChartView.cpp" />
     <ClCompile Include="DefaultFont.cpp" />
@@ -227,11 +228,13 @@
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Create</PrecompiledHeader>
     </ClCompile>
     <ClCompile Include="PlanetSpacer.cpp" />
+    <ClCompile Include="StringHelper.cpp" />
     <ClCompile Include="View.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="AboutDlg.h" />
     <ClInclude Include="AstroFont.h" />
+    <ClInclude Include="ChartDetailsView.h" />
     <ClInclude Include="ChartDrawing.h" />
     <ClInclude Include="ChartView.h" />
     <ClInclude Include="DefaultFont.h" />
@@ -242,6 +245,7 @@
     <ClInclude Include="PlanetSpacer.h" />
     <ClInclude Include="resource.h" />
     <ClInclude Include="pch.h" />
+    <ClInclude Include="StringHelper.h" />
     <ClInclude Include="View.h" />
     <ClInclude Include="ViewBase.h" />
   </ItemGroup>
