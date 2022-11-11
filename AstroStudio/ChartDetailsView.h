@@ -4,6 +4,7 @@
 #include <VirtualListView.h>
 
 class ChartData;
+struct PlanetPosition;
 
 class CChartDetailsView : 
 	public CDialogImpl<CChartDetailsView>,
@@ -18,6 +19,7 @@ public:
 	void SetNotifyWindow(HWND hWnd);
 
 	CString GetColumnText(HWND, int row, int col) const;
+	void DoSort(SortInfo const* si);
 
 	DWORD OnPrePaint(int, LPNMCUSTOMDRAW cd);
 	DWORD OnItemPrePaint(int, LPNMCUSTOMDRAW cd);
@@ -28,8 +30,8 @@ public:
 		NOTIFY_HANDLER(IDC_DATE, DTN_DATETIMECHANGE, OnDateChanged)
 		NOTIFY_HANDLER(IDC_TIME, DTN_DATETIMECHANGE, OnTimeChanged)
 		MESSAGE_HANDLER(WM_INITDIALOG, OnInitView)
-		CHAIN_MSG_MAP(CVirtualListView<CChartDetailsView>)
 		CHAIN_MSG_MAP(CCustomDraw<CChartDetailsView>)
+		CHAIN_MSG_MAP(CVirtualListView<CChartDetailsView>)
 	END_MSG_MAP()
 
 	// Handler prototypes (uncomment arguments if needed):
@@ -39,7 +41,7 @@ public:
 
 private:
 	enum class ColumnType {
-		Planet, Longitude, Latitude, Speed, House,
+		Planet, Longitude, Latitude, Speed, House, HouseLongitude,
 	};
 
 	void UpdateControls();
@@ -51,8 +53,10 @@ private:
 
 	CComboBox m_ctlHouseSystem;
 	CDateTimePickerCtrl m_ctlDate, m_ctlTime;
-	CListViewCtrl m_ctlPlanets;
+	CListViewCtrl m_ctlPlanets, m_ctlHouses;
+	CUpDownCtrl m_ctlHarmonicSpin;
 	ChartData* m_Data{ nullptr };
+	std::vector<PlanetPosition> m_Planets;
 	CFont m_Font;
 	CWindow m_NotifyWnd;
 };

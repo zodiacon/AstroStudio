@@ -179,6 +179,8 @@ void CMainFrame::InitMenu() {
 		UINT icon;
 	} commands[] = {
 		{ ID_EDIT_COPY, IDI_COPY },
+		{ ID_EDIT_PASTE, IDI_PASTE },
+		{ ID_EDIT_CUT, IDI_CUT },
 		{ ID_OPTIONS_ALWAYSONTOP, IDI_PIN },
 		{ ID_TOOL_EPHEMERIS, IDI_EPHEMERIS },
 		{ ID_NEW_CHART, IDI_CHART },

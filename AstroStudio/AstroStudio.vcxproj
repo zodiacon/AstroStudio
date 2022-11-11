@@ -261,6 +261,8 @@
     <Image Include="res\AstroStudio.ico" />
     <Image Include="res\Chart.ico" />
     <Image Include="res\clip_copy.ico" />
+    <Image Include="res\clip_cut.ico" />
+    <Image Include="res\clip_paste.ico" />
     <Image Include="res\clock.ico" />
     <Image Include="res\color_wheel.ico" />
     <Image Include="res\ephemeris.ico" />
@@ -272,7 +274,9 @@
     <Image Include="res\glyph.ico" />
     <Image Include="res\grid.ico" />
     <Image Include="res\pin.ico" />
+    <Image Include="res\play.ico" />
     <Image Include="res\retro.ico" />
+    <Image Include="res\stop.ico" />
   </ItemGroup>
   <ItemGroup>
     <None Include="packages.config" />
