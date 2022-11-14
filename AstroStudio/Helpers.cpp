@@ -56,6 +56,15 @@ CString Helpers::FormatLatitude(double lat) {
 	text.Format(L"%d%c %02d' %c", int(abs(lat)), 0xb0, int(60 * (abs(lat) - int(abs(lat)))), lat < 0 ? 'S' : 'N');
 	return text;
 }
+
+std::tuple<int, int, int> Helpers::GetDegMinSec(double angle, bool sign) {
+	if (!sign)
+		angle = abs(angle);
+	int deg = (int)angle;
+	int min = int((angle - deg) * 60);
+	return { deg, min, 0 };
+}
+
 PCWSTR Helpers::GetPlanetName(PlanetType type) {
 	static PCWSTR names[] = {
 		L"Sun", L"Moon", L"Mercury", L"Venus", L"Mars", L"Jupiter", L"Saturn", L"Uranus", L"Neptune", L"Pluto",

@@ -1,6 +1,14 @@
 #include "pch.h"
 #include "AstroPoint.h"
 
+AstroPoint::AstroPoint(double value, AstroPointFlags flags) : Value(value - (int)value / 360), Flags(flags) {}
+
+AstroPoint& AstroPoint::operator=(double value) {
+	Value = value;
+	Flags = AstroPointFlags::None;
+	return Normalize();
+}
+
 double AstroPoint::DegreeInSign() const {
 	return Value - int(Value / 30) * 30;
 }

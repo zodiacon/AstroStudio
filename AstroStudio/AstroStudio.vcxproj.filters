@@ -70,7 +70,7 @@
       <Filter>Helpers</Filter>
     </ClCompile>
     <ClCompile Include="WinHttp.cpp">
-      <Filter>Source Files</Filter>
+      <Filter>Helpers</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
@@ -125,10 +125,10 @@
     <ClInclude Include="NetworkHelper.h">
       <Filter>Helpers</Filter>
     </ClInclude>
-    <ClInclude Include="WinHttp.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
     <ClInclude Include="Json.h">
+      <Filter>Helpers</Filter>
+    </ClInclude>
+    <ClInclude Include="WinHttp.h">
       <Filter>Helpers</Filter>
     </ClInclude>
   </ItemGroup>
@@ -195,6 +195,12 @@
     </Image>
     <Image Include="res\clip_cut.ico">
       <Filter>Resource Files\Icons</Filter>
+    </Image>
+    <Image Include="res\ChartNow.ico">
+      <Filter>Resource Files\Icons</Filter>
+    </Image>
+    <Image Include="res\Globe.ico">
+      <Filter>Resource Files</Filter>
     </Image>
   </ItemGroup>
   <ItemGroup>

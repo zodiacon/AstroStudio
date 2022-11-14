@@ -64,8 +64,9 @@ enum class AstroPointFlags {
 DEFINE_ENUM_FLAG_OPERATORS(AstroPointFlags);
 
 struct AstroPoint final {
-	AstroPoint(double value, AstroPointFlags flags = AstroPointFlags::None) : Value(value - (int)value / 360 ), Flags(flags) {}
+	AstroPoint(double value, AstroPointFlags flags = AstroPointFlags::None);
 	AstroPoint() = default;
+	AstroPoint& operator=(double value);
 
 	operator double() const {
 		return Value;

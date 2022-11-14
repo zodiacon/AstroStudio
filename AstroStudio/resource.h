@@ -22,6 +22,7 @@
 #define IDI_FONT_SMALLER                211
 #define IDI_EVENT                       212
 #define IDI_FONT_SIZE_DEFAULT           213
+#define IDI_ICON1                       214
 #define IDI_GRID                        214
 #define IDI_COPY                        215
 #define IDI_PIN                         216
@@ -30,8 +31,10 @@
 #define IDI_CUT                         220
 #define IDI_PASTE                       221
 #define IDI_PLAY                        222
-#define IDI_ICON5                       223
 #define IDI_STOP                        223
+#define IDI_CHARTNOW                    224
+#define IDI_ICON2                       225
+#define IDI_GLOBE                       225
 #define IDC_HOUSESYSTEM                 1000
 #define IDC_PLANETS                     1001
 #define IDC_DATE                        1002
@@ -41,19 +44,21 @@
 #define IDC_HARMONICUD                  1006
 #define IDC_LOCATION                    1007
 #define IDC_NAME                        1008
-#define IDC_LATMIN                      1009
-#define IDC_LATMINUD                    1010
+#define IDC_LATDEG                      1009
+#define IDC_LATDEGUD                    1010
 #define IDC_NORTH                       1011
 #define IDC_SOUTH                       1012
-#define IDC_BUTTON2                     1015
-#define IDC_LATSEC                      1019
-#define IDC_LATSECUD                    1020
-#define IDC_LONMIN                      1021
-#define IDC_LATMINUD2                   1022
+#define IDC_HERE                        1015
+#define IDC_LOOKUP                      1016
+#define IDC_LATMIN                      1019
+#define IDC_LATMINUD                    1020
+#define IDC_LONDEG                      1021
+#define IDC_LONDEGUD                    1022
 #define IDC_EAST                        1023
 #define IDC_WEST                        1024
-#define IDC_LONSEC                      1025
-#define IDC_LATSECUD2                   1026
+#define IDC_LONMIN                      1025
+#define IDC_LONMINUD                    1026
+#define IDC_NOW                         1027
 #define ID_WINDOW_CLOSE                 32772
 #define ID_WINDOW_CLOSE_ALL             32773
 #define ID_OPTIONS_ALWAYSONTOP          32775
@@ -62,14 +67,15 @@
 #define ID_OPTIONS_FONT                 32778
 #define ID_FILE_NEW32779                32779
 #define ID_NEW_CHART                    32780
+#define ID_NEW_CHARTFORNOW              32781
 
 // Next default values for new objects
 // 
 #ifdef APSTUDIO_INVOKED
 #ifndef APSTUDIO_READONLY_SYMBOLS
-#define _APS_NEXT_RESOURCE_VALUE        224
-#define _APS_NEXT_COMMAND_VALUE         32781
-#define _APS_NEXT_CONTROL_VALUE         1016
+#define _APS_NEXT_RESOURCE_VALUE        226
+#define _APS_NEXT_COMMAND_VALUE         32782
+#define _APS_NEXT_CONTROL_VALUE         1017
 #define _APS_NEXT_SYMED_VALUE           107
 #endif
 #endif

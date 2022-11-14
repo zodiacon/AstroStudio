@@ -7,22 +7,11 @@
 
 
 void CChartView::Chart(ChartData data) {
-	data.Info().Time = DateTime::Now();
-
+	data.AddPlanets({ PlanetType::Chiron, PlanetType::TrueNode, PlanetType::Lilith });
 	AstroCalculator calc;
 	calc.Calculate(data);
-
 	m_Data = std::move(data);
 	m_DetailsView.SetChartData(&m_Data);
-
-	//auto planets = Helpers::GetStandardPlanets();
-	//planets.push_back(PlanetType::Chiron);
-	//planets.push_back(PlanetType::TrueNode);
-	//planets.push_back(PlanetType::Lilith);
-
-	//for (auto p : planets) {
-	//	m_Data.AddPlanets({ m_Calc.CalcPlanet(p, dt) });
-	//}
 
 	AspectCalculator ac;
 	auto aspects = ac.Calculate(m_Data.AllPlanets());
@@ -33,6 +22,13 @@ void CChartView::Chart(ChartData data) {
 }
 
 void CChartView::ChartForNow() {
+	ChartData data;
+	auto& info = data.Info();
+	info = Frame()->DefaultChartInfo();
+	info.Time = DateTime::Now();
+	auto planets = Helpers::GetStandardPlanets();
+	data.AddPlanets(planets);
+	Chart(data);
 }
 
 ChartData const& CChartView::Chart() const {
@@ -46,7 +42,7 @@ void CChartView::DisplayPlanets(CDCHandle dc, int x, int y) const {
 
 	for (auto& p : m_Data.AllPlanets()) {
 		dc.TextOut(x, y, DefaultFont::Get().GetPlanetGlyphAsString(p.Planet), -1);
-		dc.TextOut(x + 20, y, Helpers::FormatLongitude(p.Longitude, 
+		dc.TextOut(x + 20, y, Helpers::FormatLongitude(p.Longitude,
 			FormatOptions::ShowDegreeGlyph | FormatOptions::ShowSeconds | FormatOptions::UseGlyphs), -1);
 		y += 22;
 	}
@@ -109,20 +105,27 @@ LRESULT CChartView::OnEditCopy(WORD, WORD, HWND, BOOL&) {
 	return LRESULT();
 }
 
-LRESULT CChartView::OnRecalc(UINT, WPARAM, LPARAM, BOOL&) {
-	m_Calc.Calculate(m_Data);
-	AspectCalculator ac;
-	auto aspects = ac.Calculate(m_Data.AllPlanets());
-	m_Drawing.Aspects(std::move(aspects));
+LRESULT CChartView::OnRecalc(UINT, WPARAM wp, LPARAM, BOOL&) {
+	auto type = static_cast<Recalc>(wp);
+	auto& info = m_Data.Info();
+	switch (type) {
+		case Recalc::All:
+			m_Calc.Calculate(m_Data);
+			break;
+		case Recalc::Houses:
+			m_Data.CalcHouses(m_Calc);
+			break;
+		case Recalc::Planets:
+			m_Data.CalcPlanets(m_Calc);
+			break;
+	}
+	if (type != Recalc::Houses) {
+		AspectCalculator ac;
+		auto aspects = ac.Calculate(m_Data.AllPlanets());
+		m_Drawing.Aspects(std::move(aspects));
+	}
 	m_RedrawNeeded = true;
 	Invalidate(FALSE);
-	return 0;
-}
-
-LRESULT CChartView::OnPaint(UINT, WPARAM, LPARAM, BOOL&) {
-	CClientDC dc(m_hWndClient);
-	DoPaint(dc.m_hDC);
-	ValidateRect(nullptr);
 	return 0;
 }
 

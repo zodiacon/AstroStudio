@@ -26,6 +26,7 @@ struct Helpers abstract final {
 	static CString FormatDateTime(DateTime const& dt, DateTimeFormatOptions options = DateTimeFormatOptions::Default);
 	static CString FormatLongitude(AstroPoint const& longitude, FormatOptions options = FormatOptions::Default, AstroFontBase const& font = DefaultFont::Get());
 	static CString FormatLatitude(double lat);
+	static std::tuple<int, int, int> GetDegMinSec(double angle, bool sign = false);
 	static PCWSTR GetPlanetName(PlanetType type);
 	static CString GetZodiacSignName(ZodiacSign sign);
 	static std::vector<PlanetType> GetStandardPlanets();

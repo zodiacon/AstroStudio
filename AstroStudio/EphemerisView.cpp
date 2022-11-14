@@ -184,7 +184,7 @@ void CEphemerisView::AutoSizeColumns() {
 
 LRESULT CEphemerisView::OnCreate(UINT, WPARAM, LPARAM, BOOL&) {
 	m_hWndClient = m_List.Create(m_hWnd, rcDefault, nullptr,
-		WS_CHILD | WS_VISIBLE | WS_CLIPSIBLINGS | WS_CLIPCHILDREN
+		WS_CHILD | WS_VISIBLE | WS_CLIPSIBLINGS | 0*WS_CLIPCHILDREN
 		| LVS_OWNERDATA | LVS_REPORT | LVS_SHOWSELALWAYS | LVS_NOSORTHEADER);
 	m_List.SetExtendedListViewStyle(LVS_EX_FULLROWSELECT | LVS_EX_DOUBLEBUFFER);
 	CImageList images;
@@ -227,7 +227,7 @@ LRESULT CEphemerisView::OnCreate(UINT, WPARAM, LPARAM, BOOL&) {
 	m_StartTime = DateTime::Today();
 	m_StartTime = m_StartTime.AddDays(-m_StartTime.Day() + 1);
 	m_Items.reserve(500);
-	m_List.SetItemCount(1000);
+	m_List.SetItemCount(500);
 
 	return 0;
 }
@@ -290,7 +290,7 @@ LRESULT CEphemerisView::OnNewChart(WORD, WORD, HWND, BOOL&) {
 
 	data.Info().Latitude = 34;
 	data.Info().Longitude = 47;
-	data.Houses(m_Calc.CalcHouses(info.Time, info.Latitude, info.Longitude, data.GetHouseSystem()));
+	m_Calc.Calculate(data);
 	Frame()->AddChartView(std::move(data), L"Chart 1");
 
 	return 0;

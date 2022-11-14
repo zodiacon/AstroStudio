@@ -2,6 +2,8 @@
 
 #include "resource.h"
 #include <VirtualListView.h>
+#include "Interfaces.h"
+#include <DialogHelper.h>
 
 class ChartData;
 struct PlanetPosition;
@@ -9,6 +11,7 @@ struct PlanetPosition;
 class CChartDetailsView : 
 	public CDialogImpl<CChartDetailsView>,
 	public CVirtualListView<CChartDetailsView>,
+	public CDialogHelper<CChartDetailsView>,
 	public CCustomDraw<CChartDetailsView> {
 public:
 	enum { IDD = IDD_CHARTDETAILS };
@@ -27,8 +30,10 @@ public:
 
 	BEGIN_MSG_MAP(CChartDetailsView)
 		COMMAND_HANDLER(IDC_HOUSESYSTEM, CBN_SELCHANGE, OnHouseSystemChanged)
+		COMMAND_HANDLER(IDC_HARMONIC, EN_CHANGE, OnHarmonicChanged)
 		NOTIFY_HANDLER(IDC_DATE, DTN_DATETIMECHANGE, OnDateChanged)
 		NOTIFY_HANDLER(IDC_TIME, DTN_DATETIMECHANGE, OnTimeChanged)
+		COMMAND_ID_HANDLER(IDC_NOW, OnNow)
 		MESSAGE_HANDLER(WM_INITDIALOG, OnInitView)
 		CHAIN_MSG_MAP(CCustomDraw<CChartDetailsView>)
 		CHAIN_MSG_MAP(CVirtualListView<CChartDetailsView>)
@@ -44,12 +49,14 @@ private:
 		Planet, Longitude, Latitude, Speed, House, HouseLongitude,
 	};
 
-	void UpdateControls();
+	void UpdateControls(Recalc type = Recalc::All);
 
 	LRESULT OnInitView(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, BOOL& /*bHandled*/);
 	LRESULT OnHouseSystemChanged(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/);
 	LRESULT OnDateChanged(int /*idCtrl*/, LPNMHDR /*pnmh*/, BOOL& /*bHandled*/);
 	LRESULT OnTimeChanged(int /*idCtrl*/, LPNMHDR /*pnmh*/, BOOL& /*bHandled*/);
+	LRESULT OnHarmonicChanged(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/);
+	LRESULT OnNow(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/);
 
 	CComboBox m_ctlHouseSystem;
 	CDateTimePickerCtrl m_ctlDate, m_ctlTime;

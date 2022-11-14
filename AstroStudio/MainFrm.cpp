@@ -29,9 +29,12 @@ BOOL CMainFrame::OnIdle() {
 }
 
 LRESULT CMainFrame::OnCreate(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, BOOL& /*bHandled*/) {
+	m_hDefaultChartInfoReady = ::CreateEvent(nullptr, FALSE, FALSE, nullptr);
+	ATLASSERT(m_hDefaultChartInfoReady);
 	::TrySubmitThreadpoolCallback([](auto, auto ctx) {
 		auto frame = (CMainFrame*)ctx;
 		NetworkHelper::FillInfoFromLocal(frame->m_DefaultChartInfo);
+		::SetEvent(frame->m_hDefaultChartInfoReady);
 		}, this, nullptr);
 
 	static bool gdiPlusInit = false;
@@ -50,6 +53,7 @@ LRESULT CMainFrame::OnCreate(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/
 		{ ID_TOOL_EPHEMERIS, IDI_EPHEMERIS },
 		{ 0 },
 		{ ID_NEW_CHART, IDI_CHART },
+		{ ID_NEW_CHARTFORNOW, IDI_CHARTNOW },
 	};
 	CreateSimpleReBar(ATL_SIMPLE_REBAR_NOBORDER_STYLE);
 	auto tb = ToolbarHelper::CreateAndInitToolBar(m_hWnd, buttons, _countof(buttons));
@@ -79,6 +83,8 @@ LRESULT CMainFrame::OnCreate(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/
 	CMenuHandle menuMain = GetMenu();
 	m_view.SetWindowMenu(menuMain.GetSubMenu(WINDOW_MENU_POSITION));
 
+	PostMessage(WM_COMMAND, ID_NEW_CHARTFORNOW);
+
 	return 0;
 }
 
@@ -98,7 +104,7 @@ LRESULT CMainFrame::OnFileExit(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCt
 
 LRESULT CMainFrame::OnToolEphemeris(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/) {
 	auto pView = new CEphemerisView(this);
-	pView->Create(m_view, rcDefault, nullptr, WS_CHILD | WS_VISIBLE | WS_CLIPCHILDREN, 0);
+	pView->Create(m_view, rcDefault, nullptr, WS_CHILD | WS_VISIBLE | WS_CLIPCHILDREN | WS_CLIPSIBLINGS, 0);
 	m_view.AddPage(pView->m_hWnd, L"Ephemeris", 0, pView);
 
 	return 0;
@@ -106,19 +112,39 @@ LRESULT CMainFrame::OnToolEphemeris(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*h
 
 LRESULT CMainFrame::OnNewChart(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/) {
 	auto pView = new CChartView(this);
-	pView->Create(m_view, rcDefault, nullptr, WS_CHILD | WS_VISIBLE | WS_CLIPSIBLINGS | WS_CLIPCHILDREN, 0);
+	pView->Create(m_view, rcDefault, nullptr, WS_CHILD | WS_VISIBLE | WS_CLIPCHILDREN, 0);
 	m_view.AddPage(pView->m_hWnd, L"Chart", 1, pView);
+
+	return 0;
+}
+
+LRESULT CMainFrame::OnNewChartNow(WORD, WORD, HWND, BOOL&) {
+	auto pView = new CChartView(this);
+	pView->Create(m_view, rcDefault, nullptr, WS_CHILD | WS_VISIBLE | WS_CLIPCHILDREN, 0);
+	if (m_hDefaultChartInfoReady) {
+		CWaitCursor wait;
+		if (WAIT_OBJECT_0 == ::WaitForSingleObject(m_hDefaultChartInfoReady, 3000)) {
+			::CloseHandle(m_hDefaultChartInfoReady);
+			m_hDefaultChartInfoReady = nullptr;
+		}
+	}
+	pView->ChartForNow();
+	m_view.AddPage(pView->m_hWnd, L"NewChart", 1, pView);
 
 	return 0;
 }
 
 IView* CMainFrame::AddChartView(ChartData data, PCWSTR title) {
 	auto pView = new CChartView(this);
-	pView->Create(m_view, rcDefault, nullptr, WS_CHILD | WS_VISIBLE | WS_CLIPSIBLINGS | WS_CLIPCHILDREN, 0);
+	pView->Create(m_view, rcDefault, nullptr, WS_CHILD | WS_VISIBLE | WS_CLIPCHILDREN, 0);
 	m_view.AddPage(pView->m_hWnd, title ? title : L"Chart", 1, pView);
 	pView->Chart(std::move(data));
 
 	return pView;
+}
+
+ChartInfo& CMainFrame::DefaultChartInfo() {
+	return m_DefaultChartInfo;
 }
 
 LRESULT CMainFrame::OnViewStatusBar(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/) {
@@ -184,6 +210,7 @@ void CMainFrame::InitMenu() {
 		{ ID_OPTIONS_ALWAYSONTOP, IDI_PIN },
 		{ ID_TOOL_EPHEMERIS, IDI_EPHEMERIS },
 		{ ID_NEW_CHART, IDI_CHART },
+		{ ID_NEW_CHARTFORNOW, IDI_CHARTNOW },
 	};
 
 	for (auto& cmd : commands)

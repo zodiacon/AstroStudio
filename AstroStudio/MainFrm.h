@@ -31,6 +31,7 @@ protected:
 		COMMAND_ID_HANDLER(ID_TOOL_EPHEMERIS, OnToolEphemeris)
 		COMMAND_TABVIEW_HANDLER(m_view, 1)
 		COMMAND_ID_HANDLER(ID_NEW_CHART, OnNewChart)
+		COMMAND_ID_HANDLER(ID_NEW_CHARTFORNOW, OnNewChartNow)
 		MESSAGE_HANDLER(WM_GETMINMAXINFO, OnGetMinMaxInfo)
 		COMMAND_ID_HANDLER(ID_WINDOW_CLOSE_ALL, OnWindowCloseAll)
 		MESSAGE_HANDLER(WM_CREATE, OnCreate)
@@ -49,6 +50,7 @@ private:
 	BOOL TrackPopupMenu(HMENU hMenu, DWORD flags, int x, int y) override;
 	CUpdateUIBase& GetUI() override;
 	IView* AddChartView(ChartData data, PCWSTR title = nullptr);
+	ChartInfo& DefaultChartInfo() override;
 
 	// Handler prototypes (uncomment arguments if needed):
 	//	LRESULT MessageHandler(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, BOOL& /*bHandled*/)
@@ -67,9 +69,11 @@ private:
 	LRESULT OnWindowActivate(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/);
 	LRESULT OnPageActivated(int /*idCtrl*/, LPNMHDR /*pnmh*/, BOOL& /*bHandled*/);
 	LRESULT OnNewChart(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/);
+	LRESULT OnNewChartNow(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/);
 
 	CCustomTabView m_view;
 	int m_CurrentPage{ -1 };
 	ULONG_PTR m_GdiPlusToken{ 0 };
-	ChartInfo m_DefaultChartInfo;
+	HANDLE m_hDefaultChartInfoReady;
+	ChartInfo m_DefaultChartInfo{};
 };

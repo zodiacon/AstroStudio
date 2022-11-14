@@ -2,12 +2,18 @@
 #include "ChartData.h"
 #include <assert.h>
 
-ChartData& ChartData::AddPlanets(std::initializer_list<PlanetPosition> planets) {
+ChartData& ChartData::AddPlanets(std::initializer_list<PlanetPosition> const& planets) {
     m_Planets.insert(m_Planets.end(), planets.begin(), planets.end());
     return *this;
 }
 
-ChartData& ChartData::AddPlanets(std::initializer_list<PlanetType> planets) {
+ChartData& ChartData::AddPlanets(std::vector<PlanetType> const& planets) {
+    for (auto& p : planets)
+        m_Planets.push_back(PlanetPosition{ .Planet = p });
+    return *this;
+}
+
+ChartData& ChartData::AddPlanets(std::initializer_list<PlanetType> const& planets) {
     for (auto& p : planets)
         m_Planets.push_back(PlanetPosition{ .Planet = p });
     return *this;
@@ -19,11 +25,11 @@ ChartData& ChartData::RemovePlanets(std::initializer_list<PlanetType> planets) {
     return *this;
 }
 
-void ChartData::Houses(HouseData const& houses) {
-    m_Houses = houses;
+HouseData const& ChartData::Houses() const {
+    return m_Houses;
 }
 
-HouseData const& ChartData::Houses() const {
+HouseData& ChartData::Houses() {
     return m_Houses;
 }
 
@@ -63,4 +69,23 @@ HouseSystem ChartData::GetHouseSystem() const {
 
 void ChartData::SetHouseSystem(HouseSystem system) {
     m_HouseSystem = system;
+}
+
+int ChartData::Harmonic() const {
+    return m_Harmonic;
+}
+
+int ChartData::Harmonic(int harmonic) {
+    if (harmonic > 0 && harmonic < 10000)
+        m_Harmonic = harmonic;
+    return m_Harmonic;
+}
+
+void ChartData::CalcHouses(AstroCalculator& calc) {
+    m_Houses = calc.CalcHouses(m_Info.Time, m_Info.Latitude, m_Info.Longitude, m_HouseSystem);
+}
+
+void ChartData::CalcPlanets(AstroCalculator& calc) {
+    for (auto& p : m_Planets)
+        p = calc.CalcPlanet(p.Planet, m_Info.Time, m_Harmonic);
 }

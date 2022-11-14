@@ -7,7 +7,7 @@
 
 static char s_error[256];
 
-const std::unordered_map<PlanetType, double> monthlyCycle{
+const std::unordered_map<PlanetType, double> MonthlyCycle{
 	{ PlanetType::Moon, 1.8},
 	{ PlanetType::Sun, 27 },
 	{ PlanetType::Mercury, 20 },
@@ -35,13 +35,13 @@ AstroCalculator::AstroCalculator() : m_SweFlags(SEFLG_MOSEPH) {
 	}
 }
 
-PlanetPosition AstroCalculator::CalcPlanet(PlanetType planet, DateTime const& dt, bool withSpeed) const {
+PlanetPosition AstroCalculator::CalcPlanet(PlanetType planet, DateTime const& dt, int harmonic, bool withSpeed) const {
 	double xx[6];
 	swe_calc_ut(dt, (int)planet, m_SweFlags | (withSpeed ? SEFLG_SPEED : 0), xx, s_error);
 	PlanetPosition pp;
 	pp.Planet = planet;
-	pp.Longitude = xx[0] * Harmonic();
-	pp.Longitude.Normalize();
+	pp.Longitude = xx[0] * harmonic;
+	//pp.Longitude.Normalize();
 	pp.Latitude = xx[1];
 	if (withSpeed) {
 		pp.Speed = xx[3];
@@ -58,7 +58,7 @@ IngressData AstroCalculator::CalcPlanetIngress(PlanetType planet, DateTime start
 	auto sign = data.Longitude.Sign();
 	const AstroPoint targetNext = data.Longitude.NextSign();
 	const AstroPoint targetPrev = data.Longitude.ZeroSign();
-	double avg = std::min(monthlyCycle.at(planet), fabs(monthlyCycle.at(planet)) /
+	double avg = std::min(MonthlyCycle.at(planet), fabs(MonthlyCycle.at(planet)) /
 		std::max(AstroPoint::Diff(data.Longitude, targetNext), AstroPoint::Diff(data.Longitude, targetPrev)));
 	double dir = reverse ? -1 : 1;
 	DateTime run = start;
@@ -93,28 +93,18 @@ StationData AstroCalculator::CalcPlanetStation(PlanetType planet, DateTime start
 	do {
 		if (fabs(data.Speed) < eps)
 			break;
-		start = start.AddDays(fabs(data.Speed) / 2 * monthlyCycle.at(planet) / 2);
+		start = start.AddDays(fabs(data.Speed) / 2 * MonthlyCycle.at(planet) / 2);
 		data = CalcPlanet(planet, start);
 	} while (++iter < MaxIterations / 4);
 
 	return StationData{ planet, start, data.Longitude, data.Speed > 0 };
 }
 
-int AstroCalculator::Harmonic() const {
-	return m_Harmonic;
-}
-
-int AstroCalculator::Harmonic(int harmonic) {
-	if (harmonic < 1)
-		harmonic = 1;
-	return m_Harmonic = harmonic;
-}
-
 bool AstroCalculator::Calculate(ChartData& data) {
 	auto const& info = data.Info();
-	data.Houses(CalcHouses(info.Time, info.Latitude, info.Longitude, data.GetHouseSystem()));
+	data.Houses() = CalcHouses(info.Time, info.Latitude, info.Longitude, data.GetHouseSystem());
 	for (auto& p : data.AllPlanets()) {
-		p = CalcPlanet(p.Planet, info.Time);
+		p = CalcPlanet(p.Planet, info.Time, data.Harmonic());
 	}
 
 	return true;
@@ -128,14 +118,14 @@ HouseData AstroCalculator::CalcHouses(DateTime dt, double latitude, double longi
 	for (int i = 0; i < 12; i++)
 		houses.Cusps[i] = cusps[i + 1];
 
-	houses.Asc = ascmc[0] * m_Harmonic;
-	houses.MC = ascmc[1] * m_Harmonic;
-	houses.Armc = ascmc[2] * m_Harmonic;
-	houses.Vertex = ascmc[3] * m_Harmonic;
-	houses.EquAsc = ascmc[4] * m_Harmonic;
-	houses.CoAsc1 = ascmc[5] * m_Harmonic;
-	houses.CoAsc2 = ascmc[6] * m_Harmonic;
-	houses.PolarAsc = ascmc[7] * m_Harmonic;
+	houses.Asc = ascmc[0];
+	houses.MC = ascmc[1];
+	houses.Armc = ascmc[2];
+	houses.Vertex = ascmc[3];
+	houses.EquAsc = ascmc[4];
+	houses.CoAsc1 = ascmc[5];
+	houses.CoAsc2 = ascmc[6];
+	houses.PolarAsc = ascmc[7];
 
 	return houses;
 }

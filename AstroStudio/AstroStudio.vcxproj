@@ -260,6 +260,7 @@
   <ItemGroup>
     <Image Include="res\AstroStudio.ico" />
     <Image Include="res\Chart.ico" />
+    <Image Include="res\ChartNow.ico" />
     <Image Include="res\clip_copy.ico" />
     <Image Include="res\clip_cut.ico" />
     <Image Include="res\clip_paste.ico" />
@@ -271,6 +272,7 @@
     <Image Include="res\fontreset.ico" />
     <Image Include="res\FormatFontLarger.ico" />
     <Image Include="res\FormatFontSmaller.ico" />
+    <Image Include="res\Globe.ico" />
     <Image Include="res\glyph.ico" />
     <Image Include="res\grid.ico" />
     <Image Include="res\pin.ico" />
