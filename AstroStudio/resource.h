@@ -33,7 +33,6 @@
 #define IDI_PLAY                        222
 #define IDI_STOP                        223
 #define IDI_CHARTNOW                    224
-#define IDI_ICON2                       225
 #define IDI_GLOBE                       225
 #define IDC_HOUSESYSTEM                 1000
 #define IDC_PLANETS                     1001
@@ -50,6 +49,8 @@
 #define IDC_SOUTH                       1012
 #define IDC_HERE                        1015
 #define IDC_LOOKUP                      1016
+#define IDC_LIST1                       1017
+#define IDC_ASPECTS                     1017
 #define IDC_LATMIN                      1019
 #define IDC_LATMINUD                    1020
 #define IDC_LONDEG                      1021
@@ -75,7 +76,7 @@
 #ifndef APSTUDIO_READONLY_SYMBOLS
 #define _APS_NEXT_RESOURCE_VALUE        226
 #define _APS_NEXT_COMMAND_VALUE         32782
-#define _APS_NEXT_CONTROL_VALUE         1017
+#define _APS_NEXT_CONTROL_VALUE         1018
 #define _APS_NEXT_SYMED_VALUE           107
 #endif
 #endif

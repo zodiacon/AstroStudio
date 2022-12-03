@@ -25,10 +25,11 @@ void CChartView::ChartForNow() {
 	ChartData data;
 	auto& info = data.Info();
 	info = Frame()->DefaultChartInfo();
+	info.FirstName = L"(Now)";
 	info.Time = DateTime::Now();
 	auto planets = Helpers::GetStandardPlanets();
 	data.AddPlanets(planets);
-	Chart(data);
+	Chart(std::move(data));
 }
 
 ChartData const& CChartView::Chart() const {

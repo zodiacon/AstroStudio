@@ -30,6 +30,7 @@ void CChartDetailsView::SetChartData(ChartData* data) {
 		}
 		SetDlgItemText(IDC_LOCATION, (info.City + (info.State.empty() ? L"" : (L", " + info.State)) + L", " + info.Country).c_str());
 		SetDlgItemInt(IDC_HARMONIC, m_Data->Harmonic());
+		SetDlgItemText(IDC_NAME, ((info.LastName.empty() ? L"" : info.LastName + L", ") + info.FirstName).c_str());
 		UpdateControls();
 	}
 }
@@ -138,6 +139,7 @@ void CChartDetailsView::UpdateControls(Recalc type) {
 	if (type == Recalc::All || type == Recalc::Houses) {
 		m_ctlHouseSystem.SelectString(-1, StringHelper::HouseSystemToString(m_Data->GetHouseSystem()));
 		m_ctlHouses.RedrawItems(0, m_ctlHouses.GetItemCount() - 1);
+		m_ctlHouses.UpdateWindow();
 	}
 	auto st = m_Data->Info().Time.AsSystemTime();
 	SystemTimeToTzSpecificLocalTime(nullptr, &st, &st);
@@ -234,6 +236,7 @@ LRESULT CChartDetailsView::OnHouseSystemChanged(WORD, WORD, HWND, BOOL&) {
 	if (m_NotifyWnd) {
 		m_NotifyWnd.SendMessage(WM_RECALC, static_cast<WPARAM>(Recalc::Houses));
 		m_ctlHouses.RedrawItems(0, m_ctlHouses.GetItemCount() - 1);
+		m_ctlHouses.UpdateWindow();
 	}
 	return 0;
 }
