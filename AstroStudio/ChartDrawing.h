@@ -5,7 +5,7 @@
 #include <array>
 
 struct ChartDrawingParameters {
-	Gdiplus::Color BackColor{ Gdiplus::Color::WhiteSmoke };
+	Gdiplus::Color BackColor{ Gdiplus::Color(Gdiplus::Color::WhiteSmoke) };
 	std::array<Gdiplus::Color, 4> ElementColor {
 		Gdiplus::Color(Gdiplus::Color::OrangeRed),
 		Gdiplus::Color(Gdiplus::Color::LightGoldenrodYellow),
@@ -13,10 +13,10 @@ struct ChartDrawingParameters {
 		Gdiplus::Color(Gdiplus::Color::LightBlue)
 	};
 
-	Gdiplus::Color SoftAspectColor{ Gdiplus::Color::Blue };
-	Gdiplus::Color HardAspectColor{ Gdiplus::Color::Red };
-	Gdiplus::Color MinorAspectColor{ Gdiplus::Color::Purple };
-	Gdiplus::Color AspectColor{ Gdiplus::Color::Black };
+	Gdiplus::Color SoftAspectColor{ Gdiplus::Color(Gdiplus::Color::Blue) };
+	Gdiplus::Color HardAspectColor{ Gdiplus::Color(Gdiplus::Color::Red) };
+	Gdiplus::Color MinorAspectColor{ Gdiplus::Color(Gdiplus::Color::Purple) };
+	Gdiplus::Color AspectColor{ Gdiplus::Color(Gdiplus::Color::Black) };
 
 	float MajorAspectWidth{ 3 };
 	float MinorAspectWidth{ 1.5f };
