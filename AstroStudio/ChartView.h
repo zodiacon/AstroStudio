@@ -27,6 +27,7 @@ public:
 		//MESSAGE_HANDLER(WM_ERASEBKGND, OnEraseBkgnd)
 		MESSAGE_HANDLER(WM_CREATE, OnCreate)
 		MESSAGE_HANDLER(WM_RECALC, OnRecalc)
+		CHAIN_MSG_MAP(CVirtualListView<CChartView>)
 		CHAIN_MSG_MAP(CDoubleBufferImpl<CChartView>)
 		CHAIN_MSG_MAP(BaseFrame)
 	ALT_MSG_MAP(1)

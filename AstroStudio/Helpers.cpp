@@ -42,8 +42,8 @@ CString Helpers::FormatLongitude(AstroPoint const& value, FormatOptions options,
 		(options & FormatOptions::ShowDegreeGlyph) == FormatOptions::ShowDegreeGlyph ? (PCWSTR)CString((WCHAR)39) : L"");
 	if ((options & FormatOptions::ShowSeconds) == FormatOptions::ShowSeconds) {
 		CString sec;
-		sec.Format(L"%02d", int(value.Seconds() + .5));
-		text += sec + L"\"";
+		sec.Format(L"%02d\"", int(value.Seconds() + .5));
+		text += sec;
 	}
 	if ((value.Flags & AstroPointFlags::Retro) == AstroPointFlags::Retro) {
 		text += (options & FormatOptions::UseGlyphs) == FormatOptions::UseGlyphs ? L">" : L"R";

@@ -83,7 +83,7 @@ LRESULT CMainFrame::OnCreate(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/
 	CMenuHandle menuMain = GetMenu();
 	m_view.SetWindowMenu(menuMain.GetSubMenu(WINDOW_MENU_POSITION));
 
-	PostMessage(WM_COMMAND, ID_NEW_CHARTFORNOW);
+	//PostMessage(WM_COMMAND, ID_NEW_CHARTFORNOW);
 
 	return 0;
 }

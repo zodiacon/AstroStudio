@@ -6,9 +6,9 @@ class DateTime;
 
 enum class FormatOptions {
 	None = 0,
+	ShowSeconds = 1,
 	UseGlyphs = 2,
 	ShowDegreeGlyph = 4,
-	ShowSeconds = ShowDegreeGlyph | 1,
 	Default = ShowDegreeGlyph | UseGlyphs,
 };
 DEFINE_ENUM_FLAG_OPERATORS(FormatOptions);
