@@ -14,7 +14,6 @@ class CChartView :
 	public CDoubleBufferImpl<CChartView> {
 public:
 	using CFrameView::CFrameView;
-
 	void Chart(ChartData data);
 	void ChartForNow();
 	ChartData const& Chart() const;

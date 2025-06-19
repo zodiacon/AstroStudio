@@ -80,7 +80,8 @@ struct AstroPoint final {
 	AstroPoint ZeroSign() const;
 	AstroPoint Opposite() const;
 	AstroPoint& Normalize();
-	bool IsBetween(AstroPoint const& start, AstroPoint const& end);
+	[[nodiscard]] AstroPoint Normalize() const;
+	bool IsBetween(AstroPoint const& start, AstroPoint const& end) const;
 
 	static double Diff(AstroPoint const& p1, AstroPoint const& p2);
 	static AstroPoint MidPoint(AstroPoint const& p1, AstroPoint const& p2);

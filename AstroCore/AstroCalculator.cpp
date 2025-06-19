@@ -29,7 +29,7 @@ AstroCalculator::AstroCalculator() : m_SweFlags(SEFLG_MOSEPH) {
 	if (!s_init) {
 		s_init = true;
 		char path[MAX_PATH];
-		GetModuleFileNameA(nullptr, path, _countof(path));
+		GetModuleFileNameA(nullptr, path, std::size(path));
 		*strrchr(path, '\\') = 0;
 		swe_set_ephe_path(path);
 	}

@@ -49,7 +49,7 @@ CString CChartDetailsView::GetColumnText(HWND h, int row, int col) const {
 
 	switch (GetColumnManager(h)->GetColumnTag<ColumnType>(col)) {
 		case ColumnType::Planet: return DefaultFont::Get().GetPlanetGlyphAsString(pos->Planet);
-		case ColumnType::Longitude: return Helpers::FormatLongitude(pos->Longitude, FormatOptions::ShowSeconds | FormatOptions::UseGlyphs);
+		case ColumnType::Longitude: return Helpers::FormatLongitude(pos->Longitude, FormatOptions::ShowSeconds | FormatOptions::UseGlyphs | FormatOptions::ShowDegreeGlyph);
 		case ColumnType::Latitude: return Helpers::FormatLatitude(pos->Latitude);
 		case ColumnType::Speed: return std::format(L"{:6.4f}", pos->Speed).c_str();
 		case ColumnType::House:

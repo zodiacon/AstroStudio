@@ -221,13 +221,13 @@ LRESULT CEphemerisView::OnCreate(UINT, WPARAM, LPARAM, BOOL&) {
 	for (auto& p : m_Planets) {
 		cm->AddColumn(Helpers::GetPlanetName(p), LVCFMT_LEFT, 100, ColumnType(int(ColumnType::Planet) + i++));
 	}
-	cm->AddColumn(L"Phenomena", LVCFMT_LEFT, 270, ColumnType::Phenom);
+	cm->AddColumn(L"Phenomena", LVCFMT_LEFT, 320, ColumnType::Phenom);
 	cm->UpdateColumns();
 
 	m_StartTime = DateTime::Today();
 	m_StartTime = m_StartTime.AddDays(-30);
-	m_Items.reserve(900);
-	m_List.SetItemCount(900);
+	m_Items.reserve(1000);
+	m_List.SetItemCount(1000);
 
 	return 0;
 }

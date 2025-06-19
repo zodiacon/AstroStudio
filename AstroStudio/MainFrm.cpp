@@ -187,10 +187,10 @@ LRESULT CMainFrame::OnWindowActivate(WORD /*wNotifyCode*/, WORD wID, HWND /*hWnd
 LRESULT CMainFrame::OnPageActivated(int, LPNMHDR hdr, BOOL&) {
 	auto page = static_cast<int>(hdr->idFrom);
 	if (m_CurrentPage >= 0 && m_CurrentPage < m_view.GetPageCount()) {
-		((IView*)m_view.GetPageData(m_CurrentPage))->PageActivated(false);
+		((IView*)(CChartView*)m_view.GetPageData(m_CurrentPage))->PageActivated(false);
 	}
 	if (page >= 0) {
-		auto view = (IView*)m_view.GetPageData(page);
+		auto view = (IView*)(CChartView*)m_view.GetPageData(page);
 		ATLASSERT(view);
 		view->PageActivated(true);
 	}

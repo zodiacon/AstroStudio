@@ -1,7 +1,9 @@
 #include "pch.h"
 #include "AstroPoint.h"
 
-AstroPoint::AstroPoint(double value, AstroPointFlags flags) : Value(value - (int)value / 360), Flags(flags) {}
+AstroPoint::AstroPoint(double value, AstroPointFlags flags) : Value(value), Flags(flags) {
+	Normalize();
+}
 
 AstroPoint& AstroPoint::operator=(double value) {
 	Value = value;
@@ -36,7 +38,7 @@ double AstroPoint::Diff(AstroPoint const& p1, AstroPoint const& p2) {
 	return angle;
 }
 
-bool AstroPoint::IsBetween(AstroPoint const& start, AstroPoint const& end) {
+bool AstroPoint::IsBetween(AstroPoint const& start, AstroPoint const& end) const {
 	double start1 = start, end1 = end;
 	if (end1 < start1)
 		end1 += 360;
@@ -60,6 +62,11 @@ AstroPoint& AstroPoint::Normalize() {
 	else if (Value >= 360)
 		Value -= 360 * (int(Value) / 360);
 	return *this;
+}
+
+AstroPoint AstroPoint::Normalize() const {
+	auto p = *this;
+	return p.Normalize();
 }
 
 AstroPoint AstroPoint::MidPoint(AstroPoint const& p1, AstroPoint const& p2) {
