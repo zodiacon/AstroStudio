@@ -73,7 +73,7 @@ private:
 	void AutoSizeColumns();
 
 	struct PlanetData {
-		PlanetType Planet;
+		Planet Planet;
 		PlanetPosition Position;
 	};
 
@@ -106,5 +106,5 @@ private:
 	ColorOptions m_ColorOptions;
 	int m_FontSize{ 100 };
 	std::vector<RowData> m_Items;
-	std::vector<PlanetType> m_Planets;
+	std::vector<Planet> m_Planets;
 };

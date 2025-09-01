@@ -28,15 +28,15 @@ double AspectCalculator::GetAspectAngle(AspectType type) {
     return aspectAngles[(int)type];
 }
 
-AspectType AspectCalculator::GetAspectType(PlanetType p1, PlanetType p2, double diff, double& dist) const {
+AspectType AspectCalculator::GetAspectType(Planet p1, Planet p2, double diff, double& dist) const {
     int count = m_settings.MajorOnly ? 5 : _countof(aspectAngles);
     dist = -1;
     double extra = 0;
-    if (p1 == PlanetType::Sun && p2 == PlanetType::Moon)
+    if (p1 == Planet::Sun && p2 == Planet::Moon)
         extra += m_settings.SunMoonOrbAdd;
-    else if (p1 == PlanetType::Sun)
+    else if (p1 == Planet::Sun)
         extra += m_settings.SunPlanetOrbAdd;
-    else if (p1 == PlanetType::Moon)
+    else if (p1 == Planet::Moon)
         extra += m_settings.MoonPlanetOrbAdd;
     
     for (int i = 0; i < count; i++) {

@@ -7,22 +7,22 @@
 
 static char s_error[256];
 
-const std::unordered_map<PlanetType, double> MonthlyCycle{
-	{ PlanetType::Moon, 1.8},
-	{ PlanetType::Sun, 27 },
-	{ PlanetType::Mercury, 20 },
-	{ PlanetType::Venus, 25 },
-	{ PlanetType::Mars, 40 },
-	{ PlanetType::Jupiter, 250 },
-	{ PlanetType::Saturn, 500 },
-	{ PlanetType::Uranus, 6 * 360 },
-	{ PlanetType::Neptune, 13 * 360 },
-	{ PlanetType::Pluto, 16 * 360 },
-	{ PlanetType::MeanNode, 500 },
-	{ PlanetType::TrueNode, 500 },
-	{ PlanetType::Chiron, 4 * 360},
-	{ PlanetType::OscuApog, 6 },
-	{ PlanetType::Lilith, 200 },
+const std::unordered_map<Planet, double> MonthlyCycle{
+	{ Planet::Moon, 1.8},
+	{ Planet::Sun, 27 },
+	{ Planet::Mercury, 20 },
+	{ Planet::Venus, 25 },
+	{ Planet::Mars, 40 },
+	{ Planet::Jupiter, 250 },
+	{ Planet::Saturn, 500 },
+	{ Planet::Uranus, 6 * 360 },
+	{ Planet::Neptune, 13 * 360 },
+	{ Planet::Pluto, 16 * 360 },
+	{ Planet::MeanNode, 500 },
+	{ Planet::TrueNode, 500 },
+	{ Planet::Chiron, 4 * 360},
+	{ Planet::OscuApog, 6 },
+	{ Planet::Lilith, 200 },
 };
 
 AstroCalculator::AstroCalculator() : m_SweFlags(SEFLG_MOSEPH) {
@@ -35,7 +35,7 @@ AstroCalculator::AstroCalculator() : m_SweFlags(SEFLG_MOSEPH) {
 	}
 }
 
-PlanetPosition AstroCalculator::CalcPlanet(PlanetType planet, DateTime const& dt, int harmonic, bool withSpeed) const {
+PlanetPosition AstroCalculator::CalcPlanet(Planet planet, DateTime const& dt, int harmonic, bool withSpeed) const {
 	double xx[6];
 	swe_calc_ut(dt, (int)planet, m_SweFlags | (withSpeed ? SEFLG_SPEED : 0), xx, s_error);
 	PlanetPosition pp;
@@ -52,7 +52,7 @@ PlanetPosition AstroCalculator::CalcPlanet(PlanetType planet, DateTime const& dt
 	return pp;
 }
 
-IngressData AstroCalculator::CalcPlanetIngress(PlanetType planet, DateTime start, bool reverse) const {
+IngressData AstroCalculator::CalcPlanetIngress(Planet planet, DateTime start, bool reverse) const {
 	const double eps = Epsilon;
 	auto data = CalcPlanet(planet, start);
 	auto sign = data.Longitude.Sign();
@@ -82,10 +82,10 @@ IngressData AstroCalculator::CalcPlanetIngress(PlanetType planet, DateTime start
 	return IngressData{ planet, start, nextSign, data.Speed < 0 };
 }
 
-StationData AstroCalculator::CalcPlanetStation(PlanetType planet, DateTime start) const {
+StationData AstroCalculator::CalcPlanetStation(Planet planet, DateTime start) const {
 	double eps = Epsilon;
-	assert(planet != PlanetType::Sun && planet != PlanetType::Moon);
-	if (planet == PlanetType::Sun || planet == PlanetType::Moon)
+	assert(planet != Planet::Sun && planet != Planet::Moon);
+	if (planet == Planet::Sun || planet == Planet::Moon)
 		return StationData{};
 
 	auto data = CalcPlanet(planet, start);

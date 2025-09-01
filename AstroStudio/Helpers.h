@@ -27,9 +27,9 @@ struct Helpers abstract final {
 	static CString FormatLongitude(AstroPoint const& longitude, FormatOptions options = FormatOptions::Default, AstroFontBase const& font = DefaultFont::Get());
 	static CString FormatLatitude(double lat);
 	static std::tuple<int, int, int> GetDegMinSec(double angle, bool sign = false);
-	static PCWSTR GetPlanetName(PlanetType type);
+	static PCWSTR GetPlanetName(Planet type);
 	static CString GetZodiacSignName(ZodiacSign sign);
-	static std::vector<PlanetType> GetStandardPlanets();
+	static std::vector<Planet> GetStandardPlanets();
 	static COLORREF Darken(COLORREF color, int offset);
 	static COLORREF Lighten(COLORREF color, int offset);
 };

@@ -8,11 +8,11 @@ struct PlanetPosition {
 	double Speed;
 	double Latitude;
 	double LatitudeSpeed;
-	PlanetType Planet;
+	Planet Planet;
 };
 
 struct PlanetPhenom {
-	PlanetType Planet;
+	Planet Planet;
 	DateTime Time;
 };
 
@@ -63,11 +63,11 @@ class ChartData;
 class AstroCalculator {
 public:
 	AstroCalculator();
-	PlanetPosition CalcPlanet(PlanetType planet, DateTime const& dt, int harmonic = 1, bool withSpeed = true) const;
+	PlanetPosition CalcPlanet(Planet planet, DateTime const& dt, int harmonic = 1, bool withSpeed = true) const;
 	HouseData CalcHouses(DateTime dt, double latitude, double longitude, HouseSystem system);
 
-	IngressData CalcPlanetIngress(PlanetType planet, DateTime start, bool reverse = false) const;
-	StationData CalcPlanetStation(PlanetType planet, DateTime start) const;
+	IngressData CalcPlanetIngress(Planet planet, DateTime start, bool reverse = false) const;
+	StationData CalcPlanetStation(Planet planet, DateTime start) const;
 
 	bool Calculate(ChartData& data);
 

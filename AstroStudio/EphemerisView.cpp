@@ -26,7 +26,7 @@ CString CEphemerisView::GetColumnText(HWND h, int row, int col) {
 			ATLASSERT(row < m_Items.size());
 			auto& item = m_Items[row];
 			int index = int(type) - int(ColumnType::Planet);
-			auto planet = (PlanetType)(int(type) - int(ColumnType::Planet));
+			auto planet = (Planet)(int(type) - int(ColumnType::Planet));
 			auto& pp = item.Planets[index];
 			pp.Position.Longitude.Flags |= (pp.Position.Speed < 0 ? AstroPointFlags::Retro : AstroPointFlags::None);
 			text = Helpers::FormatLongitude(pp.Position.Longitude, m_FormatOptions);
@@ -163,7 +163,7 @@ void CEphemerisView::CreateFonts() {
 }
 
 void CEphemerisView::UpdateViewUI() {
-	auto ui = Frame()->GetUI();
+	auto& ui = Frame()->GetUI();
 	ui.UISetCheck(ID_VIEW_GLYPHS, (m_FormatOptions & FormatOptions::UseGlyphs) == FormatOptions::UseGlyphs);
 	ui.UISetCheck(ID_VIEW_SECONDS, (m_FormatOptions & FormatOptions::ShowSeconds) == FormatOptions::ShowSeconds);
 	ui.UIEnable(ID_FONT_BIGGER, m_FontSize < 180);
@@ -208,10 +208,10 @@ LRESULT CEphemerisView::OnCreate(UINT, WPARAM, LPARAM, BOOL&) {
 	CreateFonts();
 
 	m_Planets = Helpers::GetStandardPlanets();
-	m_Planets.push_back(PlanetType::Chiron);
-	m_Planets.push_back(PlanetType::Lilith);
+	m_Planets.push_back(Planet::Chiron);
+	m_Planets.push_back(Planet::Lilith);
 	//m_Planets.push_back(PlanetType::OscuApog);
-	m_Planets.push_back(PlanetType::TrueNode);
+	m_Planets.push_back(Planet::TrueNode);
 
 	m_FormatOptions = FormatOptions::UseGlyphs | FormatOptions::ShowDegreeGlyph;
 
@@ -221,13 +221,13 @@ LRESULT CEphemerisView::OnCreate(UINT, WPARAM, LPARAM, BOOL&) {
 	for (auto& p : m_Planets) {
 		cm->AddColumn(Helpers::GetPlanetName(p), LVCFMT_LEFT, 100, ColumnType(int(ColumnType::Planet) + i++));
 	}
-	cm->AddColumn(L"Phenomena", LVCFMT_LEFT, 320, ColumnType::Phenom);
+	cm->AddColumn(L"Phenomena", LVCFMT_LEFT, 420, ColumnType::Phenom);
 	cm->UpdateColumns();
 
 	m_StartTime = DateTime::Today();
 	m_StartTime = m_StartTime.AddDays(-30);
-	m_Items.reserve(1000);
-	m_List.SetItemCount(1000);
+	m_Items.reserve(1200);
+	m_List.SetItemCount(1200);
 
 	return 0;
 }

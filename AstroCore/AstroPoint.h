@@ -5,7 +5,7 @@
 
 enum class ZodiacSign;
 
-enum class PlanetType {
+enum class Planet {
 	Sun,
 	Moon,
 	Mercury,
@@ -31,7 +31,7 @@ enum class PlanetType {
 };
 
 struct PlanetInfo {
-	PlanetType Type;
+	Planet Type;
 	std::wstring Name;
 };
 

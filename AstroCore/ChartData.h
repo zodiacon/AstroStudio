@@ -26,12 +26,12 @@ struct ChartInfo {
 class ChartData {
 public:
 	ChartData& AddPlanets(std::initializer_list<PlanetPosition> const& planets);
-	ChartData& AddPlanets(std::initializer_list<PlanetType> const& planets);
-	ChartData& AddPlanets(std::vector<PlanetType> const& planets);
-	ChartData& RemovePlanets(std::initializer_list<PlanetType> planets);
+	ChartData& AddPlanets(std::initializer_list<Planet> const& planets);
+	ChartData& AddPlanets(std::vector<Planet> const& planets);
+	ChartData& RemovePlanets(std::initializer_list<Planet> planets);
 	ChartData& Clear();
 	int PlanetCount() const;
-	PlanetPosition const& Planet(int index) const;
+	PlanetPosition const& GetPlanet(int index) const;
 	std::vector<PlanetPosition> const& AllPlanets() const;
 	std::vector<PlanetPosition>& AllPlanets();
 

@@ -65,7 +65,7 @@ std::tuple<int, int, int> Helpers::GetDegMinSec(double angle, bool sign) {
 	return { deg, min, 0 };
 }
 
-PCWSTR Helpers::GetPlanetName(PlanetType type) {
+PCWSTR Helpers::GetPlanetName(Planet type) {
 	static PCWSTR names[] = {
 		L"Sun", L"Moon", L"Mercury", L"Venus", L"Mars", L"Jupiter", L"Saturn", L"Uranus", L"Neptune", L"Pluto",
 		L"Mean Node", L"True Node", L"Lilith", L"True Lilith", L"Earth", L"Chiron", L"Pholus",
@@ -93,11 +93,11 @@ CString Helpers::GetZodiacSignName(ZodiacSign sign) {
 	return signs[(int)sign];
 }
 
-std::vector<PlanetType> Helpers::GetStandardPlanets() {
-	static std::vector<PlanetType> planets;
+std::vector<Planet> Helpers::GetStandardPlanets() {
+	static std::vector<Planet> planets;
 	if (planets.empty()) {
 		planets.reserve(10);
-		for (PlanetType type = PlanetType::Sun; type <= PlanetType::Pluto; ((int&)type)++)
+		for (Planet type = Planet::Sun; type <= Planet::Pluto; ((int&)type)++)
 			planets.push_back(type);
 	}
 	return planets;

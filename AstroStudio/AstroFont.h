@@ -18,8 +18,8 @@ struct AstroFontBase abstract {
 	CString GetAspectGlyphAsString(AspectType type) const {
 		return CString(GetAspectGlyph(type));
 	}
-	virtual WCHAR GetPlanetGlyph(PlanetType type) const = 0;
-	CString GetPlanetGlyphAsString(PlanetType type) const {
+	virtual WCHAR GetPlanetGlyph(Planet type) const = 0;
+	CString GetPlanetGlyphAsString(Planet type) const {
 		return CString(GetPlanetGlyph(type));
 	}
 };

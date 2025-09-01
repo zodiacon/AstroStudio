@@ -59,7 +59,7 @@ public:
 	AspectCalculator& Settings(AspectSettings const& settings);
 	AspectSettings const& Settings() const;
 
-	AspectType GetAspectType(PlanetType p1, PlanetType p2, double diff, double& dist) const;
+	AspectType GetAspectType(Planet p1, Planet p2, double diff, double& dist) const;
 	bool IsApplying(PlanetPosition p1, PlanetPosition p2, double angle, double exact) const;
 
 private:

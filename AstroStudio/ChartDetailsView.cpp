@@ -111,7 +111,7 @@ DWORD CChartDetailsView::OnItemPrePaint(int, LPNMCUSTOMDRAW cd) {
 			Gdiplus::Color(Gdiplus::Color::LightBlue).ToCOLORREF()
 		};
 		if (h == m_ctlPlanets) {
-			lv->clrTextBk = colors[int(m_Data->Planet((int)cd->dwItemSpec).Longitude.Sign()) % 4];
+			lv->clrTextBk = colors[int(m_Data->GetPlanet((int)cd->dwItemSpec).Longitude.Sign()) % 4];
 		}
 		else if(cd->dwItemSpec < 12) {
 			lv->clrTextBk = colors[int(m_Data->Houses().Cusps[((int)cd->dwItemSpec)].Sign()) % 4];

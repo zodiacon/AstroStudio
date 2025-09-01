@@ -7,19 +7,19 @@ ChartData& ChartData::AddPlanets(std::initializer_list<PlanetPosition> const& pl
     return *this;
 }
 
-ChartData& ChartData::AddPlanets(std::vector<PlanetType> const& planets) {
+ChartData& ChartData::AddPlanets(std::vector<Planet> const& planets) {
     for (auto& p : planets)
         m_Planets.push_back(PlanetPosition{ .Planet = p });
     return *this;
 }
 
-ChartData& ChartData::AddPlanets(std::initializer_list<PlanetType> const& planets) {
+ChartData& ChartData::AddPlanets(std::initializer_list<Planet> const& planets) {
     for (auto& p : planets)
         m_Planets.push_back(PlanetPosition{ .Planet = p });
     return *this;
 }
 
-ChartData& ChartData::RemovePlanets(std::initializer_list<PlanetType> planets) {
+ChartData& ChartData::RemovePlanets(std::initializer_list<Planet> planets) {
     for (auto planet : planets)
         m_Planets.erase(std::find_if(m_Planets.begin(), m_Planets.end(), [&](auto& pp) { return pp.Planet == planet; }));
     return *this;
@@ -50,7 +50,7 @@ int ChartData::PlanetCount() const {
     return (int)m_Planets.size();
 }
 
-PlanetPosition const& ChartData::Planet(int index) const {
+PlanetPosition const& ChartData::GetPlanet(int index) const {
     assert(index >= 0 && index < m_Planets.size());
     return m_Planets[index];
 }

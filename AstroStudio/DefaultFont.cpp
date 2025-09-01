@@ -20,7 +20,7 @@ WCHAR DefaultFont::GetAspectGlyph(AspectType type) const {
     return aspects[(int)type];
 }
 
-WCHAR DefaultFont::GetPlanetGlyph(PlanetType planet) const {
+WCHAR DefaultFont::GetPlanetGlyph(Planet planet) const {
     static const WCHAR planets[] = L"QWERTYUIOP\x8b{\x60\x7e\x89M";
     ATLASSERT((int)planet < _countof(planets));
     return planets[(int)planet];

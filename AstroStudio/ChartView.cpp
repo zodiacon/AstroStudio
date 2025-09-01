@@ -7,7 +7,7 @@
 
 
 void CChartView::Chart(ChartData data) {
-	data.AddPlanets({ PlanetType::Chiron, PlanetType::TrueNode, PlanetType::Lilith });
+	data.AddPlanets({ Planet::Chiron, Planet::TrueNode, Planet::Lilith });
 	AstroCalculator calc;
 	calc.Calculate(data);
 	m_Data = std::move(data);

@@ -124,7 +124,7 @@ bool ChartDrawing::Draw(Gdiplus::Graphics& g, int size) {
 				aspect.Type == AspectType::Quintile || aspect.Type == AspectType::BiQuintile))
 				continue;
 
-			if (!m_params.DrawNonStandardPlanetAspects && (aspect.Planet1.Planet > PlanetType::Pluto || aspect.Planet2.Planet > PlanetType::Pluto))
+			if (!m_params.DrawNonStandardPlanetAspects && (aspect.Planet1.Planet > Planet::Pluto || aspect.Planet2.Planet > Planet::Pluto))
 				continue;
 
 			auto pt1 = PointByAngle(center, r, aspect.Planet1.Longitude);
