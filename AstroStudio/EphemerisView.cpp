@@ -226,8 +226,8 @@ LRESULT CEphemerisView::OnCreate(UINT, WPARAM, LPARAM, BOOL&) {
 
 	m_StartTime = DateTime::Today();
 	m_StartTime = m_StartTime.AddDays(-30);
-	m_Items.reserve(1200);
-	m_List.SetItemCount(1200);
+	m_Items.reserve(2000);
+	m_List.SetItemCount(2000);
 
 	return 0;
 }

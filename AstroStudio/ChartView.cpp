@@ -6,26 +6,27 @@
 #include "DefaultFont.h"
 
 
+CChartView::CChartView(IMainFrame* frame) : CFrameView(frame), m_ChartDrawing(frame) {
+}
+
 void CChartView::Chart(ChartData data) {
 	data.AddPlanets({ Planet::Chiron, Planet::TrueNode, Planet::Lilith });
 	AstroCalculator calc;
 	calc.Calculate(data);
 	m_Data = std::move(data);
 	m_DetailsView.SetChartData(&m_Data);
+	m_ChartDrawing.SetChartData(&m_Data);
 
 	AspectCalculator ac;
 	auto aspects = ac.Calculate(m_Data.AllPlanets());
-	m_Drawing.Aspects(std::move(aspects));
-	m_Drawing.Chart(&m_Data);
-	m_RedrawNeeded = true;
-	Invalidate();
+	m_ChartDrawing.SetAspects(std::move(aspects));
+	m_ChartDrawing.Refresh();
 }
 
 void CChartView::ChartForNow() {
 	ChartData data;
 	auto& info = data.Info();
 	info = Frame()->DefaultChartInfo();
-	info.FirstName = L"(Now)";
 	info.Time = DateTime::Now();
 	auto planets = Helpers::GetStandardPlanets();
 	data.AddPlanets(planets);
@@ -69,73 +70,19 @@ void CChartView::DisplayHouses(CDCHandle dc, int x, int y) const {
 	}
 }
 
-LRESULT CChartView::OnEraseBkgnd(UINT, WPARAM, LPARAM, BOOL&) {
-	return TRUE;
-}
-
 LRESULT CChartView::OnCreate(UINT, WPARAM, LPARAM, BOOL&) {
-	m_DrawingSize = std::min(::GetSystemMetrics(SM_CXSCREEN), ::GetSystemMetrics(SM_CYSCREEN));
-	m_DetailsView.Create(m_hWnd);
+	m_hWndClient = m_Splitter.Create(m_hWnd, rcDefault, nullptr, WS_CHILD | WS_VISIBLE | WS_CLIPCHILDREN | WS_CLIPSIBLINGS, WS_EX_TRANSPARENT);
+	m_ChartDrawing.Create(m_Splitter, rcDefault, nullptr, WS_CHILD | WS_VISIBLE | WS_CLIPCHILDREN | WS_CLIPSIBLINGS);
+	m_ChartDrawing.SetStatic();
+	m_DetailsView.Create(m_Splitter);
 	m_DetailsView.SetNotifyWindow(m_hWnd);
+	m_Splitter.SetSplitterPanes(m_ChartDrawing, m_DetailsView);
+	m_Splitter.SetSplitterPosPct(50);
 
 	return 0;
-}
-
-void CChartView::DoPaint(CDCHandle dc) {
-	CRect rc;
-	GetClientRect(&rc);
-	dc.FillRect(&rc, ::GetSysColorBrush(COLOR_WINDOW));
-
-	auto size = std::min(rc.right, rc.bottom);
-
-	using namespace Gdiplus;
-
-	if (!m_Bitmap)
-		m_Bitmap.reset(new Bitmap(m_DrawingSize, m_DrawingSize));
-
-	if (m_RedrawNeeded) {
-		Graphics g(m_Bitmap.get());
-		m_Drawing.Draw(g, m_DrawingSize);
-		m_RedrawNeeded = false;
-	}
-	Graphics g(dc.m_hDC);
-	g.DrawImage(m_Bitmap.get(), Rect(0, 0, size, size));
 }
 
 LRESULT CChartView::OnEditCopy(WORD, WORD, HWND, BOOL&) {
-	return LRESULT();
-}
-
-LRESULT CChartView::OnRecalc(UINT, WPARAM wp, LPARAM, BOOL&) {
-	auto type = static_cast<Recalc>(wp);
-	auto& info = m_Data.Info();
-	switch (type) {
-		case Recalc::All:
-			m_Calc.Calculate(m_Data);
-			break;
-		case Recalc::Houses:
-			m_Data.CalcHouses(m_Calc);
-			break;
-		case Recalc::Planets:
-			m_Data.CalcPlanets(m_Calc);
-			break;
-	}
-	if (type != Recalc::Houses) {
-		AspectCalculator ac;
-		auto aspects = ac.Calculate(m_Data.AllPlanets());
-		m_Drawing.Aspects(std::move(aspects));
-	}
-	m_RedrawNeeded = true;
-	Invalidate(FALSE);
 	return 0;
 }
 
-LRESULT CChartView::OnSize(UINT, WPARAM, LPARAM lp, BOOL& handled) {
-	int cx = GET_X_LPARAM(lp), cy = GET_Y_LPARAM(lp);
-	auto size = std::min(cx, cy);
-	m_DetailsView.SetWindowPos(nullptr, size, 0, 0, 0, SWP_NOSIZE | SWP_NOZORDER);
-	m_RedrawNeeded = true;
-	Invalidate(FALSE);
-	handled = FALSE;
-	return 0;
-}

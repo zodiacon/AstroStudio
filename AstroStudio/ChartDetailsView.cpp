@@ -158,8 +158,10 @@ LRESULT CChartDetailsView::OnInitView(UINT, WPARAM, LPARAM, BOOL&) {
 	m_ctlTime.Attach(GetDlgItem(IDC_TIME));
 	m_ctlPlanets.Attach(GetDlgItem(IDC_PLANETS));
 	m_ctlPlanets.SetExtendedListViewStyle(LVS_EX_FULLROWSELECT | LVS_EX_DOUBLEBUFFER);
+	m_ctlPlanets.GetHeader().ModifyStyle(0, HDS_NOSIZING);
 	m_ctlHouses.Attach(GetDlgItem(IDC_HOUSES));
 	m_ctlHouses.SetExtendedListViewStyle(LVS_EX_FULLROWSELECT | LVS_EX_DOUBLEBUFFER);
+	m_ctlHouses.GetHeader().ModifyStyle(0, HDS_NOSIZING);
 	m_ctlHarmonicSpin.Attach(GetDlgItem(IDC_HARMONICUD));
 	m_ctlHarmonicSpin.SetRange(1, 9999);
 	AddIconToButton(IDC_NOW, IDI_CLOCK);
@@ -293,3 +295,4 @@ LRESULT CChartDetailsView::OnNow(WORD, WORD, HWND, BOOL&) {
 
 	return 0;
 }
+

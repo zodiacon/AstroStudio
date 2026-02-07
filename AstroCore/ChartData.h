@@ -15,7 +15,7 @@ struct TimeZoneInfo {
 };
 
 struct ChartInfo {
-	std::wstring FirstName, LastName;
+	std::wstring FirstName, MiddleName, LastName;
 	InfoType Type{ InfoType::Unknown };
 	double Longitude, Latitude, Elevation;
 	std::wstring Country, State, City;
@@ -29,24 +29,24 @@ public:
 	ChartData& AddPlanets(std::initializer_list<Planet> const& planets);
 	ChartData& AddPlanets(std::vector<Planet> const& planets);
 	ChartData& RemovePlanets(std::initializer_list<Planet> planets);
-	ChartData& Clear();
-	int PlanetCount() const;
-	PlanetPosition const& GetPlanet(int index) const;
-	std::vector<PlanetPosition> const& AllPlanets() const;
-	std::vector<PlanetPosition>& AllPlanets();
+	ChartData& Clear() noexcept;
+	int PlanetCount() const noexcept;
+	PlanetPosition const& GetPlanet(int index) const noexcept;
+	std::vector<PlanetPosition> const& AllPlanets() const noexcept;
+	std::vector<PlanetPosition>& AllPlanets() noexcept;
 
-	int Harmonic() const;
-	int Harmonic(int harmonic);
+	int Harmonic() const noexcept;
+	int Harmonic(int harmonic) noexcept;
 
-	void SetHouseSystem(HouseSystem system);
-	HouseSystem GetHouseSystem() const;
-	HouseData const& Houses() const;
-	HouseData& Houses();
-	ChartInfo& Info();
-	ChartInfo const& Info() const;
+	void SetHouseSystem(HouseSystem system) noexcept;
+	HouseSystem GetHouseSystem() const noexcept;
+	HouseData const& Houses() const noexcept;
+	HouseData& Houses() noexcept;
+	ChartInfo& Info() noexcept;
+	ChartInfo const& Info() const noexcept;
 
-	void CalcHouses(AstroCalculator& calc);
-	void CalcPlanets(AstroCalculator& calc);
+	void CalcHouses(AstroCalculator& calc) noexcept;
+	void CalcPlanets(AstroCalculator& calc) noexcept;
 
 private:
 	HouseSystem m_HouseSystem{ HouseSystem::Koch };

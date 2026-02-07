@@ -35,8 +35,8 @@ public:
 		NOTIFY_HANDLER(IDC_TIME, DTN_DATETIMECHANGE, OnTimeChanged)
 		COMMAND_ID_HANDLER(IDC_NOW, OnNow)
 		MESSAGE_HANDLER(WM_INITDIALOG, OnInitView)
-		CHAIN_MSG_MAP(CCustomDraw<CChartDetailsView>)
-		CHAIN_MSG_MAP(CVirtualListView<CChartDetailsView>)
+		CHAIN_MSG_MAP(CCustomDraw)
+		CHAIN_MSG_MAP(CVirtualListView)
 	END_MSG_MAP()
 
 	// Handler prototypes (uncomment arguments if needed):

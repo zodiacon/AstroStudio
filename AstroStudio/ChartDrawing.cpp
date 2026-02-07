@@ -116,7 +116,7 @@ bool ChartDrawing::Draw(Gdiplus::Graphics& g, int size) {
 	// draw aspects
 	//
 	if (m_params.DrawAspects) {
-		for (auto const& aspect : m_aspects) {
+		for (auto const& aspect : *m_aspects) {
 			if (aspect.Type == AspectType::Conjunction)
 				continue;
 
@@ -179,8 +179,8 @@ ChartData* ChartDrawing::Chart() const {
 	return m_data;
 }
 
-ChartDrawing& ChartDrawing::Aspects(std::vector<AspectData>&& aspects) {
-	m_aspects = std::move(aspects);
+ChartDrawing& ChartDrawing::Aspects(std::vector<AspectData>* aspects) {
+	m_aspects = aspects;
 	return *this;
 }
 

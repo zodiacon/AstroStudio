@@ -39,13 +39,13 @@ public:
 	ChartDrawingParameters& DrawingParameters();
 	ChartDrawing& Chart(ChartData* data);
 	ChartData* Chart() const;
-	ChartDrawing& Aspects(std::vector<AspectData>&& aspects);
+	ChartDrawing& Aspects(std::vector<AspectData>* aspects);
 
 private:
 	Gdiplus::PointF PointByAngle(Gdiplus::PointF const& center, float radius, double angle) const;
 
 	ChartDrawingParameters m_params;
 	ChartData* m_data{ nullptr };
-	std::vector<AspectData> m_aspects;
+	std::vector<AspectData>* m_aspects { nullptr};
 };
 

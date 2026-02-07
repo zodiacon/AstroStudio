@@ -25,67 +25,67 @@ ChartData& ChartData::RemovePlanets(std::initializer_list<Planet> planets) {
     return *this;
 }
 
-HouseData const& ChartData::Houses() const {
+HouseData const& ChartData::Houses() const noexcept {
     return m_Houses;
 }
 
-HouseData& ChartData::Houses() {
+HouseData& ChartData::Houses() noexcept {
     return m_Houses;
 }
 
-ChartInfo& ChartData::Info() {
+ChartInfo& ChartData::Info() noexcept {
     return m_Info;
 }
 
-ChartInfo const& ChartData::Info() const {
+ChartInfo const& ChartData::Info() const noexcept {
     return m_Info;
 }
 
-ChartData& ChartData::Clear() {
+ChartData& ChartData::Clear() noexcept {
     m_Planets.clear();
     return *this;
 }
 
-int ChartData::PlanetCount() const {
+int ChartData::PlanetCount() const noexcept {
     return (int)m_Planets.size();
 }
 
-PlanetPosition const& ChartData::GetPlanet(int index) const {
+PlanetPosition const& ChartData::GetPlanet(int index) const noexcept {
     assert(index >= 0 && index < m_Planets.size());
     return m_Planets[index];
 }
 
-std::vector<PlanetPosition> const& ChartData::AllPlanets() const {
+std::vector<PlanetPosition> const& ChartData::AllPlanets() const noexcept {
     return m_Planets;
 }
 
-std::vector<PlanetPosition>& ChartData::AllPlanets() {
+std::vector<PlanetPosition>& ChartData::AllPlanets() noexcept {
     return m_Planets;
 }
 
-HouseSystem ChartData::GetHouseSystem() const {
+HouseSystem ChartData::GetHouseSystem() const noexcept {
     return m_HouseSystem;
 }
 
-void ChartData::SetHouseSystem(HouseSystem system) {
+void ChartData::SetHouseSystem(HouseSystem system) noexcept {
     m_HouseSystem = system;
 }
 
-int ChartData::Harmonic() const {
+int ChartData::Harmonic() const noexcept {
     return m_Harmonic;
 }
 
-int ChartData::Harmonic(int harmonic) {
+int ChartData::Harmonic(int harmonic) noexcept {
     if (harmonic > 0 && harmonic < 10000)
         m_Harmonic = harmonic;
     return m_Harmonic;
 }
 
-void ChartData::CalcHouses(AstroCalculator& calc) {
+void ChartData::CalcHouses(AstroCalculator& calc) noexcept {
     m_Houses = calc.CalcHouses(m_Info.Time, m_Info.Latitude, m_Info.Longitude, m_HouseSystem);
 }
 
-void ChartData::CalcPlanets(AstroCalculator& calc) {
+void ChartData::CalcPlanets(AstroCalculator& calc) noexcept {
     for (auto& p : m_Planets)
         p = calc.CalcPlanet(p.Planet, m_Info.Time, m_Harmonic);
 }
