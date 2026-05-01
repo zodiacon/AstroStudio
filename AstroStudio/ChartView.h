@@ -20,6 +20,7 @@ public:
 	ChartData const& Chart() const;
 
 	BEGIN_MSG_MAP(CChartView)
+		MESSAGE_HANDLER(WM_RECALC, OnRecalc)
 		MESSAGE_HANDLER(WM_CREATE, OnCreate)
 		CHAIN_MSG_MAP(CVirtualListView)
 		CHAIN_MSG_MAP(BaseFrame)

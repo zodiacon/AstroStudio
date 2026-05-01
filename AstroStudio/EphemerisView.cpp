@@ -3,13 +3,28 @@
 #include "ChartData.h"
 #include <ToolbarHelper.h>
 
+#include "ColorHelper.h"
+#include "WTLHelper.h"
+#include "DarkMode/DarkModeSubclass.h"
+
+ColorOptions DarkColors{
+	RGB(30, 30, 30),
+	CLR_INVALID,
+	{
+		ColorHelper::Darken(RGB(255, 128, 0), 40),
+		ColorHelper::Darken(RGB(224, 224, 0), 40),
+		ColorHelper::Darken(RGB(0, 255, 128), 40),
+		ColorHelper::Darken(RGB(0, 192, 255), 50)
+	},
+	true, true
+};
+
 CString CEphemerisView::GetColumnText(HWND h, int row, int col) {
 	auto type = GetColumnManager(h)->GetColumnTag<ColumnType>(col);
 	CString text;
 	switch (type) {
 		case ColumnType::Time: return Helpers::FormatDateTime(m_StartTime.AddDays(row));
 		case ColumnType::Phenom: return GetRowPhenom(row);
-			break;
 
 		default:
 			while (m_Items.size() <= row + 1) {
@@ -83,7 +98,7 @@ DWORD CEphemerisView::OnSubItemPrePaint(int, LPNMCUSTOMDRAW cd) {
 			lv->clrTextBk = Helpers::Lighten(lv->clrTextBk, 25);
 	}
 	else if (highlight && colType == ColumnType::Time)
-		lv->clrTextBk = RGB(220, 220, 0);
+		lv->clrTextBk = WTLHelper::IsDarkMode() ? RGB(20, 20, 0) : RGB(220, 220, 0);
 
 	dc.SelectFont(colType != ColumnType::Time && (m_FormatOptions & FormatOptions::UseGlyphs) == FormatOptions::UseGlyphs ? m_Font : m_StdFont);
 	return CDRF_NEWFONT | CDRF_SKIPPOSTPAINT;
@@ -191,6 +206,8 @@ LRESULT CEphemerisView::OnCreate(UINT, WPARAM, LPARAM, BOOL&) {
 	images.Create(16, 16, ILC_COLOR32, 0, 1);
 	m_List.SetImageList(images, LVSIL_SMALL);
 
+	m_ColorOptions = WTLHelper::IsDarkMode() ? DarkColors : ColorOptions();
+
 	ToolBarButtonInfo buttons[] = {
 		{ ID_VIEW_GLYPHS, IDI_GLYPH, BTNS_CHECK, L"Glyphs" },
 		{ ID_VIEW_SECONDS, IDI_CLOCK, BTNS_CHECK, L"Seconds" },
@@ -204,7 +221,7 @@ LRESULT CEphemerisView::OnCreate(UINT, WPARAM, LPARAM, BOOL&) {
 	CreateSimpleReBar(ATL_SIMPLE_REBAR_NOBORDER_STYLE);
 	auto tb = ToolbarHelper::CreateAndInitToolBar(m_hWndToolBar, buttons, _countof(buttons));
 	AddSimpleReBarBand(tb);
-	Frame()->GetUI().UIAddToolBar(tb);
+	Frame()->AddToolBarToUI(tb);
 	CreateFonts();
 
 	m_Planets = Helpers::GetStandardPlanets();
@@ -228,6 +245,8 @@ LRESULT CEphemerisView::OnCreate(UINT, WPARAM, LPARAM, BOOL&) {
 	m_StartTime = m_StartTime.AddDays(-30);
 	m_Items.reserve(2000);
 	m_List.SetItemCount(2000);
+
+	DarkMode::setDarkWndNotifySafe(m_hWnd);
 
 	return 0;
 }
@@ -293,6 +312,12 @@ LRESULT CEphemerisView::OnNewChart(WORD, WORD, HWND, BOOL&) {
 	m_Calc.Calculate(data);
 	Frame()->AddChartView(std::move(data), L"Chart 1");
 
+	return 0;
+}
+
+LRESULT CEphemerisView::OnThemeChanged(UINT, WPARAM, LPARAM, BOOL&) {
+	m_ColorOptions = WTLHelper::IsDarkMode() ? DarkColors : ColorOptions();
+	m_List.RedrawWindow();
 	return 0;
 }
 

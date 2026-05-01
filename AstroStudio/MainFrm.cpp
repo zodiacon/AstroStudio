@@ -11,6 +11,7 @@
 #include "ToolbarHelper.h"
 #include "ChartView.h"
 #include "NetworkHelper.h"
+#include <WTLHelper.h>
 
 #pragma comment(lib, "gdiplus")
 
@@ -45,8 +46,8 @@ LRESULT CMainFrame::OnCreate(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/
 		ATLVERIFY(Gdiplus::Ok == Gdiplus::GdiplusStartup(&m_GdiPlusToken, &input, &output));
 	}
 	ATLVERIFY(Helpers::LoadAstroFont(IDR_FONT));
-	AddMenu(GetMenu());
-	InitMenu();
+	//AddMenu(GetMenu());
+	InitMenu(GetMenu());
 	UIAddMenu(GetMenu());
 
 	ToolBarButtonInfo buttons[] = {
@@ -57,6 +58,7 @@ LRESULT CMainFrame::OnCreate(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/
 	};
 	CreateSimpleReBar(ATL_SIMPLE_REBAR_NOBORDER_STYLE);
 	auto tb = ToolbarHelper::CreateAndInitToolBar(m_hWnd, buttons, _countof(buttons));
+	UIAddToolBar(tb);
 	AddSimpleReBarBand(tb);
 
 	CreateSimpleStatusBar();
@@ -65,6 +67,7 @@ LRESULT CMainFrame::OnCreate(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/
 	m_hWndClient = m_view.Create(m_hWnd, rcDefault, nullptr, 
 		WS_CHILD | WS_VISIBLE | WS_CLIPSIBLINGS | WS_CLIPCHILDREN);
 	UISetCheck(ID_VIEW_STATUS_BAR, 1);
+	UISetCheck(ID_OPTIONS_DARKMODE, WTLHelper::IsDarkMode());
 
 	CImageList images;
 	images.Create(16, 16, ILC_COLOR32 | ILC_MASK, 8, 4);
@@ -83,7 +86,7 @@ LRESULT CMainFrame::OnCreate(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/
 	CMenuHandle menuMain = GetMenu();
 	m_view.SetWindowMenu(menuMain.GetSubMenu(WINDOW_MENU_POSITION));
 
-	//PostMessage(WM_COMMAND, ID_NEW_CHARTFORNOW);
+	PostMessage(WM_COMMAND, ID_TOOL_EPHEMERIS);
 
 	return 0;
 }
@@ -130,6 +133,14 @@ LRESULT CMainFrame::OnNewChartNow(WORD, WORD, HWND, BOOL&) {
 	}
 	pView->ChartForNow();
 	m_view.AddPage(pView->m_hWnd, L"NewChart", 1, pView);
+
+	return 0;
+}
+
+LRESULT CMainFrame::OnToggleDarkMode(WORD, WORD, HWND, BOOL&) {
+	WTLHelper::SwitchToMode(WTLHelper::IsDarkMode() ? DarkMode::DarkModeType::light : DarkMode::DarkModeType::dark, m_hWnd);
+	InitMenu(GetMenu());
+	DrawMenuBar();
 
 	return 0;
 }
@@ -199,11 +210,8 @@ LRESULT CMainFrame::OnPageActivated(int, LPNMHDR hdr, BOOL&) {
 	return 0;
 }
 
-void CMainFrame::InitMenu() {
-	struct {
-		int id;
-		UINT icon;
-	} commands[] = {
+void CMainFrame::InitMenu(HMENU menu) {
+	MenuItemData commands[] = {
 		{ ID_EDIT_COPY, IDI_COPY },
 		{ ID_EDIT_PASTE, IDI_PASTE },
 		{ ID_EDIT_CUT, IDI_CUT },
@@ -212,9 +220,11 @@ void CMainFrame::InitMenu() {
 		{ ID_NEW_CHART, IDI_CHART },
 		{ ID_NEW_CHARTFORNOW, IDI_CHARTNOW },
 	};
+	WTLHelper::InitMenu(menu, commands, _countof(commands));
+}
 
-	for (auto& cmd : commands)
-		AddCommand(cmd.id, cmd.icon);
+BOOL CMainFrame::AddToolBarToUI(HWND hwnd) {
+	return UIAddToolBar(hwnd);
 }
 
 HWND CMainFrame::GetHwnd() const {

@@ -10,8 +10,10 @@
 #include "DateTime.h"
 #include "Helpers.h"
 #include <FrameView.h>
+
 #include "resource.h"
 #include "Interfaces.h"
+#include "WTLHelper.h"
 
 struct ColorOptions {
 	COLORREF RetroBackColor{ RGB(220, 220, 220) };
@@ -51,8 +53,9 @@ protected:
 		COMMAND_ID_HANDLER(ID_FONT_SIZE_DEFAULT, OnChangeFontSize)
 		COMMAND_ID_HANDLER(ID_VIEW_GRIDLINES, OnViewGridLines)
 		MESSAGE_HANDLER(WM_CREATE, OnCreate)
-		CHAIN_MSG_MAP(CCustomDraw<CEphemerisView>)
-		CHAIN_MSG_MAP(CVirtualListView<CEphemerisView>)
+		MESSAGE_HANDLER(WTLHelper::ThemeChangedMessage, OnThemeChanged)
+		CHAIN_MSG_MAP(CCustomDraw)
+		CHAIN_MSG_MAP(CVirtualListView)
 		CHAIN_MSG_MAP(BaseFrame)
 	ALT_MSG_MAP(1)
 		COMMAND_ID_HANDLER(ID_NEW_CHART, OnNewChart)
@@ -95,6 +98,7 @@ private:
 	LRESULT OnViewGridLines(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/);
 	LRESULT OnEditCopy(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/);
 	LRESULT OnNewChart(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/);
+	LRESULT OnThemeChanged(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, BOOL& /*bHandled*/);
 
 	CListViewCtrl m_List;
 	AstroCalculator m_Calc;

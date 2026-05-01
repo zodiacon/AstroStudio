@@ -24,9 +24,9 @@ public:
 	CString GetColumnText(HWND, int row, int col) const;
 	void DoSort(SortInfo const* si);
 
-	DWORD OnPrePaint(int, LPNMCUSTOMDRAW cd);
-	DWORD OnItemPrePaint(int, LPNMCUSTOMDRAW cd);
-	DWORD OnSubItemPrePaint(int, LPNMCUSTOMDRAW cd);
+	DWORD OnPrePaint(int, LPNMCUSTOMDRAW cd) noexcept ;
+	DWORD OnItemPrePaint(int, LPNMCUSTOMDRAW cd) noexcept;
+	DWORD OnSubItemPrePaint(int, LPNMCUSTOMDRAW cd) const noexcept;
 
 	BEGIN_MSG_MAP(CChartDetailsView)
 		COMMAND_HANDLER(IDC_HOUSESYSTEM, CBN_SELCHANGE, OnHouseSystemChanged)

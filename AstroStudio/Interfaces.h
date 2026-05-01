@@ -11,6 +11,7 @@ struct IMainFrame abstract {
 	virtual CUpdateUIBase& GetUI() = 0;
 	virtual IView* AddChartView(ChartData data, PCWSTR title = nullptr) = 0;
 	virtual ChartInfo& DefaultChartInfo() = 0;
+	virtual BOOL AddToolBarToUI(HWND) = 0;
 };
 
 struct IView {

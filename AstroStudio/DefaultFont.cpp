@@ -15,7 +15,7 @@ WCHAR DefaultFont::GetSignGlyph(ZodiacSign sign) const {
 }
 
 WCHAR DefaultFont::GetAspectGlyph(AspectType type) const {
-    static const WCHAR aspects[] = L"qtrewiy\x98\x9a\xdc\xdd\x6f\x75";
+    static const WCHAR aspects[] = L"qtrewiy\x98\x9a\xdc\xdd\x6f\x75\x23\x23";
     ATLASSERT((int)type < _countof(aspects));
     return aspects[(int)type];
 }

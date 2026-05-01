@@ -1,10 +1,11 @@
 #include "pch.h"
 #include "Aspects.h"
 
-double aspectAngles[] = {
+float aspectAngles[] = {
     0, 60, 90, 120, 180,
     30, 45, 72, 144,
-    360 / 7.0, 720 / 7.0, 150, 135
+    360 / 7.0f, 720 / 7.0f, 150, 135,
+    40, 80,
 };
 
 AspectCalculator::AspectCalculator(AspectSettings const& settings) : m_settings(settings) {
@@ -24,14 +25,14 @@ std::vector<AspectData> AspectCalculator::Calculate(std::vector<PlanetPosition> 
     return aspects;
 }
 
-double AspectCalculator::GetAspectAngle(AspectType type) {
+float AspectCalculator::GetAspectAngle(AspectType type) {
     return aspectAngles[(int)type];
 }
 
-AspectType AspectCalculator::GetAspectType(Planet p1, Planet p2, double diff, double& dist) const {
+AspectType AspectCalculator::GetAspectType(Planet p1, Planet p2, float diff, float& dist) const {
     int count = m_settings.MajorOnly ? 5 : _countof(aspectAngles);
     dist = -1;
-    double extra = 0;
+    float extra = 0;
     if (p1 == Planet::Sun && p2 == Planet::Moon)
         extra += m_settings.SunMoonOrbAdd;
     else if (p1 == Planet::Sun)
@@ -44,7 +45,7 @@ AspectType AspectCalculator::GetAspectType(Planet p1, Planet p2, double diff, do
         bool major = i <= (int)AspectType::Opposition;       
         auto orb = major ? m_settings.MajorAspectOrb : m_settings.MinorAspectOrb;
         if (type == AspectType::Conjunction)
-            orb += m_settings.ConjuntionOrbAdd;
+            orb += m_settings.ConjunctionOrbAdd;
         orb += extra;
 
         dist = fabs(diff - aspectAngles[i]);
@@ -65,8 +66,8 @@ AspectData AspectCalculator::CalcAspect(PlanetPosition p1, PlanetPosition p2) co
     AspectData data;
     data.Planet1 = p1;
     data.Planet2 = p2;
-    data.Angle = diff;
-    data.Type = GetAspectType(p1.Planet, p2.Planet, diff, data.Orb);
+    data.Angle = (float)diff;
+    data.Type = GetAspectType(p1.Planet, p2.Planet, (float)diff, data.Orb);
     if (data.Type != AspectType::None) {
         data.Applying = IsApplying(p1, p2, GetAspectAngle(data.Type), GetAspectAngle(data.Type));
     }
@@ -74,20 +75,20 @@ AspectData AspectCalculator::CalcAspect(PlanetPosition p1, PlanetPosition p2) co
 }
 
 
-bool AspectCalculator::IsApplying(PlanetPosition p1, PlanetPosition p2, double angle, double exact) const {
+bool AspectCalculator::IsApplying(PlanetPosition p1, PlanetPosition p2, double angle, double exact) noexcept {
     auto delta = .1;
     return fabs(AstroPoint::Diff(p1.Longitude + delta * p1.Speed, p2.Longitude + delta * p2.Speed) - exact)
         < fabs(AstroPoint::Diff(p1.Longitude, p2.Longitude) - angle);
 }
 
-bool AspectData::IsMajor() const {
+bool AspectData::IsMajor() const noexcept {
     return Type <= AspectType::Opposition;
 }
 
-bool AspectData::IsSoft() const {
-    return Type == AspectType::Sextile || Type == AspectType::Trine || Type == AspectType::SemiSextile;
+bool AspectData::IsSoft() const noexcept {
+    return Type == AspectType::Sextile || Type == AspectType::Trine;
 }
 
-bool AspectData::IsHard() const {
+bool AspectData::IsHard() const noexcept {
     return Type == AspectType::Square || Type == AspectType::Opposition || Type == AspectType::SemiSquare;
 }

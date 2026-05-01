@@ -9,7 +9,7 @@ bool Helpers::LoadAstroFont(UINT id) {
 	ATLASSERT(hGlobal);
 	auto size = ::SizeofResource(nullptr, res);
 	auto p = ::LockResource(hGlobal);
-	DWORD count;
+	DWORD count = 0;
 	auto handle = ::AddFontMemResourceEx(p, size, nullptr, &count);
 	ATLASSERT(handle);
 	return true;
@@ -32,15 +32,16 @@ CString Helpers::FormatDateTime(DateTime const& dt, DateTimeFormatOptions option
 
 CString Helpers::FormatLongitude(AstroPoint const& value, FormatOptions options, AstroFontBase const& font) {
 	CString text;
+	bool showSeconds = (options & FormatOptions::ShowSeconds) == FormatOptions::ShowSeconds;
 	text.Format(L"%02d%s %s %02d%s",
 		(int)value.DegreeInSign(),
 		(options & FormatOptions::ShowDegreeGlyph) == FormatOptions::ShowDegreeGlyph ? (PCWSTR)CString((WCHAR)
 			((options & FormatOptions::UseGlyphs) == FormatOptions::UseGlyphs ? 59 : 0xb0)) : L"",
 		(options & FormatOptions::UseGlyphs) == FormatOptions::UseGlyphs ?
 		(PCWSTR)font.GetSignGlyphAsString(value.Sign()) : (PCWSTR)GetZodiacSignName(value.Sign()).Left(3),
-		(int)(value.Minutes() + .5),
+		(int)(value.Minutes() + (showSeconds ? 0 : .5)),
 		(options & FormatOptions::ShowDegreeGlyph) == FormatOptions::ShowDegreeGlyph ? (PCWSTR)CString((WCHAR)39) : L"");
-	if ((options & FormatOptions::ShowSeconds) == FormatOptions::ShowSeconds) {
+	if (showSeconds) {
 		CString sec;
 		sec.Format(L"%02d\"", int(value.Seconds() + .5));
 		text += sec;

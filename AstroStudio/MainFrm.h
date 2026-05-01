@@ -6,7 +6,9 @@
 
 #include "Interfaces.h"
 #include <OwnerDrawnMenu.h>
-#include <CustomTabView.h>
+#include <NativeCustomTabView.h>
+#include <TabViewHelper.h>
+#include "resource.h"
 
 class CMainFrame :
 	public CFrameWindowImpl<CMainFrame>,
@@ -32,18 +34,20 @@ protected:
 		COMMAND_ID_HANDLER(ID_TOOL_EPHEMERIS, OnToolEphemeris)
 		COMMAND_ID_HANDLER(ID_NEW_CHART, OnNewChart)
 		COMMAND_ID_HANDLER(ID_NEW_CHARTFORNOW, OnNewChartNow)
+		COMMAND_ID_HANDLER(ID_OPTIONS_DARKMODE, OnToggleDarkMode)
 		MESSAGE_HANDLER(WM_GETMINMAXINFO, OnGetMinMaxInfo)
 		COMMAND_ID_HANDLER(ID_WINDOW_CLOSE_ALL, OnWindowCloseAll)
 		MESSAGE_HANDLER(WM_CREATE, OnCreate)
 		MESSAGE_HANDLER(WM_DESTROY, OnDestroy)
 		COMMAND_RANGE_HANDLER(ID_WINDOW_TABFIRST, ID_WINDOW_TABLAST, OnWindowActivate)
-		CHAIN_MSG_MAP(CAutoUpdateUI<CMainFrame>)
-		CHAIN_MSG_MAP(CFrameWindowImpl<CMainFrame>)
-		CHAIN_MSG_MAP(COwnerDrawnMenu<CMainFrame>)
+		CHAIN_MSG_MAP(CAutoUpdateUI)
+		CHAIN_MSG_MAP(CFrameWindowImpl)
+		//CHAIN_MSG_MAP(COwnerDrawnMenu)
 	END_MSG_MAP()
 
 private:
-	void InitMenu();
+	void InitMenu(HMENU menu);
+	BOOL AddToolBarToUI(HWND) override;
 
 	// Inherited via IMainFrame
 	HWND GetHwnd() const override;
@@ -70,8 +74,9 @@ private:
 	LRESULT OnPageActivated(int /*idCtrl*/, LPNMHDR /*pnmh*/, BOOL& /*bHandled*/);
 	LRESULT OnNewChart(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/);
 	LRESULT OnNewChartNow(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/);
+	LRESULT OnToggleDarkMode(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/);
 
-	CCustomTabView m_view;
+	CNativeCustomTabView m_view;
 	int m_CurrentPage{ -1 };
 	ULONG_PTR m_GdiPlusToken{ 0 };
 	HANDLE m_hDefaultChartInfoReady;

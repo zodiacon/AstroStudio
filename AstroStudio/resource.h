@@ -49,8 +49,7 @@
 #define IDC_SOUTH                       1012
 #define IDC_HERE                        1015
 #define IDC_LOOKUP                      1016
-#define IDC_LIST1                       1017
-#define IDC_ASPECTS                     1017
+#define IDC_MONTHCALENDAR1              1018
 #define IDC_LATMIN                      1019
 #define IDC_LATMINUD                    1020
 #define IDC_LONDEG                      1021
@@ -69,14 +68,20 @@
 #define ID_FILE_NEW32779                32779
 #define ID_NEW_CHART                    32780
 #define ID_NEW_CHARTFORNOW              32781
+#define ID_OPTIONS_THEME                32782
+#define ID_THEME_LIGHT                  32783
+#define ID_THEME_DARK                   32784
+#define ID_THEME_CLASSIC                32785
+#define ID_THEME_SYSTEM                 32786
+#define ID_OPTIONS_DARKMODE             32787
 
 // Next default values for new objects
 // 
 #ifdef APSTUDIO_INVOKED
 #ifndef APSTUDIO_READONLY_SYMBOLS
 #define _APS_NEXT_RESOURCE_VALUE        226
-#define _APS_NEXT_COMMAND_VALUE         32782
-#define _APS_NEXT_CONTROL_VALUE         1018
+#define _APS_NEXT_COMMAND_VALUE         32788
+#define _APS_NEXT_CONTROL_VALUE         1019
 #define _APS_NEXT_SYMED_VALUE           107
 #endif
 #endif

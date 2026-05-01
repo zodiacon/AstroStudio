@@ -6,6 +6,9 @@
 #include "DefaultFont.h"
 #include "Helpers.h"
 #include "SortHelper.h"
+#include <WTLHelper.h>
+
+#include "ColorHelper.h"
 
 BOOL CChartDetailsView::PreTranslateMessage(MSG* pMsg) {
 	return IsDialogMessage(pMsg);
@@ -90,18 +93,18 @@ void CChartDetailsView::DoSort(SortInfo const* si) {
 	std::ranges::sort(m_Planets, compare);
 }
 
-DWORD CChartDetailsView::OnPrePaint(int, LPNMCUSTOMDRAW cd) {
+DWORD CChartDetailsView::OnPrePaint(int, LPNMCUSTOMDRAW cd) noexcept {
 	if (cd->hdr.hwndFrom == m_ctlPlanets || cd->hdr.hwndFrom == m_ctlHouses)
 		return CDRF_NOTIFYITEMDRAW;
 	SetMsgHandled(FALSE);
 	return 0;
 }
 
-DWORD CChartDetailsView::OnItemPrePaint(int, LPNMCUSTOMDRAW cd) {
+DWORD CChartDetailsView::OnItemPrePaint(int, LPNMCUSTOMDRAW cd) noexcept {
 	auto h = cd->hdr.hwndFrom;
 	if (h == m_ctlPlanets || h == m_ctlHouses) {
 		auto lv = (LPNMLVCUSTOMDRAW)cd;
-		static const COLORREF colors[] = {
+		COLORREF colors[] = {
 			//
 			// TODO: move to handle default colors
 			//
@@ -110,6 +113,10 @@ DWORD CChartDetailsView::OnItemPrePaint(int, LPNMCUSTOMDRAW cd) {
 			Gdiplus::Color(Gdiplus::Color::LightGreen).ToCOLORREF(),
 			Gdiplus::Color(Gdiplus::Color::LightBlue).ToCOLORREF()
 		};
+		if (WTLHelper::IsDarkMode()) {
+			for (auto& color : colors)
+				color = ColorHelper::Darken(color, 40);
+		}
 		if (h == m_ctlPlanets) {
 			lv->clrTextBk = colors[int(m_Data->GetPlanet((int)cd->dwItemSpec).Longitude.Sign()) % 4];
 		}
@@ -122,7 +129,7 @@ DWORD CChartDetailsView::OnItemPrePaint(int, LPNMCUSTOMDRAW cd) {
 	return 0;
 }
 
-DWORD CChartDetailsView::OnSubItemPrePaint(int, LPNMCUSTOMDRAW cd) {
+DWORD CChartDetailsView::OnSubItemPrePaint(int, LPNMCUSTOMDRAW cd) const noexcept {
 	auto hWnd = cd->hdr.hwndFrom;
 	ATLASSERT(hWnd == m_ctlPlanets || hWnd == m_ctlHouses);
 	auto lv = (LPNMLVCUSTOMDRAW)cd;
@@ -295,4 +302,5 @@ LRESULT CChartDetailsView::OnNow(WORD, WORD, HWND, BOOL&) {
 
 	return 0;
 }
+
 

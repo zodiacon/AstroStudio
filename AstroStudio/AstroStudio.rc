@@ -88,6 +88,7 @@ BEGIN
     BEGIN
         MENUITEM "&Always On Top",              ID_OPTIONS_ALWAYSONTOP
         MENUITEM "&Font...",                    ID_OPTIONS_FONT
+        MENUITEM "&Dark Mode",                  ID_OPTIONS_DARKMODE
     END
     POPUP "&Window"
     BEGIN
@@ -164,18 +165,18 @@ IDI_GLOBE               ICON                    "res\\Globe.ico"
 // Dialog
 //
 
-IDD_ABOUTBOX DIALOGEX 0, 0, 187, 90
+IDD_ABOUTBOX DIALOGEX 0, 0, 187, 79
 STYLE DS_SETFONT | DS_MODALFRAME | WS_POPUP | WS_CAPTION | WS_SYSMENU
 CAPTION "About Astro Studio"
 FONT 9, "Segoe UI", 0, 0, 0x0
 BEGIN
-    DEFPUSHBUTTON   "OK",IDOK,68,69,50,14
-    CTEXT           "Astro Studio v1.0\n\n©2022 Pavel Yosifovich",IDC_STATIC,31,19,107,32
+    DEFPUSHBUTTON   "OK",IDOK,68,58,50,14
+    CTEXT           "Astro Studio v1.0\n\n©2022-2026 Pavel Yosifovich",IDC_STATIC,36,14,107,32
     ICON            IDR_MAINFRAME,IDC_STATIC,7,7,20,20
 END
 
 IDD_CHARTDETAILS DIALOGEX 0, 0, 503, 345
-STYLE DS_SETFONT | WS_CHILD | WS_VISIBLE | WS_CLIPSIBLINGS | WS_CLIPCHILDREN
+STYLE DS_SETFONT | DS_CONTROL | WS_CHILD | WS_VISIBLE | WS_CLIPSIBLINGS | WS_CLIPCHILDREN
 FONT 9, "Tahoma", 400, 0, 0x0
 BEGIN
     LTEXT           "House System:",IDC_STATIC,7,49,49,8
@@ -228,7 +229,7 @@ BEGIN
         LEFTMARGIN, 7
         RIGHTMARGIN, 180
         TOPMARGIN, 7
-        BOTTOMMARGIN, 83
+        BOTTOMMARGIN, 72
     END
 
     IDD_CHARTDETAILS, DIALOG
@@ -286,12 +287,13 @@ VS_VERSION_INFO VERSIONINFO
 BEGIN
     BLOCK "StringFileInfo"
     BEGIN
-        BLOCK "040904B0"
+        BLOCK "040904b0"
         BEGIN
-            VALUE "FileDescription", "AstroStudio Module"
+            VALUE "CompanyName", "Scorpio Software LLC"
+            VALUE "FileDescription", "Astrology Studio"
             VALUE "FileVersion", "1, 0, 0, 1"
             VALUE "InternalName", "AstroStudio"
-            VALUE "LegalCopyright", "Copyright 2022"
+            VALUE "LegalCopyright", "©2022-2026 Pavel Yosifovich"
             VALUE "OriginalFilename", "AstroStudio.exe"
             VALUE "ProductName", "AstroStudio Module"
             VALUE "ProductVersion", "1, 0, 0, 1"

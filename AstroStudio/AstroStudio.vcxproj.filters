@@ -122,9 +122,6 @@
     <ClInclude Include="ChartDetailsView.h">
       <Filter>Views</Filter>
     </ClInclude>
-    <ClInclude Include="StringHelper.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
     <ClInclude Include="NetworkHelper.h">
       <Filter>Helpers</Filter>
     </ClInclude>
@@ -136,6 +133,9 @@
     </ClInclude>
     <ClInclude Include="GraphicChartView.h">
       <Filter>Views</Filter>
+    </ClInclude>
+    <ClInclude Include="StringHelper.h">
+      <Filter>Helpers</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

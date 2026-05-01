@@ -2,9 +2,9 @@
 //
 
 #include "pch.h"
-#include "resource.h"
 #include "MainFrm.h"
 #include <ThemeHelper.h>
+#include <WTLHelper.h>
 
 CAppModule _Module;
 
@@ -14,7 +14,7 @@ int Run(LPTSTR /*lpstrCmdLine*/ = nullptr, int nCmdShow = SW_SHOWDEFAULT) {
 
 	CMainFrame wndMain;
 
-	if (wndMain.CreateEx() == NULL) {
+	if (wndMain.CreateEx() == nullptr) {
 		ATLTRACE(_T("Main window creation failed!\n"));
 		return 0;
 	}
@@ -36,7 +36,9 @@ int WINAPI _tWinMain(HINSTANCE hInstance, HINSTANCE /*hPrevInstance*/, LPTSTR lp
 	hRes = _Module.Init(nullptr, hInstance);
 	ATLASSERT(SUCCEEDED(hRes));
 
-	ThemeHelper::Init();
+	WTLHelper::InitDarkMode();
+	//ThemeHelper::Init();
+
 	int nRet = Run(lpstrCmdLine, nCmdShow);
 
 	_Module.Term();

@@ -4,7 +4,7 @@
 #include "Helpers.h"
 #include "Aspects.h"
 #include "DefaultFont.h"
-
+#include <DarkMode/DmlibColor.h>
 
 CChartView::CChartView(IMainFrame* frame) : CFrameView(frame), m_ChartDrawing(frame) {
 }
@@ -79,10 +79,34 @@ LRESULT CChartView::OnCreate(UINT, WPARAM, LPARAM, BOOL&) {
 	m_Splitter.SetSplitterPanes(m_ChartDrawing, m_DetailsView);
 	m_Splitter.SetSplitterPosPct(50);
 
+	DarkMode::setDarkWndNotifySafe(m_hWnd);
+
 	return 0;
 }
 
 LRESULT CChartView::OnEditCopy(WORD, WORD, HWND, BOOL&) {
+	return 0;
+}
+
+LRESULT CChartView::OnRecalc(UINT, WPARAM wp, LPARAM, BOOL&) {
+	switch (static_cast<Recalc>(wp)) {
+	case Recalc::Houses:
+		m_Data.CalcHouses(m_Calc);
+		break;
+
+	case Recalc::Planets:
+		m_Data.CalcPlanets(m_Calc);
+		break;
+
+	case Recalc::All:
+		m_Data.CalcPlanets(m_Calc);
+		m_Data.CalcHouses(m_Calc);
+		break;
+	}
+	AspectCalculator ac;
+	auto aspects = ac.Calculate(m_Data.AllPlanets());
+	m_ChartDrawing.SetAspects(std::move(aspects));
+	m_ChartDrawing.Refresh();
 	return 0;
 }
 
