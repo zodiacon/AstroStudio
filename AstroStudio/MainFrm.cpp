@@ -138,10 +138,10 @@ LRESULT CMainFrame::OnNewChartNow(WORD, WORD, HWND, BOOL&) {
 }
 
 LRESULT CMainFrame::OnToggleDarkMode(WORD, WORD, HWND, BOOL&) {
-	WTLHelper::SwitchToMode(WTLHelper::IsDarkMode() ? DarkMode::DarkModeType::light : DarkMode::DarkModeType::dark, m_hWnd);
+	WTLHelper::SwitchToMode(WTLHelper::IsDarkMode() ? DarkModeKind::Classic : DarkModeKind::Dark, m_hWnd);
 	InitMenu(GetMenu());
 	DrawMenuBar();
-
+	UISetCheck(ID_OPTIONS_DARKMODE, WTLHelper::IsDarkMode());
 	return 0;
 }
 
