@@ -4,6 +4,7 @@
 #include "Helpers.h"
 #include "PlanetSpacer.h"
 #include "DefaultFont.h"
+#include "resource.h"
 
 const double PI = std::atan(1) * 4;
 
@@ -38,7 +39,7 @@ bool ChartDrawing::Draw(Gdiplus::Graphics& g, int size) {
 
 	double startAngle = m_data->Houses().Asc.NextSign() + 120 + m_data->Houses().Asc.DegreeInSign();
 	static const WCHAR text[] = L"asdfghjklzxc";
-	Font font(L"HamburgSymbols", 17);
+	Font font(&Helpers::GetAstroFontFamily(IDR_FONT), 17);
 	
 	//
 	// draw zodiac
@@ -97,7 +98,7 @@ bool ChartDrawing::Draw(Gdiplus::Graphics& g, int size) {
 	PlanetSpacer spacer(m_data->AllPlanets());
 	spacer.Space();
 
-	Font planetFont(L"HamburgSymbols", 20);
+	Font planetFont(&Helpers::GetAstroFontFamily(IDR_FONT), 20);
 	for (auto& pp : spacer.NewPositions()) {
 		auto pt = PointByAngle(center, r, pp.Longitude);
 		auto x = pt.X, y = pt.Y;

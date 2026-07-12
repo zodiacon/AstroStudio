@@ -232,7 +232,8 @@ HWND CMainFrame::GetHwnd() const {
 }
 
 BOOL CMainFrame::TrackPopupMenu(HMENU hMenu, DWORD flags, int x, int y) {
-	return ShowContextMenu(hMenu, flags, x, y);
+	InitMenu(hMenu);
+	return ::TrackPopupMenu(hMenu, flags, x, y, 0, m_hWnd, nullptr);
 }
 
 CUpdateUIBase& CMainFrame::GetUI() {

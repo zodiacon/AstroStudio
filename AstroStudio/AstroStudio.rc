@@ -273,8 +273,8 @@ END
 //
 
 VS_VERSION_INFO VERSIONINFO
- FILEVERSION 1,0,0,1
- PRODUCTVERSION 1,0,0,1
+ FILEVERSION 0,1,0,0
+ PRODUCTVERSION 0,1,0,0
  FILEFLAGSMASK 0x3fL
 #ifdef _DEBUG
  FILEFLAGS 0x1L
@@ -291,12 +291,12 @@ BEGIN
         BEGIN
             VALUE "CompanyName", "Scorpio Software LLC"
             VALUE "FileDescription", "Astrology Studio"
-            VALUE "FileVersion", "1, 0, 0, 1"
+            VALUE "FileVersion", "0.1.0.0"
             VALUE "InternalName", "AstroStudio"
             VALUE "LegalCopyright", "©2022-2026 Pavel Yosifovich"
             VALUE "OriginalFilename", "AstroStudio.exe"
-            VALUE "ProductName", "AstroStudio Module"
-            VALUE "ProductVersion", "1, 0, 0, 1"
+            VALUE "ProductName", "Astro Studio - Astrology Studio"
+            VALUE "ProductVersion", "0.1.0.0"
         END
     END
     BLOCK "VarFileInfo"

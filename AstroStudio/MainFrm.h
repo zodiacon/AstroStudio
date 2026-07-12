@@ -5,7 +5,6 @@
 #pragma once
 
 #include "Interfaces.h"
-#include <OwnerDrawnMenu.h>
 #include <NativeCustomTabView.h>
 #include <TabViewHelper.h>
 #include "resource.h"
@@ -14,7 +13,6 @@ class CMainFrame :
 	public CFrameWindowImpl<CMainFrame>,
 	public CAutoUpdateUI<CMainFrame>,
 	public IMainFrame,
-	public COwnerDrawnMenu<CMainFrame>,
 	public CMessageFilter, 
 	public CIdleHandler {
 public:
@@ -42,7 +40,6 @@ protected:
 		COMMAND_RANGE_HANDLER(ID_WINDOW_TABFIRST, ID_WINDOW_TABLAST, OnWindowActivate)
 		CHAIN_MSG_MAP(CAutoUpdateUI)
 		CHAIN_MSG_MAP(CFrameWindowImpl)
-		//CHAIN_MSG_MAP(COwnerDrawnMenu)
 	END_MSG_MAP()
 
 private:
