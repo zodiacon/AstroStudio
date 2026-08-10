@@ -31,11 +31,14 @@ public:
 
 private:
 	enum class ColumnType {
-		Planet1, Planet2, Aspect, Orb, Applying,
+		Planet1, Planet2, Aspect, Orb, Applying, Planet1Pos, Planet2Pos,
 	};
 
 	LRESULT OnCreate(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, BOOL& /*bHandled*/);
+	void GetCellColors(LPNMCUSTOMDRAW cd, COLORREF backColorOverride, COLORREF& backColor, COLORREF& textColor) const;
 	void DrawGlyphAndName(LPNMCUSTOMDRAW cd, PCWSTR glyph, PCWSTR name) const;
+	void DrawCell(LPNMCUSTOMDRAW cd, PCWSTR text, HFONT font, COLORREF backColorOverride = CLR_INVALID) const;
+	static COLORREF GetElementColor(ZodiacSign sign);
 
 	CListViewCtrl m_List;
 	CFont m_Font;
