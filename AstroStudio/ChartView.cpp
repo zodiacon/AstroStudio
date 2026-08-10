@@ -6,7 +6,11 @@
 #include "DefaultFont.h"
 #include <DarkMode/DmlibColor.h>
 
-CChartView::CChartView(IMainFrame* frame) : CFrameView(frame), m_ChartDrawing(frame) {
+CChartView::CChartView(IMainFrame* frame) : CFrameView(frame), m_ChartDrawing(frame), m_AspectGrid(frame), m_AspectList(frame) {
+}
+
+BOOL CChartView::PreTranslateMessage(MSG* pMsg) {
+	return m_DetailsTabs.PreTranslateMessage(pMsg);
 }
 
 void CChartView::Chart(ChartData data) {
@@ -15,9 +19,15 @@ void CChartView::Chart(ChartData data) {
 	m_Data = std::move(data);
 	m_DetailsView.SetChartData(&m_Data);
 	m_ChartDrawing.SetChartData(&m_Data);
+	m_AspectGrid.SetChartData(&m_Data);
 
 	AspectCalculator ac;
 	auto aspects = ac.Calculate(m_Data.AllPlanets());
+	m_AspectList.SetAspects(aspects);
+	m_AspectList.Refresh();
+	m_AspectGrid.SetAspects(aspects);
+	m_AspectGrid.Refresh();
+	UpdateAspectGridScrollSize();
 	m_ChartDrawing.SetAspects(std::move(aspects));
 	m_ChartDrawing.Refresh();
 }
@@ -74,9 +84,26 @@ LRESULT CChartView::OnCreate(UINT, WPARAM, LPARAM, BOOL&) {
 	m_hWndClient = m_Splitter.Create(m_hWnd, rcDefault, nullptr, WS_CHILD | WS_VISIBLE | WS_CLIPCHILDREN | WS_CLIPSIBLINGS, WS_EX_TRANSPARENT);
 	m_ChartDrawing.Create(m_Splitter, rcDefault, nullptr, WS_CHILD | WS_VISIBLE | WS_CLIPCHILDREN | WS_CLIPSIBLINGS);
 	m_ChartDrawing.SetStatic();
-	m_DetailsView.Create(m_Splitter);
+
+	m_DetailsTabs.Create(m_Splitter, rcDefault, nullptr, WS_CHILD | WS_VISIBLE | WS_CLIPCHILDREN | WS_CLIPSIBLINGS);
+
+	m_DetailsView.Create(m_DetailsTabs);
 	m_DetailsView.SetNotifyWindow(m_hWnd);
-	m_Splitter.SetSplitterPanes(m_ChartDrawing, m_DetailsView);
+
+	m_AspectGridScroll.Create(m_DetailsTabs, rcDefault, nullptr, WS_CHILD | WS_CLIPCHILDREN | WS_CLIPSIBLINGS | WS_HSCROLL | WS_VSCROLL);
+	m_AspectGrid.Create(m_AspectGridScroll, rcDefault, nullptr, WS_CHILD | WS_VISIBLE | WS_CLIPCHILDREN | WS_CLIPSIBLINGS);
+	m_AspectGrid.SetStatic();
+	m_AspectGridScroll.SetClient(m_AspectGrid);
+
+	m_AspectList.Create(m_DetailsTabs, rcDefault, nullptr, WS_CHILD | WS_CLIPCHILDREN | WS_CLIPSIBLINGS);
+	m_AspectList.SetStatic();
+
+	m_DetailsTabs.AddPage(m_DetailsView.m_hWnd, L"Details");
+	m_DetailsTabs.AddPage(m_AspectGridScroll.m_hWnd, L"Aspect Grid");
+	m_DetailsTabs.AddPage(m_AspectList.m_hWnd, L"Aspect List");
+	m_DetailsTabs.SetActivePage(0);
+
+	m_Splitter.SetSplitterPanes(m_ChartDrawing, m_DetailsTabs);
 	m_Splitter.SetSplitterPosPct(50);
 
 	DarkMode::setDarkWndNotifySafe(m_hWnd);
@@ -86,6 +113,17 @@ LRESULT CChartView::OnCreate(UINT, WPARAM, LPARAM, BOOL&) {
 
 LRESULT CChartView::OnEditCopy(WORD, WORD, HWND, BOOL&) {
 	return 0;
+}
+
+LRESULT CChartView::OnForwardMsg(UINT, WPARAM, LPARAM lParam, BOOL& bHandled) {
+	bHandled = TRUE;
+	return m_DetailsTabs.PreTranslateMessage((LPMSG)lParam);
+}
+
+void CChartView::UpdateAspectGridScrollSize() {
+	auto size = m_AspectGrid.NaturalSize();
+	m_AspectGridScroll.SetScrollSize(size, size);
+	m_AspectGridScroll.UpdateLayout();
 }
 
 LRESULT CChartView::OnRecalc(UINT, WPARAM wp, LPARAM, BOOL&) {
@@ -105,6 +143,11 @@ LRESULT CChartView::OnRecalc(UINT, WPARAM wp, LPARAM, BOOL&) {
 	}
 	AspectCalculator ac;
 	auto aspects = ac.Calculate(m_Data.AllPlanets());
+	m_AspectList.SetAspects(aspects);
+	m_AspectList.Refresh();
+	m_AspectGrid.SetAspects(aspects);
+	m_AspectGrid.Refresh();
+	UpdateAspectGridScrollSize();
 	m_ChartDrawing.SetAspects(std::move(aspects));
 	m_ChartDrawing.Refresh();
 	return 0;

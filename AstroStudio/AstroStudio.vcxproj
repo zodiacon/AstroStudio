@@ -212,6 +212,9 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClCompile Include="AboutDlg.cpp" />
+    <ClCompile Include="AspectGridDrawing.cpp" />
+    <ClCompile Include="AspectGridWnd.cpp" />
+    <ClCompile Include="AspectListView.cpp" />
     <ClCompile Include="AstroFont.cpp" />
     <ClCompile Include="AstroStudio.cpp" />
     <ClCompile Include="ChartDetailsView.cpp" />
@@ -236,6 +239,9 @@
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="AboutDlg.h" />
+    <ClInclude Include="AspectGridDrawing.h" />
+    <ClInclude Include="AspectGridWnd.h" />
+    <ClInclude Include="AspectListView.h" />
     <ClInclude Include="AstroFont.h" />
     <ClInclude Include="ChartDetailsView.h" />
     <ClInclude Include="ChartDrawing.h" />

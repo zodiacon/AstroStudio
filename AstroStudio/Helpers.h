@@ -3,6 +3,7 @@
 #include "AstroPoint.h"
 #include "DefaultFont.h"
 class DateTime;
+enum class AspectType;
 
 enum class FormatOptions {
 	None = 0,
@@ -29,6 +30,7 @@ struct Helpers abstract final {
 	static CString FormatLatitude(double lat);
 	static std::tuple<int, int, int> GetDegMinSec(double angle, bool sign = false);
 	static PCWSTR GetPlanetName(Planet type);
+	static PCWSTR GetAspectName(AspectType type);
 	static CString GetZodiacSignName(ZodiacSign sign);
 	static std::vector<Planet> GetStandardPlanets();
 	static COLORREF Darken(COLORREF color, int offset);

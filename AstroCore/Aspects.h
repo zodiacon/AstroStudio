@@ -19,8 +19,8 @@ enum class AspectType {
 	BiSeptile,
 	Quincunx,
 	SesquiQuadrate,
-	//Novile,
-	//BiNovile,
+	Novile,
+	BiNovile,
 
 	None = -1,
 };

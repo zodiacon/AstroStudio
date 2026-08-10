@@ -75,6 +75,15 @@
     <ClCompile Include="GraphicChartView.cpp">
       <Filter>Views</Filter>
     </ClCompile>
+    <ClCompile Include="AspectGridDrawing.cpp">
+      <Filter>Views</Filter>
+    </ClCompile>
+    <ClCompile Include="AspectGridWnd.cpp">
+      <Filter>Views</Filter>
+    </ClCompile>
+    <ClCompile Include="AspectListView.cpp">
+      <Filter>Views</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="pch.h">
@@ -136,6 +145,15 @@
     </ClInclude>
     <ClInclude Include="StringHelper.h">
       <Filter>Helpers</Filter>
+    </ClInclude>
+    <ClInclude Include="AspectGridDrawing.h">
+      <Filter>Views</Filter>
+    </ClInclude>
+    <ClInclude Include="AspectGridWnd.h">
+      <Filter>Views</Filter>
+    </ClInclude>
+    <ClInclude Include="AspectListView.h">
+      <Filter>Views</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

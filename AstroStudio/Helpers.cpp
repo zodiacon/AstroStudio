@@ -1,6 +1,7 @@
 #include "pch.h"
 #include "Helpers.h"
 #include "DateTime.h"
+#include "Aspects.h"
 
 bool Helpers::LoadAstroFont(UINT id) {
 	auto res = ::FindResource(nullptr, MAKEINTRESOURCE(id), L"TTF");
@@ -94,6 +95,16 @@ PCWSTR Helpers::GetPlanetName(Planet type) {
 		L"Ceres", L"Pallas", L"Juno", L"Vesta",
 	};
 	ATLASSERT((int)type < _countof(names));
+	return names[(int)type];
+}
+
+PCWSTR Helpers::GetAspectName(AspectType type) {
+	static PCWSTR names[] = {
+		L"Conjunction", L"Sextile", L"Square", L"Trine", L"Opposition",
+		L"Semi-Sextile", L"Semi-Square", L"Quintile", L"Bi-Quintile", L"Septile", 
+		L"Bi-Septile", L"Quincunx", L"Sesqui-Quadrate", L"Novile", L"Bi-Novile",
+	};
+	ATLASSERT((int)type >= 0 && (int)type < _countof(names));
 	return names[(int)type];
 }
 
