@@ -5,6 +5,7 @@
 #include "Aspects.h"
 #include "DefaultFont.h"
 #include <DarkMode/DmlibColor.h>
+#include <DarkMode/DarkModeSubclass.h>
 
 CChartView::CChartView(IMainFrame* frame) : CFrameView(frame), m_ChartDrawing(frame), m_AspectGrid(frame), m_AspectList(frame) {
 }
@@ -107,6 +108,7 @@ LRESULT CChartView::OnCreate(UINT, WPARAM, LPARAM, BOOL&) {
 	m_Splitter.SetSplitterPosPct(50);
 
 	DarkMode::setDarkWndNotifySafe(m_hWnd);
+	UpdateAspectGridScrollBarTheme();
 
 	return 0;
 }
@@ -120,10 +122,23 @@ LRESULT CChartView::OnForwardMsg(UINT, WPARAM, LPARAM lParam, BOOL& bHandled) {
 	return m_DetailsTabs.PreTranslateMessage((LPMSG)lParam);
 }
 
+LRESULT CChartView::OnThemeChanged(UINT, WPARAM, LPARAM, BOOL&) {
+	UpdateAspectGridScrollBarTheme();
+	return 0;
+}
+
 void CChartView::UpdateAspectGridScrollSize() {
 	auto size = m_AspectGrid.NaturalSize();
 	m_AspectGridScroll.SetScrollSize(size, size);
 	m_AspectGridScroll.UpdateLayout();
+}
+
+void CChartView::UpdateAspectGridScrollBarTheme() {
+	// CScrollContainer is a plain custom-class window, not a recognized common control,
+	// so DarkMode::setDarkWndNotifySafe's generic child-control theming doesn't reach its
+	// native scroll bars - they need to be themed explicitly.
+	DarkMode::setDarkScrollBar(m_AspectGridScroll.m_hWnd);
+	m_AspectGridScroll.Invalidate();
 }
 
 LRESULT CChartView::OnRecalc(UINT, WPARAM wp, LPARAM, BOOL&) {

@@ -13,7 +13,7 @@ LRESULT CAspectGridWnd::OnPaint(UINT, WPARAM, LPARAM, BOOL&) const {
 
 	CPaintDC dc(*this);
 	Graphics g(dc.m_hDC);
-	SolidBrush b(Color::LightGray);
+	SolidBrush b(m_Drawing.DrawingParameters().BackColor);
 	g.FillRectangle(&b, 0, 0, rc.right, rc.bottom);
 	if (m_Bitmap)
 		g.DrawImage(m_Bitmap.get(), 0, 0);
@@ -36,6 +36,13 @@ int CAspectGridWnd::NaturalSize() const noexcept {
 }
 
 void CAspectGridWnd::Refresh() {
+	AspectGridDrawingParameters params;
+	if (WTLHelper::IsDarkMode()) {
+		params.BackColor = Color(30, 30, 30);
+		params.GridLineColor = Color(90, 90, 90);
+		params.AspectColor = Color(220, 220, 220);
+	}
+	m_Drawing.DrawingParameters(params);
 	m_Drawing.Chart(m_ChartData);
 	m_Drawing.Aspects(&m_Aspects);
 
@@ -45,4 +52,9 @@ void CAspectGridWnd::Refresh() {
 	m_Drawing.Draw(g);
 
 	Invalidate();
+}
+
+LRESULT CAspectGridWnd::OnThemeChanged(UINT, WPARAM, LPARAM, BOOL&) {
+	Refresh();
+	return 0;
 }

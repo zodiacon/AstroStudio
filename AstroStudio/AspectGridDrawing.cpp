@@ -42,16 +42,21 @@ bool AspectGridDrawing::Draw(Gdiplus::Graphics& g) {
 		}
 	}
 
+	// a 1px margin keeps the outer border from being clipped: a pen is centered on the
+	// path it strokes, so a line drawn right at the bitmap edge would have half its width
+	// fall outside the bitmap and effectively disappear
+	const float margin = 1.0f;
+
 	int size = n + 1;
 	for (int row = 0; row < size; row++) {
 		for (int col = 0; col < size; col++) {
-			RectF rc((float)(col * cell), (float)(row * cell), (float)cell, (float)cell);
+			RectF rc(margin + col * cell, margin + row * cell, (float)cell, (float)cell);
 			g.DrawRectangle(&gridPen, rc);
 
 			if (row == 0 && col == 0)
 				continue;
 
-			PointF center((float)(col * cell) + cell / 2.0f, (float)(row * cell) + cell / 2.0f);
+			PointF center(margin + col * cell + cell / 2.0f, margin + row * cell + cell / 2.0f);
 
 			if (row == 0) {
 				auto glyph = DefaultFont::Get().GetPlanetGlyphAsString(planets[col - 1].Planet);
@@ -63,8 +68,8 @@ bool AspectGridDrawing::Draw(Gdiplus::Graphics& g) {
 				g.DrawString(glyph, 1, &font, center, &format, &blackBrush);
 				continue;
 			}
-			if (row <= col)
-				continue;	// at/above the diagonal: each pair is shown once, in the lower triangle
+			if (row == col)
+				continue;	// no self-aspect; the mirrored pair is drawn on both sides of the diagonal
 
 			auto p1 = planets[row - 1].Planet, p2 = planets[col - 1].Planet;
 			auto key = p1 < p2 ? std::make_pair(p1, p2) : std::make_pair(p2, p1);
@@ -125,5 +130,5 @@ AspectGridDrawing& AspectGridDrawing::Aspects(std::vector<AspectData>* aspects) 
 
 int AspectGridDrawing::GridSize() const {
 	int n = m_data ? (int)m_data->AllPlanets().size() : 0;
-	return (n + 1) * m_params.CellSize;
+	return (n + 1) * m_params.CellSize + 2;	// +2 for the 1px margin on each side
 }

@@ -12,6 +12,7 @@
 #include <CustomSplitterWindow.h>
 #include <NativeCustomTabView.h>
 #include <atlscrl.h>
+#include <WTLHelper.h>
 
 class CChartView :
 	public CFrameView<CChartView, IMainFrame>,
@@ -29,6 +30,7 @@ public:
 		MESSAGE_HANDLER(WM_RECALC, OnRecalc)
 		MESSAGE_HANDLER(WM_CREATE, OnCreate)
 		MESSAGE_HANDLER(WM_FORWARDMSG, OnForwardMsg)
+		MESSAGE_HANDLER(WTLHelper::ThemeChangedMessage, OnThemeChanged)
 		CHAIN_MSG_MAP(CVirtualListView)
 		CHAIN_MSG_MAP(BaseFrame)
 	ALT_MSG_MAP(1)
@@ -43,7 +45,9 @@ private:
 	LRESULT OnEditCopy(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/);
 	LRESULT OnRecalc(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, BOOL& /*bHandled*/);
 	LRESULT OnForwardMsg(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM lParam, BOOL& /*bHandled*/);
+	LRESULT OnThemeChanged(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, BOOL& /*bHandled*/);
 	void UpdateAspectGridScrollSize();
+	void UpdateAspectGridScrollBarTheme();
 
 	ChartData m_Data;
 	AstroCalculator m_Calc;

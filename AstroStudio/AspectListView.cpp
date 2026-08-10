@@ -82,8 +82,6 @@ void CAspectListView::DrawGlyphAndName(LPNMCUSTOMDRAW cd, PCWSTR glyph, PCWSTR n
 	// so ask the control for the real selection state instead
 	bool selected = (m_List.GetItemState((int)cd->dwItemSpec, LVIS_SELECTED) & LVIS_SELECTED) != 0;
 
-	// use the list control's own current colors (respects dark mode) rather than a
-	// hardcoded guess, so this matches whatever the rest of the row looks like
 	COLORREF backColor = selected ? ::GetSysColor(COLOR_HIGHLIGHT) : m_List.GetBkColor();
 	COLORREF textColor = selected ? ::GetSysColor(COLOR_HIGHLIGHTTEXT) : m_List.GetTextColor();
 
