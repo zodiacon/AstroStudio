@@ -8,6 +8,8 @@
 class ChartData;
 struct PlanetPosition;
 
+const UINT WM_HERE_RESULT = WM_APP + 100;
+
 class CChartDetailsView : 
 	public CDialogImpl<CChartDetailsView>,
 	public CVirtualListView<CChartDetailsView>,
@@ -34,7 +36,18 @@ public:
 		NOTIFY_HANDLER(IDC_DATE, DTN_DATETIMECHANGE, OnDateChanged)
 		NOTIFY_HANDLER(IDC_TIME, DTN_DATETIMECHANGE, OnTimeChanged)
 		COMMAND_ID_HANDLER(IDC_NOW, OnNow)
+		COMMAND_ID_HANDLER(IDC_HERE, OnHere)
+		COMMAND_ID_HANDLER(IDC_APPLY, OnApply)
+		COMMAND_HANDLER(IDC_LATDEG, EN_CHANGE, OnLocationChanged)
+		COMMAND_HANDLER(IDC_LATMIN, EN_CHANGE, OnLocationChanged)
+		COMMAND_HANDLER(IDC_LONDEG, EN_CHANGE, OnLocationChanged)
+		COMMAND_HANDLER(IDC_LONMIN, EN_CHANGE, OnLocationChanged)
+		COMMAND_HANDLER(IDC_NORTH, BN_CLICKED, OnLocationChanged)
+		COMMAND_HANDLER(IDC_SOUTH, BN_CLICKED, OnLocationChanged)
+		COMMAND_HANDLER(IDC_EAST, BN_CLICKED, OnLocationChanged)
+		COMMAND_HANDLER(IDC_WEST, BN_CLICKED, OnLocationChanged)
 		MESSAGE_HANDLER(WM_INITDIALOG, OnInitView)
+		MESSAGE_HANDLER(WM_HERE_RESULT, OnHereResult)
 		CHAIN_MSG_MAP(CCustomDraw)
 		CHAIN_MSG_MAP(CVirtualListView)
 	END_MSG_MAP()
@@ -50,6 +63,8 @@ private:
 	};
 
 	void UpdateControls(Recalc type = Recalc::All);
+	void UpdateLocationControls();
+	void ApplyLocationFromControls();
 
 	LRESULT OnInitView(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, BOOL& /*bHandled*/);
 	LRESULT OnHouseSystemChanged(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/);
@@ -57,6 +72,10 @@ private:
 	LRESULT OnTimeChanged(int /*idCtrl*/, LPNMHDR /*pnmh*/, BOOL& /*bHandled*/);
 	LRESULT OnHarmonicChanged(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/);
 	LRESULT OnNow(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/);
+	LRESULT OnHere(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/);
+	LRESULT OnHereResult(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, BOOL& /*bHandled*/);
+	LRESULT OnApply(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/);
+	LRESULT OnLocationChanged(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/);
 
 	CComboBox m_ctlHouseSystem;
 	CDateTimePickerCtrl m_ctlDate, m_ctlTime;
@@ -66,5 +85,6 @@ private:
 	std::vector<PlanetPosition> m_Planets;
 	CFont m_Font;
 	CWindow m_NotifyWnd;
+	bool m_UpdatingLocationControls{ false };
 };
 

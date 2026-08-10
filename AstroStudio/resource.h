@@ -49,6 +49,8 @@
 #define IDC_SOUTH                       1012
 #define IDC_HERE                        1015
 #define IDC_LOOKUP                      1016
+#define IDC_HERE2                       1017
+#define IDC_APPLY                       1017
 #define IDC_MONTHCALENDAR1              1018
 #define IDC_LATMIN                      1019
 #define IDC_LATMINUD                    1020

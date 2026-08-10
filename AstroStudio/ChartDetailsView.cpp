@@ -7,6 +7,7 @@
 #include "Helpers.h"
 #include "SortHelper.h"
 #include <WTLHelper.h>
+#include "NetworkHelper.h"
 
 #include "ColorHelper.h"
 
@@ -19,23 +20,33 @@ void CChartDetailsView::SetChartData(ChartData* data) {
 	if (m_Data) {
 		m_ctlHouses.SetItemCount(16);
 		auto& info = m_Data->Info();
-		{
-			auto [deg, min, _] = Helpers::GetDegMinSec(info.Latitude);
-			SetDlgItemInt(IDC_LATDEG, deg);
-			SetDlgItemInt(IDC_LATMIN, min);
-			CheckDlgButton(info.Latitude >= 0 ? IDC_NORTH : IDC_SOUTH, BST_CHECKED);
-		}
-		{
-			auto [deg, min, _] = Helpers::GetDegMinSec(info.Longitude);
-			SetDlgItemInt(IDC_LONDEG, deg);
-			SetDlgItemInt(IDC_LONMIN, min);
-			CheckDlgButton(info.Longitude >= 0 ? IDC_EAST : IDC_WEST, BST_CHECKED);
-		}
-		SetDlgItemText(IDC_LOCATION, (info.City + (info.State.empty() ? L"" : (L", " + info.State)) + L", " + info.Country).c_str());
+		UpdateLocationControls();
 		SetDlgItemInt(IDC_HARMONIC, m_Data->Harmonic());
 		SetDlgItemText(IDC_NAME, ((info.LastName.empty() ? L"" : info.LastName + L", ") + info.FirstName).c_str());
 		UpdateControls();
 	}
+}
+
+void CChartDetailsView::UpdateLocationControls() {
+	ATLASSERT(m_Data);
+	auto& info = m_Data->Info();
+
+	m_UpdatingLocationControls = true;
+	{
+		auto [deg, min, _] = Helpers::GetDegMinSec(info.Latitude);
+		SetDlgItemInt(IDC_LATDEG, deg);
+		SetDlgItemInt(IDC_LATMIN, min);
+		CheckDlgButton(info.Latitude >= 0 ? IDC_NORTH : IDC_SOUTH, BST_CHECKED);
+	}
+	{
+		auto [deg, min, _] = Helpers::GetDegMinSec(info.Longitude);
+		SetDlgItemInt(IDC_LONDEG, deg);
+		SetDlgItemInt(IDC_LONMIN, min);
+		CheckDlgButton(info.Longitude >= 0 ? IDC_EAST : IDC_WEST, BST_CHECKED);
+	}
+	m_UpdatingLocationControls = false;
+
+	SetDlgItemText(IDC_LOCATION, (info.City + (info.State.empty() ? L"" : (L", " + info.State)) + L", " + info.Country).c_str());
 }
 
 void CChartDetailsView::SetNotifyWindow(HWND hWnd) {
@@ -172,6 +183,7 @@ LRESULT CChartDetailsView::OnInitView(UINT, WPARAM, LPARAM, BOOL&) {
 	m_ctlHarmonicSpin.Attach(GetDlgItem(IDC_HARMONICUD));
 	m_ctlHarmonicSpin.SetRange(1, 9999);
 	AddIconToButton(IDC_NOW, IDI_CLOCK);
+	AddIconToButton(IDC_HERE, IDI_PIN);
 	AddIconToButton(IDC_LOOKUP, IDI_GLOBE);
 
 	{
@@ -303,4 +315,108 @@ LRESULT CChartDetailsView::OnNow(WORD, WORD, HWND, BOOL&) {
 	return 0;
 }
 
+namespace {
+	struct HereRequest {
+		HWND Wnd;
+		ChartInfo Info;
+	};
+}
 
+LRESULT CChartDetailsView::OnHere(WORD, WORD, HWND, BOOL&) {
+	ATLASSERT(m_Data);
+	GetDlgItem(IDC_HERE).EnableWindow(FALSE);
+
+	auto req = new HereRequest{ m_hWnd, m_Data->Info() };
+	::TrySubmitThreadpoolCallback([](auto, auto ctx) {
+		auto req = static_cast<HereRequest*>(ctx);
+		auto success = NetworkHelper::FillInfoFromCurrentLocation(req->Info, req->Wnd);
+		if (!::PostMessage(req->Wnd, WM_HERE_RESULT, (WPARAM)success, (LPARAM)req))
+			delete req;
+		}, req, nullptr);
+
+	return 0;
+}
+
+LRESULT CChartDetailsView::OnHereResult(UINT, WPARAM wParam, LPARAM lParam, BOOL&) {
+	std::unique_ptr<HereRequest> req(reinterpret_cast<HereRequest*>(lParam));
+	GetDlgItem(IDC_HERE).EnableWindow(TRUE);
+
+	if (!wParam) {
+		AtlMessageBox(m_hWnd, L"Failed to determine current location.", L"Astro Studio", MB_ICONWARNING);
+		return 0;
+	}
+	if (!m_Data)
+		return 0;
+
+	auto& info = m_Data->Info();
+	info.Latitude = req->Info.Latitude;
+	info.Longitude = req->Info.Longitude;
+	info.Elevation = req->Info.Elevation;
+	info.City = req->Info.City;
+	info.State = req->Info.State;
+	info.Country = req->Info.Country;
+
+	UpdateLocationControls();
+	if (m_NotifyWnd) {
+		m_NotifyWnd.SendMessageW(WM_RECALC, static_cast<WPARAM>(Recalc::Houses));
+		m_ctlHouses.RedrawItems(0, m_ctlHouses.GetItemCount() - 1);
+		m_ctlHouses.UpdateWindow();
+	}
+
+	return 0;
+}
+
+void CChartDetailsView::ApplyLocationFromControls() {
+	ATLASSERT(m_Data);
+	auto& info = m_Data->Info();
+
+	auto latDeg = GetDlgItemInt(IDC_LATDEG);
+	auto latMin = GetDlgItemInt(IDC_LATMIN);
+	info.Latitude = (latDeg + latMin / 60.0) * (IsDlgButtonChecked(IDC_SOUTH) ? -1 : 1);
+
+	auto lonDeg = GetDlgItemInt(IDC_LONDEG);
+	auto lonMin = GetDlgItemInt(IDC_LONMIN);
+	info.Longitude = (lonDeg + lonMin / 60.0) * (IsDlgButtonChecked(IDC_WEST) ? -1 : 1);
+}
+
+LRESULT CChartDetailsView::OnLocationChanged(WORD, WORD, HWND, BOOL&) {
+	if (m_Data == nullptr || m_UpdatingLocationControls)
+		return 0;
+
+	ApplyLocationFromControls();
+	if (m_NotifyWnd) {
+		m_NotifyWnd.SendMessageW(WM_RECALC, static_cast<WPARAM>(Recalc::Houses));
+		m_ctlHouses.RedrawItems(0, m_ctlHouses.GetItemCount() - 1);
+		m_ctlHouses.UpdateWindow();
+	}
+
+	return 0;
+}
+
+LRESULT CChartDetailsView::OnApply(WORD, WORD, HWND, BOOL&) {
+	ATLASSERT(m_Data);
+	auto& info = m_Data->Info();
+
+	ApplyLocationFromControls();
+
+	SYSTEMTIME sdate, stime;
+	m_ctlDate.GetSystemTime(&sdate);
+	m_ctlTime.GetSystemTime(&stime);
+	TzSpecificLocalTimeToSystemTime(nullptr, &sdate, &sdate);
+	TzSpecificLocalTimeToSystemTime(nullptr, &stime, &stime);
+	info.Time.SetDate(sdate.wYear, sdate.wMonth, sdate.wDay);
+	info.Time.SetTime(stime.wHour, stime.wMinute, stime.wSecond);
+
+	m_Data->SetHouseSystem((HouseSystem)m_ctlHouseSystem.GetItemData(m_ctlHouseSystem.GetCurSel()));
+
+	auto harmonic = GetDlgItemInt(IDC_HARMONIC);
+	if (harmonic > 0 && harmonic < 10000)
+		m_Data->Harmonic(harmonic);
+
+	if (m_NotifyWnd) {
+		m_NotifyWnd.SendMessageW(WM_RECALC, static_cast<WPARAM>(Recalc::All));
+		UpdateControls();
+	}
+
+	return 0;
+}

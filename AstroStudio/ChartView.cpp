@@ -10,7 +10,6 @@ CChartView::CChartView(IMainFrame* frame) : CFrameView(frame), m_ChartDrawing(fr
 }
 
 void CChartView::Chart(ChartData data) {
-	data.AddPlanets({ Planet::Chiron, Planet::TrueNode, Planet::Lilith });
 	AstroCalculator calc;
 	calc.Calculate(data);
 	m_Data = std::move(data);
@@ -30,6 +29,7 @@ void CChartView::ChartForNow() {
 	info.Time = DateTime::Now();
 	auto planets = Helpers::GetStandardPlanets();
 	data.AddPlanets(planets);
+	data.AddPlanets({ Planet::Chiron, Planet::TrueNode, Planet::Lilith });
 	Chart(std::move(data));
 }
 
