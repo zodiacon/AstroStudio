@@ -102,7 +102,7 @@ PCWSTR Helpers::GetAspectName(AspectType type) {
 	static PCWSTR names[] = {
 		L"Conjunction", L"Sextile", L"Square", L"Trine", L"Opposition",
 		L"Semi-Sextile", L"Semi-Square", L"Quintile", L"Bi-Quintile", L"Septile", 
-		L"Bi-Septile", L"Quincunx", L"Sesqui-Quadrate", L"Novile", L"Bi-Novile",
+		L"Bi-Septile", L"Quincunx", L"Sesquiquadrate", L"Novile", L"Bi-Novile",
 	};
 	ATLASSERT((int)type >= 0 && (int)type < _countof(names));
 	return names[(int)type];
@@ -129,7 +129,7 @@ CString Helpers::GetZodiacSignName(ZodiacSign sign) {
 std::vector<Planet> Helpers::GetStandardPlanets() {
 	static std::vector<Planet> planets;
 	if (planets.empty()) {
-		planets.reserve(10);
+		planets.reserve(16);
 		for (Planet type = Planet::Sun; type <= Planet::Pluto; ((int&)type)++)
 			planets.push_back(type);
 	}

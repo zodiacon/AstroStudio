@@ -126,22 +126,14 @@ void CAspectListView::DrawGlyphAndName(LPNMCUSTOMDRAW cd, PCWSTR glyph, PCWSTR n
 	CRect r(rc);
 	r.left += 4;
 
-	// ExtTextOut, not DrawText: some HamburgSymbols glyphs (e.g. Quintile) sit at Unicode
-	// C1 control codepoints (U+0080-U+009F). DrawText's extra Unicode formatting-character
-	// handling silently drops those, while ExtTextOut just blits whatever glyph the font
-	// has there - which is also how GDI+ (the wheel and the aspect grid) renders them fine.
 	dc.SelectFont(m_Font);
-	auto glyphLen = (UINT)wcslen(glyph);
 	CSize sz;
-	dc.GetTextExtent(glyph, (int)glyphLen, &sz);
-	dc.ExtTextOut(r.left, rc.top + (rc.Height() - sz.cy) / 2, ETO_CLIPPED, &rc, glyph, glyphLen);
+	dc.GetTextExtent(glyph, (int)wcslen(glyph), &sz);
+	dc.DrawText(glyph, -1, &r, DT_LEFT | DT_VCENTER | DT_SINGLELINE);
 	r.left += sz.cx + 6;
 
 	dc.SelectFont(m_List.GetFont());
-	auto nameLen = (UINT)wcslen(name);
-	CSize nameSz;
-	dc.GetTextExtent(name, (int)nameLen, &nameSz);
-	dc.ExtTextOut(r.left, rc.top + (rc.Height() - nameSz.cy) / 2, ETO_CLIPPED, &rc, name, nameLen);
+	dc.DrawText(name, -1, &r, DT_LEFT | DT_VCENTER | DT_SINGLELINE);
 }
 
 void CAspectListView::DrawCell(LPNMCUSTOMDRAW cd, PCWSTR text, HFONT font, COLORREF backColorOverride) const {
@@ -162,10 +154,7 @@ void CAspectListView::DrawCell(LPNMCUSTOMDRAW cd, PCWSTR text, HFONT font, COLOR
 	CRect r(rc);
 	r.left += 4;
 	dc.SelectFont(font);
-	auto len = (UINT)wcslen(text);
-	CSize sz;
-	dc.GetTextExtent(text, (int)len, &sz);
-	dc.ExtTextOut(r.left, rc.top + (rc.Height() - sz.cy) / 2, ETO_CLIPPED, &rc, text, len);
+	dc.DrawText(text, -1, &r, DT_LEFT | DT_VCENTER | DT_SINGLELINE);
 }
 
 COLORREF CAspectListView::GetElementColor(ZodiacSign sign) {
