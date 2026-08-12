@@ -1,0 +1,96 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <!--
+    wxWidgets 3.3 from vcpkg, x64-windows-static triplet.
+
+    This sheet deliberately does NOT rely on "vcpkg integrate install" so the
+    build stays reproducible on a clean machine and does not silently affect
+    the WTL AstroStudio project (which imports the same user props).
+
+    The static triplet is required, not a preference: AstroStudio and AstroCore
+    build with /MT and /MTd (static CRT). The default x64-windows triplet is
+    /MD and would produce runtime-library mismatch errors at link time.
+
+    Override the vcpkg location by setting the VCPKG_ROOT environment variable
+    or the VcpkgRootDir property; it defaults to C:\vcpkg.
+
+    Library list is taken verbatim from the INTERFACE_LINK_LIBRARIES of the
+    wx::base and wx::core targets in
+      <triplet>\share\wxwidgets\wxWidgetsTargets.cmake
+    so it stays in step with however vcpkg built the port. Regenerate from
+    there if you add a wx library that pulls new third-party dependencies.
+  -->
+  <PropertyGroup Label="UserMacros">
+    <VcpkgRootDir Condition="'$(VcpkgRootDir)' == '' And '$(VCPKG_ROOT)' != ''">$(VCPKG_ROOT)</VcpkgRootDir>
+    <VcpkgRootDir Condition="'$(VcpkgRootDir)' == ''">C:\vcpkg</VcpkgRootDir>
+    <WxTriplet>x64-windows-static</WxTriplet>
+    <WxRoot>$(VcpkgRootDir)\installed\$(WxTriplet)</WxRoot>
+
+    <!-- wx/setup.h is per-configuration and MUST precede the generic include
+         dir, which contains a different wx/setup.h. -->
+    <WxSetupDir Condition="'$(Configuration)' == 'Debug'">$(WxRoot)\debug\lib\mswud</WxSetupDir>
+    <WxSetupDir Condition="'$(Configuration)' != 'Debug'">$(WxRoot)\lib\mswu</WxSetupDir>
+    <WxLibDir Condition="'$(Configuration)' == 'Debug'">$(WxRoot)\debug\lib</WxLibDir>
+    <WxLibDir Condition="'$(Configuration)' != 'Debug'">$(WxRoot)\lib</WxLibDir>
+
+    <!-- Most, but not all, of the third-party libs carry a 'd' debug suffix.
+         jpeg / lzma / nanosvg / webp / sharpyuv do not - they are distinguished
+         only by living under debug\lib. -->
+    <WxSuffix Condition="'$(Configuration)' == 'Debug'">d</WxSuffix>
+    <WxSuffix Condition="'$(Configuration)' != 'Debug'"></WxSuffix>
+  </PropertyGroup>
+
+  <!-- wx/msw/wx.rc supplies the RT_MANIFEST (comctl32 v6 + per-monitor-v2 DPI).
+       MSBuild's own manifest would be a second resource with the same id, so
+       turn it off. -->
+  <PropertyGroup>
+    <GenerateManifest>false</GenerateManifest>
+  </PropertyGroup>
+
+  <!--
+    Switch off vcpkg's global MSBuild integration FOR THIS PROJECT ONLY.
+
+    "vcpkg integrate install" has been run on this machine, and its defaults are
+    VcpkgUseStatic=false + VcpkgAutoLink=true. Both wxwidgets:x64-windows and
+    wxwidgets:x64-windows-static are installed here, so the integration silently
+    added the *dynamic* triplet's import libraries on top of the static ones
+    listed below, giving:
+
+      wxmsw33ud_core.lib(minifram.cpp.obj) : error LNK2005: ... already defined
+      in wxmsw33ud_core.lib(wxmsw331ud_core_vc_x64_custom.dll)
+
+    Note this only bites once something references a symbol both copies define -
+    the phase 0 skeleton linked fine and the clash appeared only when wxAUI was
+    actually used, so it is worth pinning rather than leaving to luck.
+
+    This must stay project-scoped: the WTL AstroStudio project gets detours and
+    wil through that same global integration, so disabling it machine-wide would
+    break the other build.
+  -->
+  <PropertyGroup>
+    <VcpkgEnabled>false</VcpkgEnabled>
+  </PropertyGroup>
+
+  <ItemDefinitionGroup>
+    <ClCompile>
+      <AdditionalIncludeDirectories>$(WxSetupDir);$(WxRoot)\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <PreprocessorDefinitions>__WXMSW__;wxUSE_GUI=1;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+    </ClCompile>
+    <ResourceCompile>
+      <!-- The include dir is what lets AstroStudioWx.rc find "wx/msw/wx.rc". -->
+      <AdditionalIncludeDirectories>$(WxSetupDir);$(WxRoot)\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <PreprocessorDefinitions>__WXMSW__;wxUSE_RC_MANIFEST=1;wxUSE_DPI_AWARE_MANIFEST=2;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+    </ResourceCompile>
+    <Link>
+      <AdditionalLibraryDirectories>$(WxLibDir);%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+      <AdditionalDependencies>wxmsw33u$(WxSuffix)_core.lib;wxmsw33u$(WxSuffix)_aui.lib;wxbase33u$(WxSuffix).lib;libpng16$(WxSuffix).lib;zs$(WxSuffix).lib;tiff$(WxSuffix).lib;pcre2-16$(WxSuffix).lib;jpeg.lib;lzma.lib;nanosvg.lib;nanosvgrast.lib;libwebpdecoder.lib;libwebp.lib;libwebpdemux.lib;libwebpmux.lib;libsharpyuv.lib;kernel32.lib;user32.lib;gdi32.lib;gdiplus.lib;msimg32.lib;comdlg32.lib;winspool.lib;winmm.lib;shell32.lib;shlwapi.lib;comctl32.lib;ole32.lib;oleaut32.lib;uuid.lib;rpcrt4.lib;advapi32.lib;version.lib;ws2_32.lib;wininet.lib;oleacc.lib;uxtheme.lib;%(AdditionalDependencies)</AdditionalDependencies>
+    </Link>
+  </ItemDefinitionGroup>
+
+  <!-- Fail early and clearly rather than emitting hundreds of "cannot open
+       include file: 'wx/setup.h'" errors. -->
+  <Target Name="VerifyWxWidgetsPresent" BeforeTargets="ClCompile">
+    <Error Condition="!Exists('$(WxSetupDir)\wx\setup.h')"
+           Text="wxWidgets not found at $(WxRoot). Install it with: vcpkg install wxwidgets:$(WxTriplet) -- or set VCPKG_ROOT / VcpkgRootDir to your vcpkg location." />
+  </Target>
+</Project>

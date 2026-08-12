@@ -1,0 +1,38 @@
+#include "resource.h"
+
+//
+// Icons.
+//
+// They have to be *named* resources, not numeric ones: wxICON(X) expands to
+// wxIcon(wxT(#X)) on MSW (wx/gdicmn.h), and wxIconBundle's MSW constructor
+// also takes a resource name. The .ico files are shared with the WTL build
+// rather than copied.
+//
+// "appicon" must sort first: Windows shows the alphabetically first named
+// icon as the application icon, and wx/msw/wx.rc below contributes
+// "wxICON_AAA".
+//
+appicon                 ICON    "..\\AstroStudio\\res\\AstroStudio.ico"
+chart                   ICON    "..\\AstroStudio\\res\\Chart.ico"
+chartnow                ICON    "..\\AstroStudio\\res\\ChartNow.ico"
+ephemeris               ICON    "..\\AstroStudio\\res\\ephemeris.ico"
+
+//
+// The zodiac/planet glyph font, embedded so it renders without being installed
+// system-wide (see commit 317f765 in the WTL build). Same file and same custom
+// "TTF" resource type as IDR_FONT there; named rather than numbered because
+// AstroHelpers::LoadAstroFont looks it up by name.
+//
+hamburgfont             TTF     "..\\AstroStudio\\res\\HamburgSymbols.ttf"
+
+//
+// Required in every wxWidgets MSW application. Supplies wx's standard cursors
+// and icons, and - because wxwidgets-vcpkg.props defines wxUSE_RC_MANIFEST=1
+// and wxUSE_DPI_AWARE_MANIFEST=2 - the RT_MANIFEST declaring the comctl32 v6
+// dependency and per-monitor-v2 DPI awareness.
+//
+// This replaces the /manifestdependency linker pragma at the bottom of the WTL
+// pch.h. MSBuild manifest generation is switched off in the props sheet so
+// that this is the only manifest in the binary.
+//
+#include "wx/msw/wx.rc"
