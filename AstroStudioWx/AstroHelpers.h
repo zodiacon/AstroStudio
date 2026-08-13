@@ -1,7 +1,33 @@
 #pragma once
 
 #include "AstroPoint.h"
+#include "AstroCalculator.h"
 #include <vector>
+
+struct AstroFontBase;
+enum class AspectType;
+
+//
+// Ported from AstroStudio\Helpers.h unchanged.
+//
+enum class FormatOptions {
+	None = 0,
+	ShowSeconds = 1,
+	UseGlyphs = 2,
+	ShowDegreeGlyph = 4,
+	Default = ShowDegreeGlyph | UseGlyphs,
+};
+DEFINE_ENUM_FLAG_OPERATORS(FormatOptions);
+
+enum class DateTimeFormatOptions {
+	None = 0,
+	DateOnly = 1,
+	TimeOnly = 2,
+	Default = DateOnly,
+};
+DEFINE_ENUM_FLAG_OPERATORS(DateTimeFormatOptions);
+
+class DateTime;
 
 //
 // The portable half of AstroStudio\Helpers.h.
@@ -73,4 +99,34 @@ namespace AstroHelpers {
 	};
 
 	void DrawGlyphRuns(wxDC& dc, std::vector<GlyphRun> const& runs);
+
+	//
+	// Formatting, ported from Helpers with CString retyped to wxString. The
+	// degree/minute marks are built from wxUniChar rather than written as
+	// literals, so the source stays pure ASCII and does not depend on the
+	// compiler's source-charset guess.
+	//
+	wxString FormatLongitude(AstroPoint const& value,
+		FormatOptions options = FormatOptions::Default,
+		AstroFontBase const* font = nullptr);
+	wxString FormatLatitude(double lat);
+	wxString FormatDateTime(DateTime const& dt,
+		DateTimeFormatOptions options = DateTimeFormatOptions::Default);
+
+	// Per-channel clamped shifts, replacing ColorHelper::Darken/Lighten.
+	wxColour Darken(wxColour const& colour, int offset);
+	wxColour Lighten(wxColour const& colour, int offset);
+	std::tuple<int, int, int> GetDegMinSec(double angle, bool sign = false);
+
+	wxString GetPlanetName(Planet type);
+	wxString GetAspectName(AspectType type);
+	wxString GetZodiacSignName(ZodiacSign sign);
+	wxString HouseSystemToString(HouseSystem system);
+
+	// Element colour, matching ChartDrawingParameters::ElementColor. Darkened
+	// when the app is in dark mode, as ChartDetailsView did with
+	// ColorHelper::Darken. The index form is what the zodiac belt wants, which
+	// walks elements 0-3 rather than signs.
+	wxColour ElementColour(int elementIndex);
+	wxColour ElementColour(ZodiacSign sign);
 }

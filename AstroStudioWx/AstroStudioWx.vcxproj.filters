@@ -27,7 +27,16 @@
     <ClCompile Include="AspectGridView.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="AspectListView.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="EphemerisView.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
     <ClCompile Include="AstroFont.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="ChartDetailsView.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="ChartDrawing.cpp">
@@ -48,9 +57,6 @@
     <ClCompile Include="MainFrame.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="PlaceholderView.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
     <ClCompile Include="Resources.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
@@ -68,7 +74,16 @@
     <ClInclude Include="AspectGridView.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="AspectListView.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="EphemerisView.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
     <ClInclude Include="AstroFont.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="ChartDetailsView.h">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="ChartDrawing.h">
@@ -90,9 +105,6 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="MainFrame.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="PlaceholderView.h">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="Resources.h">

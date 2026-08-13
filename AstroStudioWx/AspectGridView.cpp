@@ -51,5 +51,12 @@ void AspectGridView::OnPaint(wxPaintEvent&) {
 	GetViewStart(&viewX, &viewY);
 	GetScrollPixelsPerUnit(&unitX, &unitY);
 
+	// See the note in GraphicChartView::OnPaint - theme read per paint, aspect
+	// colours left semantic.
+	auto& params = m_Drawing.DrawingParameters();
+	params.BackColor = wxSystemSettings::GetColour(wxSYS_COLOUR_WINDOW);
+	params.GridLineColor = wxSystemSettings::GetColour(wxSYS_COLOUR_GRAYTEXT);
+	params.AspectColor = wxSystemSettings::GetColour(wxSYS_COLOUR_WINDOWTEXT);
+
 	m_Drawing.Draw(dc, wxPoint(-viewX * unitX, -viewY * unitY));
 }

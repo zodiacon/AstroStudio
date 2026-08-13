@@ -24,6 +24,7 @@ public:
 private:
 	void BuildMenuBar();
 	void BuildToolBar();
+	void InitDefaultChartInfo();
 	void RebuildWindowMenu();
 
 	void AddView(wxWindow* view, wxString const& title, wxString const& iconName);

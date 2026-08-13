@@ -2,8 +2,8 @@
 #include "MainFrame.h"
 
 #include "ChartView.h"
+#include "EphemerisView.h"
 #include "Interfaces.h"
-#include "PlaceholderView.h"
 #include "Resources.h"
 #include "resource.h"
 #include "AstroHelpers.h"
@@ -18,6 +18,8 @@ MainFrame::MainFrame()
 	// Carried over from CMainFrame::OnGetMinMaxInfo, which clamped the frame to
 	// 600x600. FromDIP makes it a real 600x600 at any scaling factor.
 	SetMinSize(FromDIP(wxSize(600, 600)));
+
+	InitDefaultChartInfo();
 
 	BuildMenuBar();
 	BuildToolBar();
@@ -212,9 +214,7 @@ IView* MainFrame::ActiveView() const {
 }
 
 void MainFrame::OnEphemeris(wxCommandEvent&) {
-	AddView(new PlaceholderView(m_Notebook, "Ephemeris",
-		"CEphemerisView lands here in phase 5 (wxListCtrl in virtual mode)."),
-		"Ephemeris", ICON_EPHEMERIS);
+	AddView(new EphemerisView(m_Notebook, this), "Ephemeris", ICON_EPHEMERIS);
 }
 
 void MainFrame::OnNewChart(wxCommandEvent&) {
@@ -246,10 +246,26 @@ IView* MainFrame::AddChartView(ChartData data, wxString const& title) {
 }
 
 ChartInfo const& MainFrame::DefaultChartInfo() const {
-	// Phase 6 fills this from NetworkHelper::FillInfoFromLocal on a background
-	// thread, as CMainFrame::OnCreate does. Until then it is a zeroed
-	// ChartInfo: a valid chart at 0N 0E, just not the user's location.
 	return m_DefaultChartInfo;
+}
+
+//
+// Phase 6 fills this from NetworkHelper::FillInfoFromLocal on a background
+// thread, as CMainFrame::OnCreate does. Until then it is Greenwich rather than
+// a zeroed ChartInfo.
+//
+// That is not just cosmetic. A zeroed ChartInfo puts the chart at 0N 0E, and
+// on the equator every quadrant house system degenerates to the same division
+// - Koch, Placidus and Campanus return byte-identical cusps there - so
+// changing the House System combo appears to do nothing at all.
+//
+void MainFrame::InitDefaultChartInfo() {
+	m_DefaultChartInfo.Latitude = 51.4779;		// Royal Observatory, Greenwich
+	m_DefaultChartInfo.Longitude = -0.0015;
+	m_DefaultChartInfo.Elevation = 0;
+	m_DefaultChartInfo.City = L"Greenwich";
+	m_DefaultChartInfo.Country = L"United Kingdom";
+	m_DefaultChartInfo.Time = DateTime::Now();
 }
 
 void MainFrame::OnWindowClose(wxCommandEvent&) {

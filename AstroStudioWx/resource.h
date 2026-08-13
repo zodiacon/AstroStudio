@@ -89,7 +89,13 @@
 // Named icon resources (see AstroStudioWx.rc). These are strings rather than
 // numbers because both wxICON() and wxIconBundle look icons up by name.
 //
-#define ICON_APP        "appicon"
-#define ICON_EPHEMERIS  "ephemeris"
-#define ICON_CHART      "chart"
-#define ICON_CHARTNOW   "chartnow"
+#define ICON_APP            "appicon"
+#define ICON_EPHEMERIS      "ephemeris"
+#define ICON_CHART          "chart"
+#define ICON_CHARTNOW       "chartnow"
+#define ICON_GLYPH          "glyph"
+#define ICON_CLOCK          "clock"
+#define ICON_FONT_BIGGER    "fontbigger"
+#define ICON_FONT_SMALLER   "fontsmaller"
+#define ICON_FONT_DEFAULT   "fontdefault"
+#define ICON_GRID           "grid"

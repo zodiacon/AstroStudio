@@ -108,14 +108,16 @@
     <ClCompile Include="App.cpp" />
     <ClCompile Include="AspectGridDrawing.cpp" />
     <ClCompile Include="AspectGridView.cpp" />
+    <ClCompile Include="AspectListView.cpp" />
     <ClCompile Include="AstroFont.cpp" />
     <ClCompile Include="AstroHelpers.cpp" />
+    <ClCompile Include="ChartDetailsView.cpp" />
     <ClCompile Include="ChartDrawing.cpp" />
     <ClCompile Include="ChartView.cpp" />
+    <ClCompile Include="EphemerisView.cpp" />
     <ClCompile Include="PlanetSpacer.cpp" />
     <ClCompile Include="GraphicChartView.cpp" />
     <ClCompile Include="MainFrame.cpp" />
-    <ClCompile Include="PlaceholderView.cpp" />
     <ClCompile Include="Resources.cpp" />
     <ClCompile Include="pch.cpp">
       <PrecompiledHeader>Create</PrecompiledHeader>
@@ -125,15 +127,17 @@
     <ClInclude Include="App.h" />
     <ClInclude Include="AspectGridDrawing.h" />
     <ClInclude Include="AspectGridView.h" />
+    <ClInclude Include="AspectListView.h" />
     <ClInclude Include="AstroFont.h" />
     <ClInclude Include="AstroHelpers.h" />
+    <ClInclude Include="ChartDetailsView.h" />
     <ClInclude Include="ChartDrawing.h" />
     <ClInclude Include="ChartView.h" />
+    <ClInclude Include="EphemerisView.h" />
     <ClInclude Include="PlanetSpacer.h" />
     <ClInclude Include="GraphicChartView.h" />
     <ClInclude Include="Interfaces.h" />
     <ClInclude Include="MainFrame.h" />
-    <ClInclude Include="PlaceholderView.h" />
     <ClInclude Include="Resources.h" />
     <ClInclude Include="pch.h" />
     <ClInclude Include="resource.h" />

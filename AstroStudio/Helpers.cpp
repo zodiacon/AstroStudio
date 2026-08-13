@@ -2,6 +2,7 @@
 #include "Helpers.h"
 #include "DateTime.h"
 #include "Aspects.h"
+#include <cmath>
 
 bool Helpers::LoadAstroFont(UINT id) {
 	auto res = ::FindResource(nullptr, MAKEINTRESOURCE(id), L"TTF");
@@ -53,23 +54,55 @@ CString Helpers::FormatDateTime(DateTime const& dt, DateTimeFormatOptions option
 }
 
 CString Helpers::FormatLongitude(AstroPoint const& value, FormatOptions options, AstroFontBase const& font) {
-	CString text;
 	bool showSeconds = (options & FormatOptions::ShowSeconds) == FormatOptions::ShowSeconds;
+	bool useGlyphs = (options & FormatOptions::UseGlyphs) == FormatOptions::UseGlyphs;
+	bool showDegreeGlyph = (options & FormatOptions::ShowDegreeGlyph) == FormatOptions::ShowDegreeGlyph;
+
+	//
+	// Round the longitude once, at the precision actually being displayed, and
+	// split the rounded result into components.
+	//
+	// Rounding each component on its own let the carry escape: without seconds,
+	// a position like 11.9955 degrees into a sign has Minutes() == 59.73, and
+	// "(int)(Minutes() + .5)" printed that as "60'" instead of carrying into
+	// the degree. The same applied to Seconds() when seconds were shown.
+	//
+	// Doing the arithmetic in whole display units also keeps the split exact.
+	// Deriving each component by multiplying and truncating doubles (as
+	// AstroPoint::Minutes/Seconds do) can land a hair under the true value and
+	// lose a whole unit.
+	//
+	const long long unitsPerDegree = showSeconds ? 3600 : 60;
+	const long long unitsPerSign = 30 * unitsPerDegree;
+	const long long unitsPerCircle = 12 * unitsPerSign;
+
+	auto units = std::llround(value.Value * unitsPerDegree);
+	units = ((units % unitsPerCircle) + unitsPerCircle) % unitsPerCircle;
+
+	//
+	// The sign is taken from the rounded value, so a position within half a
+	// display unit of a cusp reads as the next sign - 29 Pisces 59'40" shows as
+	// 00 Aries 00' when seconds are hidden. That is what rounding means; to
+	// keep it in the sign it actually occupies, floor instead of rounding above.
+	//
+	auto sign = static_cast<ZodiacSign>(units / unitsPerSign);
+	auto inSign = units % unitsPerSign;
+
+	CString text;
 	text.Format(L"%02d%s %s %02d%s",
-		(int)value.DegreeInSign(),
-		(options & FormatOptions::ShowDegreeGlyph) == FormatOptions::ShowDegreeGlyph ? (PCWSTR)CString((WCHAR)
-			((options & FormatOptions::UseGlyphs) == FormatOptions::UseGlyphs ? 59 : 0xb0)) : L"",
-		(options & FormatOptions::UseGlyphs) == FormatOptions::UseGlyphs ?
-		(PCWSTR)font.GetSignGlyphAsString(value.Sign()) : (PCWSTR)GetZodiacSignName(value.Sign()).Left(3),
-		(int)(value.Minutes() + (showSeconds ? 0 : .5)),
-		(options & FormatOptions::ShowDegreeGlyph) == FormatOptions::ShowDegreeGlyph ? (PCWSTR)CString((WCHAR)39) : L"");
+		(int)(inSign / unitsPerDegree),
+		showDegreeGlyph ? (PCWSTR)CString((WCHAR)(useGlyphs ? 59 : 0xb0)) : L"",
+		useGlyphs ? (PCWSTR)font.GetSignGlyphAsString(sign) : (PCWSTR)GetZodiacSignName(sign).Left(3),
+		(int)(showSeconds ? (inSign / 60) % 60 : inSign % 60),
+		showDegreeGlyph ? (PCWSTR)CString((WCHAR)39) : L"");
+
 	if (showSeconds) {
 		CString sec;
-		sec.Format(L"%02d\"", int(value.Seconds() + .5));
+		sec.Format(L"%02d\"", (int)(inSign % 60));
 		text += sec;
 	}
 	if ((value.Flags & AstroPointFlags::Retro) == AstroPointFlags::Retro) {
-		text += (options & FormatOptions::UseGlyphs) == FormatOptions::UseGlyphs ? L">" : L"R";
+		text += useGlyphs ? L">" : L"R";
 	}
 	return text;
 }

@@ -5,6 +5,8 @@
 
 class GraphicChartView;
 class AspectGridView;
+class AspectListView;
+class ChartDetailsView;
 class wxSplitterWindow;
 class wxNotebook;
 
@@ -50,6 +52,7 @@ private:
 	wxNotebook* m_DetailsTabs{};
 	GraphicChartView* m_ChartDrawing{};
 	AspectGridView* m_AspectGrid{};
-	wxStaticText* m_DetailsSummary{};
+	AspectListView* m_AspectList{};
+	ChartDetailsView* m_DetailsView{};
 	bool m_SashCentred{ false };
 };

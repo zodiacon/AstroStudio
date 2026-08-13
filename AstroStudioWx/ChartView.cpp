@@ -2,27 +2,15 @@
 #include "ChartView.h"
 
 #include "AspectGridView.h"
+#include "AspectListView.h"
 #include "AstroHelpers.h"
+#include "ChartDetailsView.h"
 #include "GraphicChartView.h"
 #include "Aspects.h"
 
 #include <wx/splitter.h>
 #include <wx/notebook.h>
 
-//
-// Builds a page that is still a stub, with a note naming the phase that
-// replaces it. Keeps the three placeholder tabs from cluttering the ctor.
-//
-static wxWindow* MakeStubPage(wxWindow* parent, wxString const& note) {
-	auto panel = new wxPanel(parent);
-	auto sizer = new wxBoxSizer(wxVERTICAL);
-	sizer->AddStretchSpacer();
-	sizer->Add(new wxStaticText(panel, wxID_ANY, note),
-		wxSizerFlags().Center().Border(wxALL, panel->FromDIP(8)));
-	sizer->AddStretchSpacer();
-	panel->SetSizer(sizer);
-	return panel;
-}
 
 ChartView::ChartView(wxWindow* parent, IMainFrame* frame)
 	: wxPanel(parent, wxID_ANY, wxDefaultPosition, wxDefaultSize,
@@ -52,29 +40,18 @@ ChartView::ChartView(wxWindow* parent, IMainFrame* frame)
 	//
 	m_DetailsTabs->SetDoubleBuffered(true);
 
-	//
-	// Details page. Phase 4 replaces this with the port of CChartDetailsView
-	// and IDD_CHARTDETAILS; for now it is a readout proving the chart really
-	// was calculated.
-	//
-	auto details = new wxPanel(m_DetailsTabs);
-	{
-		auto sizer = new wxBoxSizer(wxVERTICAL);
-		m_DetailsSummary = new wxStaticText(details, wxID_ANY, wxEmptyString);
-		sizer->Add(m_DetailsSummary, wxSizerFlags().Border(wxALL, FromDIP(10)));
-		sizer->Add(new wxStaticText(details, wxID_ANY,
-			"CChartDetailsView + IDD_CHARTDETAILS arrive in phase 4."),
-			wxSizerFlags().Border(wxLEFT | wxRIGHT | wxBOTTOM, FromDIP(10)));
-		details->SetSizer(sizer);
-	}
+	// Edits here feed straight back into the model, so the view asks us to
+	// recalculate - the callback that replaces SendMessage(WM_RECALC).
+	m_DetailsView = new ChartDetailsView(m_DetailsTabs,
+		[this](Recalc what) { Recalculate(what); });
 
 	m_AspectGrid = new AspectGridView(m_DetailsTabs);
 
-	m_DetailsTabs->AddPage(details, "Details", true);
+	m_AspectList = new AspectListView(m_DetailsTabs);
+
+	m_DetailsTabs->AddPage(m_DetailsView, "Details", true);
 	m_DetailsTabs->AddPage(m_AspectGrid, "Aspect Grid");
-	m_DetailsTabs->AddPage(MakeStubPage(m_DetailsTabs,
-		"CAspectListView arrives in phase 5 (wxListCtrl in virtual mode)."),
-		"Aspect List");
+	m_DetailsTabs->AddPage(m_AspectList, "Aspect List");
 
 	// CChartView used SetSplitterPanes + SetSplitterPosPct(50); sash gravity
 	// keeps that 50/50 split as the window resizes, which the WTL splitter
@@ -115,6 +92,7 @@ void ChartView::SetChart(ChartData data) {
 
 	m_ChartDrawing->SetChartData(&m_Data);
 	m_AspectGrid->SetChartData(&m_Data);
+	m_DetailsView->SetChartData(&m_Data);
 
 	RefreshFromData();
 }
@@ -150,6 +128,12 @@ void ChartView::Recalculate(Recalc what) {
 			break;
 	}
 	RefreshFromData();
+
+	// CChartDetailsView called UpdateControls() itself after posting WM_RECALC;
+	// here the frame that owns both does it, so the details view does not have
+	// to know it triggered the recalculation. Its own m_Updating guard stops
+	// the write-back from raising further change events.
+	m_DetailsView->UpdateControls(what);
 }
 
 void ChartView::RefreshFromData() {
@@ -158,22 +142,10 @@ void ChartView::RefreshFromData() {
 
 	m_AspectGrid->SetAspects(aspects);
 	m_AspectGrid->Refresh();
+	m_AspectList->SetAspects(aspects);
 
 	m_ChartDrawing->SetAspects(std::move(aspects));
 	m_ChartDrawing->Refresh();
-
-	auto const& houses = m_Data.Houses();
-	m_DetailsSummary->SetLabel(wxString::Format(
-		"%zu planets\nAsc %.4f deg\nMC  %.4f deg",
-		m_Data.AllPlanets().size(),
-		static_cast<double>(houses.Asc),
-		static_cast<double>(houses.MC)));
-
-	// The label has to be re-laid out by the panel that *contains* it. Calling
-	// Layout() on ChartView only re-runs the splitter sizer, which leaves the
-	// static text at the best size it had when it was empty, clipping all but
-	// the first line.
-	m_DetailsSummary->GetParent()->Layout();
 }
 
 void ChartView::PageActivated(bool active) {

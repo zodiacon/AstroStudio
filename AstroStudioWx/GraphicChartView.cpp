@@ -1,5 +1,6 @@
 #include "pch.h"
 #include "GraphicChartView.h"
+#include "AstroHelpers.h"
 
 #include <wx/dcbuffer.h>
 #include <wx/graphics.h>
@@ -38,6 +39,22 @@ void GraphicChartView::OnPaint(wxPaintEvent&) {
 	auto size = std::min(client.x, client.y);
 	if (size <= 0)
 		return;
+
+	//
+	// Re-read the theme on every paint rather than caching it: the drawing
+	// classes stay free of any UI/theme dependency, and a system theme change
+	// needs no notification plumbing to take effect.
+	//
+	// The aspect colours are deliberately left alone. Red for hard and blue for
+	// soft are semantic to astrologers, not decoration.
+	//
+	auto& params = m_Drawing.DrawingParameters();
+	params.BackColor = wxSystemSettings::GetColour(wxSYS_COLOUR_WINDOW);
+	params.ForeColor = wxSystemSettings::GetColour(wxSYS_COLOUR_WINDOWTEXT);
+	params.HouseLineColor = wxSystemSettings::GetColour(wxSYS_COLOUR_GRAYTEXT);
+	params.AspectColor = params.ForeColor;
+	for (int i = 0; i < 4; i++)
+		params.ElementColor[i] = AstroHelpers::ElementColour(i);
 
 	m_Drawing.Chart(m_ChartData);
 	m_Drawing.Aspects(&m_Aspects);

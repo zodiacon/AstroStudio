@@ -15,7 +15,13 @@
 appicon                 ICON    "..\\AstroStudio\\res\\AstroStudio.ico"
 chart                   ICON    "..\\AstroStudio\\res\\Chart.ico"
 chartnow                ICON    "..\\AstroStudio\\res\\ChartNow.ico"
+clock                   ICON    "..\\AstroStudio\\res\\clock.ico"
 ephemeris               ICON    "..\\AstroStudio\\res\\ephemeris.ico"
+fontbigger              ICON    "..\\AstroStudio\\res\\FormatFontLarger.ico"
+fontdefault             ICON    "..\\AstroStudio\\res\\fontreset.ico"
+fontsmaller             ICON    "..\\AstroStudio\\res\\FormatFontSmaller.ico"
+glyph                   ICON    "..\\AstroStudio\\res\\glyph.ico"
+grid                    ICON    "..\\AstroStudio\\res\\grid.ico"
 
 //
 // The zodiac/planet glyph font, embedded so it renders without being installed

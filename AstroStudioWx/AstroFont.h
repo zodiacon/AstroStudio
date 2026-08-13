@@ -27,6 +27,15 @@ struct AstroFontBase {
 };
 
 struct DefaultFont : AstroFontBase {
+	//
+	// How far the glyph tables actually reach. HamburgSymbols stops at Chiron,
+	// so Planet::Pholus and everything after it (Ceres, Pallas, Juno, Vesta)
+	// have no glyph - the Planet enum is larger than the font. Anything walking
+	// the enum to build glyphs must stop here, not at Planet::NumPlanets.
+	//
+	static constexpr int PlanetGlyphCount = 16;
+	static constexpr int AspectGlyphCount = 15;	// Conjunction..BiNovile
+
 	wchar_t GetRetroGlyph() const override;
 	wchar_t GetDirectGlyph() const override;
 	wchar_t GetSignGlyph(ZodiacSign sign) const override;
