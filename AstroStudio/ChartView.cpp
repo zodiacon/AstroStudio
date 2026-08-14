@@ -41,7 +41,48 @@ void CChartView::ChartForNow() {
 	auto planets = Helpers::GetStandardPlanets();
 	data.AddPlanets(planets);
 	data.AddPlanets({ Planet::Chiron, Planet::TrueNode, Planet::Lilith });
+
+	// The chart opens straight away; if the location hasn't arrived yet it is a
+	// placeholder and the details view says so until WM_LOCATION_UPDATED.
+	m_AwaitingLocation = Frame()->IsLocationPending();
+
 	Chart(std::move(data));
+	m_DetailsView.SetLocationPending(m_AwaitingLocation);
+}
+
+LRESULT CChartView::OnLocationUpdated(UINT, WPARAM wParam, LPARAM, BOOL&) {
+	if (!m_AwaitingLocation)
+		return 0;
+
+	m_AwaitingLocation = false;
+
+	// Don't stomp a location the user typed while the lookup was still running.
+	if (!wParam || m_DetailsView.IsLocationEdited()) {
+		m_DetailsView.SetLocationPending(false);
+		return 0;
+	}
+
+	auto const& source = Frame()->DefaultChartInfo();
+	auto& info = m_Data.Info();
+	info.Latitude = source.Latitude;
+	info.Longitude = source.Longitude;
+	info.Elevation = source.Elevation;
+	info.City = source.City;
+	info.State = source.State;
+	info.Country = source.Country;
+	info.TimeZone = source.TimeZone;
+
+	// The time is deliberately left alone - it was captured when the chart was
+	// created, and shifting it now would silently change the chart.
+	SendMessage(WM_RECALC, static_cast<WPARAM>(Recalc::Houses));
+
+	// Has to come after the copy above: SetLocationPending refreshes the
+	// latitude/longitude fields and the location text from the chart's info,
+	// and UpdateControls does not touch them at all.
+	m_DetailsView.SetLocationPending(false);
+	m_DetailsView.UpdateControls();
+
+	return 0;
 }
 
 ChartData const& CChartView::Chart() const {

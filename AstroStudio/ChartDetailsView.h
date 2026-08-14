@@ -23,6 +23,16 @@ public:
 	void SetChartData(ChartData* data);
 	void SetNotifyWindow(HWND hWnd);
 
+	// While pending, the Location field reads "<Locating...>" instead of the
+	// (still empty) city/state/country.
+	void SetLocationPending(bool pending);
+
+	// True once the user has typed a location or used Here, so an arriving
+	// geolocation result knows not to overwrite it.
+	bool IsLocationEdited() const;
+
+	void UpdateControls(Recalc type = Recalc::All);
+
 	CString GetColumnText(HWND, int row, int col) const;
 	void DoSort(SortInfo const* si);
 
@@ -62,7 +72,6 @@ private:
 		Planet, Longitude, Latitude, Speed, House, HouseLongitude,
 	};
 
-	void UpdateControls(Recalc type = Recalc::All);
 	void UpdateLocationControls();
 	void ApplyLocationFromControls();
 
@@ -86,5 +95,7 @@ private:
 	CFont m_Font;
 	CWindow m_NotifyWnd;
 	bool m_UpdatingLocationControls{ false };
+	bool m_LocationPending{ false };
+	bool m_LocationEdited{ false };
 };
 

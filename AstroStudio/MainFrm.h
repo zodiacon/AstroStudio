@@ -34,6 +34,7 @@ protected:
 		COMMAND_ID_HANDLER(ID_NEW_CHARTFORNOW, OnNewChartNow)
 		COMMAND_ID_HANDLER(ID_OPTIONS_DARKMODE, OnToggleDarkMode)
 		MESSAGE_HANDLER(WM_GETMINMAXINFO, OnGetMinMaxInfo)
+		MESSAGE_HANDLER(WM_LOCATION_READY, OnLocationReady)
 		COMMAND_ID_HANDLER(ID_WINDOW_CLOSE_ALL, OnWindowCloseAll)
 		MESSAGE_HANDLER(WM_CREATE, OnCreate)
 		MESSAGE_HANDLER(WM_DESTROY, OnDestroy)
@@ -52,6 +53,7 @@ private:
 	CUpdateUIBase& GetUI() override;
 	IView* AddChartView(ChartData data, PCWSTR title = nullptr);
 	ChartInfo& DefaultChartInfo() override;
+	bool IsLocationPending() const override;
 
 	// Handler prototypes (uncomment arguments if needed):
 	//	LRESULT MessageHandler(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, BOOL& /*bHandled*/)
@@ -72,10 +74,11 @@ private:
 	LRESULT OnNewChart(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/);
 	LRESULT OnNewChartNow(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/);
 	LRESULT OnToggleDarkMode(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/);
+	LRESULT OnLocationReady(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, BOOL& /*bHandled*/);
 
 	CNativeCustomTabView m_view;
 	int m_CurrentPage{ -1 };
 	ULONG_PTR m_GdiPlusToken{ 0 };
-	HANDLE m_hDefaultChartInfoReady;
+	bool m_LocationPending{ false };
 	ChartInfo m_DefaultChartInfo{};
 };

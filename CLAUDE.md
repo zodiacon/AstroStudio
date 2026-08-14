@@ -16,21 +16,13 @@ msbuild AstroStudio.sln /p:Configuration=Debug /p:Platform=x64
 
 There are no automated tests, lint configs, or CI workflows in this repo — verify changes by building and running the app (`x64\Debug\AstroStudio.exe`).
 
-The `AstroStudioWx` project additionally needs wxWidgets from vcpkg:
-
-```
-vcpkg install wxwidgets:x64-windows-static
-```
-
-The **static** triplet is required, not preferred — every project here builds with the static CRT (`/MT`, `/MTd`), and the default `x64-windows` triplet is `/MD`. `AstroStudioWx\wxwidgets-vcpkg.props` locates it via `VCPKG_ROOT` (defaulting to `C:\vcpkg`) and fails with a readable message if it's missing. That project is x64-only; x86 solution builds skip it.
-
 ### Submodules
 
 `WTLHelper` is a git submodule (https://github.com/zodiacon/WTLHelper). Run `git submodule update --init` after cloning if it's empty. Note: `.gitmodules` also lists `modules/CairoGfx`, but the `CairoGfx` directory at the repo root is actually committed directly to this repo (not a submodule) — the `.gitmodules` entry for it is stale.
 
 ## Solution structure
 
-The `.sln` builds five projects: `AstroStudio` (the WTL app), `AstroStudioWx` (the in-progress wxWidgets port of the same app — see below), `AstroCore` (calculation engine), `sweph` (Swiss Ephemeris, vendored C library), and `WTLHelper` (submodule, shared WTL UI helper library used across the author's other projects). The `CairoGfx` and `QChart` directories exist in the repo but are **not** part of the solution — they're unused/legacy alternative rendering backends; don't assume they're wired into the build.
+The `.sln` builds four projects: `AstroStudio` (the app), `AstroCore` (calculation engine), `sweph` (Swiss Ephemeris, vendored C library), and `WTLHelper` (submodule, shared WTL UI helper library used across the author's other projects). The `CairoGfx` and `QChart` directories exist in the repo but are **not** part of the solution — they're unused/legacy alternative rendering backends; don't assume they're wired into the build.
 
 - **`sweph/`** — Vendored Swiss Ephemeris C sources (`swe*.c/h`). Treat as third-party; avoid modifying unless fixing a vendoring issue.
 - **`AstroCore/`** — Platform-agnostic astrology calculation engine, no UI/WTL dependencies.
@@ -48,28 +40,10 @@ The `.sln` builds five projects: `AstroStudio` (the WTL app), `AstroStudioWx` (t
   - `Interfaces.h` — cross-view contracts: `IMainFrame` (what views can call on the frame) and `IView` (what the frame can call on a tab page: `PageActivated`, `ProcessCommand`). New views should implement `IView`; new frame-level operations should be added to `IMainFrame`.
   - `ViewBase.h` (`CViewBase<T, TBase>`) — CRTP base every tab view derives from; wires up `IView::PageActivated`, idle-driven toolbar UI updates (`CAutoUpdateUI`), and self-deletion on `WM_DESTROY`/`OnFinalMessage`. New tab views should derive from this rather than reimplementing the plumbing.
   - `NetworkHelper` / `WinHttp` — WinHTTP-based lookups (e.g. external IP, geocoding-ish info) used to fill in `ChartInfo` (location/timezone) for "chart for now" style birth data.
-  - `AstroFont` / `DefaultFont` — embeds/loads `res\HamburgSymbols.ttf` (the zodiac/planet glyph font) via a private font collection so it renders without being installed system-wide — see commit history for why (avoids requiring a global font install).
+  - `AstroFont` / `DefaultFont` — embeds/loads `res\HamburgSymbols.ttf` (the zodiac/planet glyph font) so it renders without being installed system-wide — see commit history for why (avoids requiring a global font install).
+    - **`Helpers::LoadAstroFont` loading the font twice is not redundant.** `AddFontMemResourceEx` registers the face with GDI, which is what `CFont`/`CreatePointFont` lookups by name need; GDI+ cannot see privately-loaded fonts by name *at all* (neither memory-loaded nor file-based `FR_PRIVATE`) and silently substitutes Microsoft Sans Serif. Its only route to one is the separate `Gdiplus::PrivateFontCollection`, which is why `ChartDrawing` takes a `FontFamily` from there. Don't "simplify" either away.
+    - The glyph tables in `DefaultFont.cpp` must cover their whole enum. `Planet` runs to Vesta (21) while HamburgSymbols originally stopped at Chiron (16), so the last five read past the end. A `static_assert` now ties the planet table's length to `Planet::NumPlanets`, so adding a body fails to compile until it has a glyph. Codes come from the "INDEX #" column of `HamburgSymbols.pdf`.
   - `PlanetSpacer` — layout helper to avoid overlapping planet glyphs when several planets cluster together on the wheel.
-- **`AstroStudioWx/`** — In-progress wxWidgets 3.3 port of the application, built as a second executable alongside the WTL one so both run during the migration. It links `AstroCore`/`sweph` but shares no code with `AstroStudio/` yet — those files are ATL/WTL-bound (`CString` returns, `Gdiplus::FontFamily`) and get ported phase by phase. x64 only; see `wxwidgets-vcpkg.props` for why, and for the vcpkg autolink conflict that sheet pins down.
-  - `App` — `wxIMPLEMENT_APP`; replaces the `CAppModule`/`CMessageLoop`/`_tWinMain` scaffolding and the `WTLHelper::InitDarkMode` call.
-  - `MainFrame` — replaces `CMainFrame`: menu bar, tool bar, status bar, and a `wxAuiNotebook` in place of `CNativeCustomTabView`. UI enable/check state comes from `wxEVT_UPDATE_UI` instead of `CAutoUpdateUI` + `CIdleHandler`.
-  - `Interfaces.h` — `IView` (a mixin recovered from notebook pages with `dynamic_cast`) and `IMainFrame`, down from six methods to two. Also the `Recalc` enum, which replaces the `WM_RECALC` custom message. The header explains each omission.
-  - `ChartView` — replaces `CChartView`: a `wxSplitterWindow` (wheel left, detail notebook right) with Details / Aspect Grid / Aspect List pages.
-  - `GraphicChartView` / `AspectGridView` — hosts for the two drawings. `wxAutoBufferedPaintDC` replaces the manual `Gdiplus::Bitmap` backbuffer and `WM_ERASEBKGND` handler.
-  - `ChartDrawing` / `AspectGridDrawing` — ports of the GDI+ originals onto `wxGraphicsContext`, keeping the same 1000-unit logical space and geometry. Three colours the WTL code hard-coded (`Color::Black`, `Color::Gray`, `Color::Blue`) are parameters here, so the wheel can be themed without editing drawing code.
-  - Drawing colours are read from `wxSystemSettings` on every paint, so both drawings follow the system light/dark theme. Aspect line colours are deliberately *not* themed — red for hard and blue for soft are semantic, not decoration.
-  - **Never leave `ChartInfo` at 0°N 0°E.** On the equator every quadrant house system degenerates to the same division — Koch, Placidus and Campanus return byte-identical cusps — so changing the House System appears to do nothing and looks like a broken event handler. `MainFrame::InitDefaultChartInfo` uses Greenwich until phase 6 wires up the geolocation lookup.
-  - **Text cannot go through `wxGraphicsContext`.** GDI+ ignores private fonts entirely — both `AddFontMemResourceEx` and file-based `FR_PRIVATE` — and silently substitutes Microsoft Sans Serif, so HamburgSymbols renders as plain Latin letters. Its only route to a private face is a `Gdiplus::PrivateFontCollection` (which is why `AstroStudio\Helpers.cpp` keeps one *in addition to* its `AddFontMemResourceEx` call), and wx exposes no way to supply one. So shapes are drawn through the graphics context and glyphs are collected into `AstroHelpers::GlyphRun`s and drawn afterwards with `wxDC::DrawText`, which is GDI and resolves the face. Do not "simplify" this back into the graphics context.
-  - `PlanetSpacer` — the one UI-layer file that ports verbatim; it is pure geometry.
-  - `AspectListView` / `EphemerisView` — replace `CAspectListView` / `CEphemerisView`. Both are virtual `wxListCtrl`s; all six `NM_CUSTOMDRAW` handlers across the two are gone, replaced by `OnGetItemText` / `OnGetItemColumnAttr` / `OnGetItemColumnImage`. `EphemerisView` keeps its own more saturated element palette, as the WTL build did — it deliberately differs from the chart views'.
-  - **The glyph tables are shorter than the `Planet` enum.** HamburgSymbols stops at Chiron (16 entries) while `Planet` runs to Vesta (21), so anything iterating planets to build glyphs must bound on `DefaultFont::PlanetGlyphCount`, never `Planet::NumPlanets`. `AstroFont.cpp` static_asserts the counts against the tables.
-  - Glyph+name cells (WTL's `DrawGlyphAndName`, which needed two fonts in one cell) are done with a masked `wxImageList` supplying the glyph via `OnGetItemColumnImage` and the name as ordinary cell text. Trade-off: the glyph colour is baked in, so it does not invert on selection and the list is rebuilt on `wxEVT_SYS_COLOUR_CHANGED`.
-  - `AspectGridView` — replaces `CAspectGridWnd` **and** its `CScrollContainer` host, plus the `UpdateAspectGridScrollSize`/`UpdateAspectGridScrollBarTheme` plumbing in `CChartView`. One `wxScrolledWindow` does all of it.
-  - `ChartDetailsView` — replaces `CChartDetailsView` **and** the `IDD_CHARTDETAILS` dialog resource. wx cannot load an RC dialog and the original used absolute pixel coordinates, so it is rebuilt from sizers; the field rows sit in a `wxWrapSizer` so nothing is clipped when the splitter pane is dragged narrow. Each edit + `msctls_updown32` pair collapses into one `wxSpinCtrl`, and `SysDateTimePick32` becomes `wxDatePickerCtrl`/`wxTimePickerCtrl`. The planet and house tables are virtual `wxListCtrl`s whose per-cell colours and glyph font come from `OnGetItemColumnAttr`, replacing all three `NM_CUSTOMDRAW` handlers.
-  - `AstroHelpers` — the portable subset of `Helpers`, ported per-phase. The rest of `Helpers` is ATL/GDI+-bound (`CString`, `Gdiplus::FontFamily`, `COLORREF`) and cannot be shared.
-  - `Resources` — icon loading via `wxIconBundle`/`wxBitmapBundle`, which picks the right size per monitor DPI. Icons are shared with the WTL build's `res\*.ico` via *named* resources in `AstroStudioWx.rc` (both `wxICON()` and `wxIconBundle` look icons up by name, not number).
-  - `PlaceholderView` — temporary stub page; replaced by `CChartView` (phase 2) and `CEphemerisView` (phase 5).
-  - **Command IDs are renumbered, not carried over.** wx asserts `id < 32767` for menu items, and Visual Studio's resource editor allocates from 32771 up, so every `ID_*` in `AstroStudio\resource.h` is illegal in wx. `AstroStudioWx\resource.h` documents the mapping.
 
 ## Conventions
 

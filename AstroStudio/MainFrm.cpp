@@ -17,6 +17,15 @@
 
 #define WINDOW_MENU_POSITION	5
 
+namespace {
+	// Owned by the thread pool callback until it is posted to the frame, which
+	// then takes ownership - the same hand-off CChartDetailsView::OnHere uses.
+	struct LocationRequest {
+		HWND Wnd;
+		ChartInfo Info;
+	};
+}
+
 BOOL CMainFrame::PreTranslateMessage(MSG* pMsg) {
 	if (CFrameWindowImpl<CMainFrame>::PreTranslateMessage(pMsg))
 		return TRUE;
@@ -30,13 +39,23 @@ BOOL CMainFrame::OnIdle() {
 }
 
 LRESULT CMainFrame::OnCreate(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, BOOL& /*bHandled*/) {
-	m_hDefaultChartInfoReady = ::CreateEvent(nullptr, FALSE, FALSE, nullptr);
-	ATLASSERT(m_hDefaultChartInfoReady);
-	::TrySubmitThreadpoolCallback([](auto, auto ctx) {
-		auto frame = (CMainFrame*)ctx;
-		NetworkHelper::FillInfoFromLocal(frame->m_DefaultChartInfo);
-		::SetEvent(frame->m_hDefaultChartInfoReady);
-		}, this, nullptr);
+	//
+	// The lookup fills its own ChartInfo and posts it back, rather than writing
+	// straight into m_DefaultChartInfo and signalling an event for the UI thread
+	// to block on. Nothing waits for it now: charts open immediately with a
+	// placeholder location and are filled in when it lands.
+	//
+	auto request = new LocationRequest{ m_hWnd };
+	m_LocationPending = true;
+	if (!::TrySubmitThreadpoolCallback([](auto, auto ctx) {
+		auto req = static_cast<LocationRequest*>(ctx);
+		auto success = NetworkHelper::FillInfoFromLocal(req->Info);
+		if (!::PostMessage(req->Wnd, WM_LOCATION_READY, (WPARAM)success, (LPARAM)req))
+			delete req;
+		}, request, nullptr)) {
+		delete request;
+		m_LocationPending = false;
+	}
 
 	static bool gdiPlusInit = false;
 	if (!gdiPlusInit) {
@@ -124,17 +143,32 @@ LRESULT CMainFrame::OnNewChart(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCt
 LRESULT CMainFrame::OnNewChartNow(WORD, WORD, HWND, BOOL&) {
 	auto pView = new CChartView(this);
 	pView->Create(m_view, rcDefault, nullptr, WS_CHILD | WS_VISIBLE | WS_CLIPCHILDREN, 0);
-	if (m_hDefaultChartInfoReady) {
-		CWaitCursor wait;
-		if (WAIT_OBJECT_0 == ::WaitForSingleObject(m_hDefaultChartInfoReady, 3000)) {
-			::CloseHandle(m_hDefaultChartInfoReady);
-			m_hDefaultChartInfoReady = nullptr;
-		}
-	}
 	pView->ChartForNow();
 	m_view.AddPage(pView->m_hWnd, L"NewChart", 1, pView);
 
 	return 0;
+}
+
+//
+// The geolocation lookup finished. Adopt the result, then let every open page
+// know - a chart created while it was still running shows "<Locating...>" and
+// fills itself in here.
+//
+LRESULT CMainFrame::OnLocationReady(UINT, WPARAM wParam, LPARAM lParam, BOOL&) {
+	std::unique_ptr<LocationRequest> request(reinterpret_cast<LocationRequest*>(lParam));
+
+	m_LocationPending = false;
+	if (wParam)
+		m_DefaultChartInfo = request->Info;
+
+	for (int i = 0; i < m_view.GetPageCount(); i++)
+		::SendMessage(m_view.GetPageHWND(i), WM_LOCATION_UPDATED, wParam, 0);
+
+	return 0;
+}
+
+bool CMainFrame::IsLocationPending() const {
+	return m_LocationPending;
 }
 
 LRESULT CMainFrame::OnToggleDarkMode(WORD, WORD, HWND, BOOL&) {

@@ -31,6 +31,7 @@ public:
 		MESSAGE_HANDLER(WM_CREATE, OnCreate)
 		MESSAGE_HANDLER(WM_FORWARDMSG, OnForwardMsg)
 		MESSAGE_HANDLER(WTLHelper::ThemeChangedMessage, OnThemeChanged)
+		MESSAGE_HANDLER(WM_LOCATION_UPDATED, OnLocationUpdated)
 		CHAIN_MSG_MAP(CVirtualListView)
 		CHAIN_MSG_MAP(BaseFrame)
 	ALT_MSG_MAP(1)
@@ -46,11 +47,15 @@ private:
 	LRESULT OnRecalc(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, BOOL& /*bHandled*/);
 	LRESULT OnForwardMsg(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM lParam, BOOL& /*bHandled*/);
 	LRESULT OnThemeChanged(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, BOOL& /*bHandled*/);
+	LRESULT OnLocationUpdated(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, BOOL& /*bHandled*/);
 	void UpdateAspectGridScrollSize();
 	void UpdateAspectGridScrollBarTheme();
 
 	ChartData m_Data;
 	AstroCalculator m_Calc;
+	// Set when this chart was opened before the geolocation lookup finished, so
+	// its location is a placeholder awaiting WM_LOCATION_UPDATED.
+	bool m_AwaitingLocation{ false };
 	CCustomSplitterWindow m_Splitter;
 	CNativeCustomTabView m_DetailsTabs;
 	CChartDetailsView m_DetailsView;

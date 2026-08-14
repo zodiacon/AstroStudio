@@ -36,17 +36,51 @@ void CChartDetailsView::UpdateLocationControls() {
 		auto [deg, min, _] = Helpers::GetDegMinSec(info.Latitude);
 		SetDlgItemInt(IDC_LATDEG, deg);
 		SetDlgItemInt(IDC_LATMIN, min);
-		CheckDlgButton(info.Latitude >= 0 ? IDC_NORTH : IDC_SOUTH, BST_CHECKED);
+		//
+		// CheckRadioButton, not CheckDlgButton: the latter only sets the state
+		// of the button named, leaving the other one checked too. Auto-radio
+		// buttons clear their siblings when the *user* clicks, not on a
+		// programmatic BM_SETCHECK - so switching to a southern or western
+		// location used to light up both halves of the pair.
+		//
+		CheckRadioButton(IDC_NORTH, IDC_SOUTH, info.Latitude >= 0 ? IDC_NORTH : IDC_SOUTH);
 	}
 	{
 		auto [deg, min, _] = Helpers::GetDegMinSec(info.Longitude);
 		SetDlgItemInt(IDC_LONDEG, deg);
 		SetDlgItemInt(IDC_LONMIN, min);
-		CheckDlgButton(info.Longitude >= 0 ? IDC_EAST : IDC_WEST, BST_CHECKED);
+		CheckRadioButton(IDC_EAST, IDC_WEST, info.Longitude >= 0 ? IDC_EAST : IDC_WEST);
 	}
 	m_UpdatingLocationControls = false;
 
-	SetDlgItemText(IDC_LOCATION, (info.City + (info.State.empty() ? L"" : (L", " + info.State)) + L", " + info.Country).c_str());
+	if (m_LocationPending) {
+		SetDlgItemText(IDC_LOCATION, L"Locating...");
+	}
+	else {
+		// Join only the parts we actually have. Concatenating unconditionally
+		// rendered an unknown location as a bare ", ", which is now visible
+		// whenever the lookup fails.
+		std::wstring const* parts[] = { &info.City, &info.State, &info.Country };
+		CString location;
+		for (auto part : parts) {
+			if (part->empty())
+				continue;
+			if (!location.IsEmpty())
+				location += L", ";
+			location += part->c_str();
+		}
+		SetDlgItemText(IDC_LOCATION, location);
+	}
+}
+
+void CChartDetailsView::SetLocationPending(bool pending) {
+	m_LocationPending = pending;
+	if (m_Data)
+		UpdateLocationControls();
+}
+
+bool CChartDetailsView::IsLocationEdited() const {
+	return m_LocationEdited;
 }
 
 void CChartDetailsView::SetNotifyWindow(HWND hWnd) {
@@ -356,6 +390,8 @@ LRESULT CChartDetailsView::OnHereResult(UINT, WPARAM wParam, LPARAM lParam, BOOL
 	info.State = req->Info.State;
 	info.Country = req->Info.Country;
 
+	m_LocationEdited = true;
+	m_LocationPending = false;
 	UpdateLocationControls();
 	if (m_NotifyWnd) {
 		m_NotifyWnd.SendMessageW(WM_RECALC, static_cast<WPARAM>(Recalc::Houses));
@@ -382,6 +418,11 @@ void CChartDetailsView::ApplyLocationFromControls() {
 LRESULT CChartDetailsView::OnLocationChanged(WORD, WORD, HWND, BOOL&) {
 	if (m_Data == nullptr || m_UpdatingLocationControls)
 		return 0;
+
+	// The user has taken control of the location; a late geolocation result
+	// must not overwrite it.
+	m_LocationEdited = true;
+	m_LocationPending = false;
 
 	ApplyLocationFromControls();
 	if (m_NotifyWnd) {
