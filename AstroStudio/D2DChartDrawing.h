@@ -1,25 +1,38 @@
 #pragma once
 
-#include "ChartDrawing.h"
-// pch.h targets Windows 7, which hides the DirectWrite in-memory font loader (Windows 10 1709+) that
-// the embedded glyph font needs; raise the target for these headers only (d2d1.h pulls in dcommon.h,
-// which dwrite_3.h needs at the same level)
-#pragma push_macro("NTDDI_VERSION")
-#undef NTDDI_VERSION
-#define NTDDI_VERSION NTDDI_WIN10_RS3
-#include <d2d1.h>
-#include <dwrite_3.h>
-#pragma pop_macro("NTDDI_VERSION")
+#include "ChartData.h"
+#include "Aspects.h"
+#include "D2DResources.h"
+#include <array>
 
-// Direct2D/DirectWrite counterpart of ChartDrawing. Uses the same ChartDrawingParameters and the same
-// 1000x1000 logical coordinate space, so the two renderers produce the same chart.
+struct ChartDrawingParameters {
+	D2D1_COLOR_F BackColor{ D2D1::ColorF(D2D1::ColorF::WhiteSmoke) };
+	std::array<D2D1_COLOR_F, 4> ElementColor {
+		D2D1::ColorF(D2D1::ColorF::OrangeRed),
+		D2D1::ColorF(D2D1::ColorF::LightGoldenrodYellow),
+		D2D1::ColorF(D2D1::ColorF::LightGreen),
+		D2D1::ColorF(D2D1::ColorF::LightBlue)
+	};
+
+	D2D1_COLOR_F SoftAspectColor{ D2D1::ColorF(D2D1::ColorF::Blue) };
+	D2D1_COLOR_F HardAspectColor{ D2D1::ColorF(D2D1::ColorF::Red) };
+	D2D1_COLOR_F MinorAspectColor{ D2D1::ColorF(D2D1::ColorF::Purple) };
+	D2D1_COLOR_F AspectColor{ D2D1::ColorF(D2D1::ColorF::Black) };
+
+	float MajorAspectWidth{ 3 };
+	float MinorAspectWidth{ 1.5f };
+	float ZodiacBeltWidth{ 40 };
+
+	bool DrawAspects{ true };
+	bool FillZodiacBelts{ true };
+	bool DrawHouseLines{ true };
+	bool DrawVeryMinorAspects{ true };
+	bool DrawNonStandardPlanetAspects{ false };
+};
+
+// Draws the chart wheel with Direct2D/DirectWrite in a 1000x1000 logical coordinate space.
 class D2DChartDrawing {
 public:
-	D2DChartDrawing() = default;
-	D2DChartDrawing(D2DChartDrawing const&) = delete;
-	D2DChartDrawing& operator=(D2DChartDrawing const&) = delete;
-	~D2DChartDrawing();
-
 	// Draws the chart into the top-left size x size DIPs of the render target, clearing just that square.
 	// The caller owns BeginDraw/EndDraw (and so D2DERR_RECREATE_TARGET handling).
 	HRESULT Draw(ID2D1RenderTarget* rt, float size);
@@ -31,19 +44,10 @@ public:
 	D2DChartDrawing& Aspects(std::vector<AspectData>* aspects);
 
 private:
-	HRESULT EnsureTextResources();
-	HRESULT LoadAstroFontCollection();
 	HRESULT DrawChart(ID2D1RenderTarget* rt);
 	D2D1_POINT_2F PointByAngle(D2D1_POINT_2F const& center, float radius, double angle) const;
 
 	ChartDrawingParameters m_params;
 	ChartData* m_data{ nullptr };
 	std::vector<AspectData>* m_aspects{ nullptr };
-
-	// device-independent resources, kept across draws and render target recreation
-	CComPtr<IDWriteFactory5> m_dwFactory;
-	CComPtr<IDWriteInMemoryFontFileLoader> m_fontLoader;
-	CComPtr<IDWriteFontCollection1> m_fontCollection;
-	CComPtr<IDWriteTextFormat> m_glyphFormat;	// zodiac sign and aspect glyphs
-	CComPtr<IDWriteTextFormat> m_planetFormat;
 };

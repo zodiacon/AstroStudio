@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## What this is
 
-AstroStudio is a native Windows desktop astrology application built with C++20, WTL (Windows Template Library), and GDI+. It calculates and draws natal/chart data (planets, houses, aspects) using the Swiss Ephemeris library.
+AstroStudio is a native Windows desktop astrology application built with C++20, WTL (Windows Template Library), and Direct2D/DirectWrite. It calculates and draws natal/chart data (planets, houses, aspects) using the Swiss Ephemeris library.
 
 ## Build
 
@@ -34,19 +34,21 @@ The `.sln` builds four projects: `AstroStudio` (the app), `AstroCore` (calculati
 - **`AstroStudio/`** — The WTL application.
   - `MainFrm` (`IMainFrame`) — main frame window; owns a `CNativeCustomTabView` hosting one tab per open chart. Creates new chart views via `AddChartView`.
   - `ChartView` (`CChartView`) — one chart's tab content; splits between `ChartDetailsView` (text/list data) and `GraphicChartView`.
-  - `GraphicChartView` (`CGraphicChartView`) — renders the circular chart wheel via `ChartDrawing` onto a `Gdiplus::Bitmap`.
-  - `ChartDrawing` — pure GDI+ drawing logic for the chart wheel (zodiac belt, houses, aspect lines), parameterized by `ChartDrawingParameters` (colors, widths, toggles).
+  - `GraphicChartView` (`CGraphicChartView`) — renders the circular chart wheel via `D2DChartDrawing` onto its own `ID2D1HwndRenderTarget`.
+  - `D2DChartDrawing` — Direct2D/DirectWrite drawing logic for the chart wheel (zodiac belt, houses, aspect lines) in a 1000x1000 logical space, parameterized by `ChartDrawingParameters` (colors, widths, toggles). `Draw` does not call `BeginDraw`/`EndDraw`; the owning view does.
+  - `AspectGridWnd` / `AspectGridDrawing` — the aspect grid tab, drawn the same way (its own render target; `AspectGridDrawing::Draw` also leaves `BeginDraw`/`EndDraw` to the caller).
+  - `D2DResources` — process-wide singleton (`D2DResources::Get().Ensure()`) holding everything device-independent: the D2D and DirectWrite factories, the embedded glyph-font collection and the text formats. Only render targets are per window (`CreateWindowRenderTarget`, fixed at 96 DPI so a DIP is a pixel). The project targets Windows 7 in `pch.h`, which hides the DirectWrite in-memory font loader; `D2DResources.h` raises `NTDDI_VERSION` around its d2d1/dwrite_3 includes only. There is no GDI+ anywhere in the app — don't reintroduce it.
   - `EphemerisView` — ephemeris/table-style view.
   - `Interfaces.h` — cross-view contracts: `IMainFrame` (what views can call on the frame) and `IView` (what the frame can call on a tab page: `PageActivated`, `ProcessCommand`). New views should implement `IView`; new frame-level operations should be added to `IMainFrame`.
   - `ViewBase.h` (`CViewBase<T, TBase>`) — CRTP base every tab view derives from; wires up `IView::PageActivated`, idle-driven toolbar UI updates (`CAutoUpdateUI`), and self-deletion on `WM_DESTROY`/`OnFinalMessage`. New tab views should derive from this rather than reimplementing the plumbing.
   - `NetworkHelper` / `WinHttp` — WinHTTP-based lookups (e.g. external IP, geocoding-ish info) used to fill in `ChartInfo` (location/timezone) for "chart for now" style birth data.
   - `AstroFont` / `DefaultFont` — embeds/loads `res\HamburgSymbols.ttf` (the zodiac/planet glyph font) so it renders without being installed system-wide — see commit history for why (avoids requiring a global font install).
-    - **`Helpers::LoadAstroFont` loading the font twice is not redundant.** `AddFontMemResourceEx` registers the face with GDI, which is what `CFont`/`CreatePointFont` lookups by name need; GDI+ cannot see privately-loaded fonts by name *at all* (neither memory-loaded nor file-based `FR_PRIVATE`) and silently substitutes Microsoft Sans Serif. Its only route to one is the separate `Gdiplus::PrivateFontCollection`, which is why `ChartDrawing` takes a `FontFamily` from there. Don't "simplify" either away.
+    - **`Helpers::LoadAstroFont` loading the font twice is not redundant.** `AddFontMemResourceEx` registers the face with GDI, which is what `CFont`/`CreatePointFont` lookups by name need; DirectWrite cannot see that registration, so `D2DResources` builds its own font collection from the same embedded resource (in-memory font loader + font set builder). Don't "simplify" either away.
     - The glyph tables in `DefaultFont.cpp` must cover their whole enum. `Planet` runs to Vesta (21) while HamburgSymbols originally stopped at Chiron (16), so the last five read past the end. A `static_assert` now ties the planet table's length to `Planet::NumPlanets`, so adding a body fails to compile until it has a glyph. Codes come from the "INDEX #" column of `HamburgSymbols.pdf`.
   - `PlanetSpacer` — layout helper to avoid overlapping planet glyphs when several planets cluster together on the wheel.
 
 ## Conventions
 
 - Views communicate with the main frame only through `IMainFrame`/`IView`, not concrete types — keep new cross-view interactions going through those interfaces.
-- `AstroCore` must stay free of WTL/GDI+/UI includes; calculation logic belongs there, drawing/UI logic belongs in `AstroStudio`.
+- `AstroCore` must stay free of WTL/Direct2D/UI includes; calculation logic belongs there, drawing/UI logic belongs in `AstroStudio`.
 - Dark mode is handled via `WTLHelper`'s `WTLHelper::InitDarkMode()` / `ThemeHelper`; the app toggles it at runtime (`ID_OPTIONS_DARKMODE`) — UI code should get colors from the theme helpers rather than hardcoding them where dark-mode correctness matters.

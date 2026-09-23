@@ -36,14 +36,8 @@ bool CGraphicChartView::EnsureRenderTarget() {
 	if (m_RenderTarget)
 		return true;
 
-	if (!m_D2DFactory && FAILED(::D2D1CreateFactory(D2D1_FACTORY_TYPE_SINGLE_THREADED, &m_D2DFactory)))
-		return false;
-
-	CRect rc;
-	GetClientRect(&rc);
-	// fixed 96 DPI so a DIP is a pixel, as it was when drawing to a GDI+ bitmap
-	auto props = D2D1::RenderTargetProperties(D2D1_RENDER_TARGET_TYPE_DEFAULT, D2D1::PixelFormat(), 96, 96);
-	return SUCCEEDED(m_D2DFactory->CreateHwndRenderTarget(props, D2D1::HwndRenderTargetProperties(m_hWnd, D2D1::SizeU(rc.right, rc.bottom)), &m_RenderTarget));
+	auto& resources = D2DResources::Get();
+	return SUCCEEDED(resources.Ensure()) && SUCCEEDED(resources.CreateWindowRenderTarget(m_hWnd, &m_RenderTarget));
 }
 
 void CGraphicChartView::SetChartData(ChartData* data) noexcept {

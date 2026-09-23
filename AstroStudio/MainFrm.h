@@ -78,7 +78,6 @@ private:
 
 	CNativeCustomTabView m_view;
 	int m_CurrentPage{ -1 };
-	ULONG_PTR m_GdiPlusToken{ 0 };
 	bool m_LocationPending{ false };
 	ChartInfo m_DefaultChartInfo{};
 };

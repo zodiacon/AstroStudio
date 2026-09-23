@@ -13,8 +13,6 @@
 #include "NetworkHelper.h"
 #include <WTLHelper.h>
 
-#pragma comment(lib, "gdiplus")
-
 #define WINDOW_MENU_POSITION	5
 
 namespace {
@@ -57,13 +55,6 @@ LRESULT CMainFrame::OnCreate(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/
 		m_LocationPending = false;
 	}
 
-	static bool gdiPlusInit = false;
-	if (!gdiPlusInit) {
-		gdiPlusInit = true;
-		Gdiplus::GdiplusStartupInput input;
-		Gdiplus::GdiplusStartupOutput output;
-		ATLVERIFY(Gdiplus::Ok == Gdiplus::GdiplusStartup(&m_GdiPlusToken, &input, &output));
-	}
 	ATLVERIFY(Helpers::LoadAstroFont(IDR_FONT));
 	//AddMenu(GetMenu());
 	InitMenu(GetMenu());

@@ -48,10 +48,10 @@
     <ClCompile Include="AstroFont.cpp">
       <Filter>Helpers</Filter>
     </ClCompile>
-    <ClCompile Include="ChartDrawing.cpp">
+    <ClCompile Include="D2DChartDrawing.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="D2DChartDrawing.cpp">
+    <ClCompile Include="D2DResources.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="ChartView.cpp">
@@ -119,10 +119,10 @@
     <ClInclude Include="resource.h">
       <Filter>Resource Files</Filter>
     </ClInclude>
-    <ClInclude Include="ChartDrawing.h">
+    <ClInclude Include="D2DChartDrawing.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="D2DChartDrawing.h">
+    <ClInclude Include="D2DResources.h">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="ChartView.h">

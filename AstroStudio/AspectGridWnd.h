@@ -17,16 +17,19 @@ public:
 	BEGIN_MSG_MAP(CAspectGridWnd)
 		MESSAGE_HANDLER(WM_ERASEBKGND, OnEraseBkgnd)
 		MESSAGE_HANDLER(WM_PAINT, OnPaint)
+		MESSAGE_HANDLER(WM_SIZE, OnSize)
 		MESSAGE_HANDLER(WTLHelper::ThemeChangedMessage, OnThemeChanged)
 		CHAIN_MSG_MAP(BaseFrame)
 	END_MSG_MAP()
 
 private:
 	LRESULT OnEraseBkgnd(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, BOOL& /*bHandled*/);
-	LRESULT OnPaint(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, BOOL& /*bHandled*/) const;
+	LRESULT OnPaint(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, BOOL& /*bHandled*/);
+	LRESULT OnSize(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, BOOL& /*bHandled*/);
 	LRESULT OnThemeChanged(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, BOOL& /*bHandled*/);
+	bool EnsureRenderTarget();
 
-	std::unique_ptr<Gdiplus::Bitmap> m_Bitmap;
+	CComPtr<ID2D1HwndRenderTarget> m_RenderTarget;
 	AspectGridDrawing m_Drawing;
 	ChartData* m_ChartData{ nullptr };
 	std::vector<AspectData> m_Aspects;

@@ -1,6 +1,5 @@
 #pragma once
 
-#include "ChartDrawing.h"
 #include "ChartData.h"
 #include <FrameView.h>
 #include "Interfaces.h"

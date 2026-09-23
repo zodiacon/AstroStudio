@@ -153,10 +153,10 @@ DWORD CChartDetailsView::OnItemPrePaint(int, LPNMCUSTOMDRAW cd) noexcept {
 			//
 			// TODO: move to handle default colors
 			//
-			Gdiplus::Color(Gdiplus::Color::OrangeRed).ToCOLORREF(),
-			Gdiplus::Color(Gdiplus::Color::LightGoldenrodYellow).ToCOLORREF(),
-			Gdiplus::Color(Gdiplus::Color::LightGreen).ToCOLORREF(),
-			Gdiplus::Color(Gdiplus::Color::LightBlue).ToCOLORREF()
+			RGB(255, 69, 0),		// OrangeRed
+			RGB(250, 250, 210),		// LightGoldenrodYellow
+			RGB(144, 238, 144),		// LightGreen
+			RGB(173, 216, 230)		// LightBlue
 		};
 		if (WTLHelper::IsDarkMode()) {
 			for (auto& color : colors)

@@ -14,28 +14,7 @@ bool Helpers::LoadAstroFont(UINT id) {
 	DWORD count = 0;
 	auto handle = ::AddFontMemResourceEx(p, size, nullptr, &count);
 	ATLASSERT(handle);
-	GetAstroFontFamily(id);
 	return true;
-}
-
-Gdiplus::FontFamily const& Helpers::GetAstroFontFamily(UINT id) {
-	static Gdiplus::PrivateFontCollection collection;
-	static Gdiplus::FontFamily family;
-	static bool loaded = false;
-	if (!loaded) {
-		loaded = true;
-		auto res = ::FindResource(nullptr, MAKEINTRESOURCE(id), L"TTF");
-		ATLASSERT(res);
-		auto hGlobal = ::LoadResource(nullptr, res);
-		ATLASSERT(hGlobal);
-		auto size = ::SizeofResource(nullptr, res);
-		auto p = ::LockResource(hGlobal);
-		ATLVERIFY(Gdiplus::Ok == collection.AddMemoryFont(p, size));
-		INT found = 0;
-		ATLVERIFY(Gdiplus::Ok == collection.GetFamilies(1, &family, &found));
-		ATLASSERT(found == 1);
-	}
-	return family;
 }
 
 CString Helpers::FormatDateTime(DateTime const& dt, DateTimeFormatOptions options) {

@@ -34,7 +34,6 @@ extern CAppModule _Module;
 #include <unordered_map>
 #include <map>
 #include <algorithm>
-#include <gdiplus.h>
 #include <winhttp.h>
 #include <wininet.h>
 #include <format>

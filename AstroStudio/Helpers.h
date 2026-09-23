@@ -24,7 +24,6 @@ DEFINE_ENUM_FLAG_OPERATORS(DateTimeFormatOptions);
 
 struct Helpers abstract final {
 	static bool LoadAstroFont(UINT id);
-	static Gdiplus::FontFamily const& GetAstroFontFamily(UINT id);
 	static CString FormatDateTime(DateTime const& dt, DateTimeFormatOptions options = DateTimeFormatOptions::Default);
 	static CString FormatLongitude(AstroPoint const& longitude, FormatOptions options = FormatOptions::Default, AstroFontBase const& font = DefaultFont::Get());
 	static CString FormatLatitude(double lat);

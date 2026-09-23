@@ -26,7 +26,6 @@ private:
 	bool EnsureRenderTarget();
 
 private:
-	CComPtr<ID2D1Factory> m_D2DFactory;
 	CComPtr<ID2D1HwndRenderTarget> m_RenderTarget;
 	D2DChartDrawing m_Drawing;
 	ChartData* m_ChartData{ nullptr };

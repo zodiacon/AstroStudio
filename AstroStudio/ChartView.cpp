@@ -1,6 +1,5 @@
 #include "pch.h"
 #include "ChartView.h"
-#include "ChartDrawing.h"
 #include "Helpers.h"
 #include "Aspects.h"
 #include "DefaultFont.h"
