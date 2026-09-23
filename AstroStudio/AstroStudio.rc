@@ -194,7 +194,7 @@ BEGIN
     CONTROL         "",IDC_HOUSES,"SysListView32",LVS_REPORT | LVS_ALIGNLEFT | LVS_OWNERDATA | LVS_NOSORTHEADER | WS_BORDER | WS_TABSTOP,194,77,93,220
     LTEXT           "Name:",IDC_STATIC,7,9,21,8
     LTEXT           "Location:",IDC_STATIC,150,9,30,8
-    EDITTEXT        IDC_LOCATION,186,7,125,14,ES_AUTOHSCROLL | NOT WS_BORDER,WS_EX_CLIENTEDGE
+    EDITTEXT        IDC_LOCATION,186,7,130,14,ES_AUTOHSCROLL | NOT WS_BORDER,WS_EX_CLIENTEDGE
     EDITTEXT        IDC_NAME,42,7,102,14,ES_AUTOHSCROLL | NOT WS_BORDER,WS_EX_CLIENTEDGE
     LTEXT           "Latitude:",IDC_STATIC,7,29,29,8
     EDITTEXT        IDC_LATDEG,42,26,29,14,ES_AUTOHSCROLL | ES_NUMBER
@@ -212,7 +212,7 @@ BEGIN
     CONTROL         "",IDC_LONMINUD,"msctls_updown32",UDS_SETBUDDYINT | UDS_ALIGNRIGHT | UDS_AUTOBUDDY | UDS_ARROWKEYS,267,26,10,14
     PUSHBUTTON      "Here",IDC_HERE,318,26,41,14
     PUSHBUTTON      "Now",IDC_NOW,348,46,41,14
-    PUSHBUTTON      "Lookup",IDC_LOOKUP,316,7,47,14
+    PUSHBUTTON      "Lookup",IDC_LOOKUP,319,7,47,14
     PUSHBUTTON      "Apply",IDC_APPLY,7,303,63,14
 END
 
@@ -274,8 +274,8 @@ END
 //
 
 VS_VERSION_INFO VERSIONINFO
- FILEVERSION 0,1,0,0
- PRODUCTVERSION 0,1,0,0
+ FILEVERSION 0,2,0,0
+ PRODUCTVERSION 0,2,0,0
  FILEFLAGSMASK 0x3fL
 #ifdef _DEBUG
  FILEFLAGS 0x1L
@@ -292,12 +292,12 @@ BEGIN
         BEGIN
             VALUE "CompanyName", "Scorpio Software LLC"
             VALUE "FileDescription", "Astrology Studio"
-            VALUE "FileVersion", "0.1.0.0"
+            VALUE "FileVersion", "0.2.0.0"
             VALUE "InternalName", "AstroStudio"
             VALUE "LegalCopyright", "©2022-2026 Pavel Yosifovich"
             VALUE "OriginalFilename", "AstroStudio.exe"
             VALUE "ProductName", "Astro Studio - Astrology Studio"
-            VALUE "ProductVersion", "0.1.0.0"
+            VALUE "ProductVersion", "0.2.0.0"
         END
     END
     BLOCK "VarFileInfo"

@@ -1,7 +1,7 @@
 #pragma once
 
 #include <FrameView.h>
-#include "ChartDrawing.h"
+#include "D2DChartDrawing.h"
 #include "Interfaces.h"
 
 class CGraphicChartView : public CFrameView<CGraphicChartView, IMainFrame> {
@@ -21,14 +21,14 @@ public:
 
 private:
 	LRESULT OnEraseBkgnd(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, BOOL& /*bHandled*/);
-	LRESULT OnPaint(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, BOOL& /*bHandled*/) const;
+	LRESULT OnPaint(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, BOOL& /*bHandled*/);
 	LRESULT OnSize(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, BOOL& /*bHandled*/);
+	bool EnsureRenderTarget();
 
 private:
-	std::unique_ptr<Gdiplus::Bitmap> m_Bitmap;
-	int m_DrawingSize {0};
-	ChartDrawing m_Drawing;
+	CComPtr<ID2D1Factory> m_D2DFactory;
+	CComPtr<ID2D1HwndRenderTarget> m_RenderTarget;
+	D2DChartDrawing m_Drawing;
 	ChartData* m_ChartData{ nullptr };
 	std::vector<AspectData> m_Aspects;
 };
-

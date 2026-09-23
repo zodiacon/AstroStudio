@@ -219,6 +219,7 @@
     <ClCompile Include="AstroStudio.cpp" />
     <ClCompile Include="ChartDetailsView.cpp" />
     <ClCompile Include="ChartDrawing.cpp" />
+    <ClCompile Include="D2DChartDrawing.cpp" />
     <ClCompile Include="ChartView.cpp" />
     <ClCompile Include="DefaultFont.cpp" />
     <ClCompile Include="EphemerisView.cpp" />
@@ -245,6 +246,7 @@
     <ClInclude Include="AstroFont.h" />
     <ClInclude Include="ChartDetailsView.h" />
     <ClInclude Include="ChartDrawing.h" />
+    <ClInclude Include="D2DChartDrawing.h" />
     <ClInclude Include="ChartView.h" />
     <ClInclude Include="DefaultFont.h" />
     <ClInclude Include="EphemerisView.h" />
