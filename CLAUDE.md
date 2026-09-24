@@ -14,7 +14,15 @@ This is a Visual Studio solution (`AstroStudio.sln`), not a CMake/cross-platform
 msbuild AstroStudio.sln /p:Configuration=Debug /p:Platform=x64
 ```
 
-There are no automated tests, lint configs, or CI workflows in this repo — verify changes by building and running the app (`x64\Debug\AstroStudio.exe`).
+There are no lint configs or CI workflows in this repo. `AstroCore` has unit tests (below); everything else is verified by building and running the app (`x64\Debug\AstroStudio.exe`).
+
+### Tests
+
+`AstroCore.Tests` is a Catch2 v3 console project (x64 only, Debug and Release) covering `AstroCore`: `DateTime`, `AstroPoint`, `Aspects`, `AstroCalculator` (positions, houses, ingresses, stations - checked against equinox times, J2000 and the 2024 Mercury retrograde, using the built-in Moshier ephemeris so no data files are needed) and `ChartData`. Build the solution, then run `x64\Debug\AstroCore.Tests.exe` (`[DateTime]` etc. select by tag; the exit code is 0 when everything passes).
+
+- Catch2 comes from vcpkg in classic mode (`E:\vcpkg`, integrated with MSBuild). The project uses the `x64-windows-static` triplet (`VcpkgUseStatic`) because AstroCore and sweph use the static CRT (`/MT`); `VcpkgAutoLink` is off and Catch2 is linked explicitly (`Catch2Main` lives in `lib\manual-link`). The solution's x86 configuration doesn't build it (no x86 Catch2 installed).
+- To record a bug you haven't fixed yet, write the test for the correct behaviour and tag it `[!shouldfail]` (Catch2 counts a failure as a pass and starts complaining when the bug is fixed - then remove the tag). There are none at the moment.
+- `DateTime::Get` works in whole milliseconds on purpose: splitting the day fraction with doubles made a whole minute read back as the previous minute plus 59.99999 seconds. `AstroPoint::MidPoint` is the midpoint on the shorter arc, and `IsBetween(start, end)` is the range running forward from `start` to `end`, through 0 Aries if `end` is the smaller number.
 
 ### Submodules
 

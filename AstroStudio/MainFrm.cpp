@@ -64,7 +64,6 @@ LRESULT CMainFrame::OnCreate(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/
 	}
 
 	ATLVERIFY(Helpers::LoadAstroFont(IDR_FONT));
-	//AddMenu(GetMenu());
 	InitMenu(GetMenu());
 	UIAddMenu(GetMenu());
 
@@ -75,7 +74,7 @@ LRESULT CMainFrame::OnCreate(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/
 		{ ID_TOOL_EPHEMERIS, IDI_EPHEMERIS },
 		{ 0 },
 		{ ID_NEW_CHART, IDI_CHART, 0, L"New Chart" },
-		{ ID_NEW_CHARTFORNOW, IDI_CHARTNOW },
+		{ ID_NEW_CHARTFORNOW, IDI_CHARTNOW, 0, L"Now" },
 	};
 	CreateSimpleReBar(ATL_SIMPLE_REBAR_NOBORDER_STYLE);
 	auto tb = ToolbarHelper::CreateAndInitToolBar(m_hWnd, buttons, _countof(buttons));

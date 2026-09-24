@@ -39,13 +39,14 @@ double AstroPoint::Diff(AstroPoint const& p1, AstroPoint const& p2) {
 }
 
 bool AstroPoint::IsBetween(AstroPoint const& start, AstroPoint const& end) const {
+	// the range runs forward from start to end, and may pass 0 Aries (then end is the smaller number)
 	double start1 = start, end1 = end;
 	if (end1 < start1)
 		end1 += 360;
 	auto degree = Value;
-	if (fabs(start1 - degree) > 180)
+	if (degree < start1)
 		degree += 360;
-	return start1 <= Value && Value <= end1;
+	return degree <= end1;
 }
 
 AstroPoint AstroPoint::ZeroSign() const {
@@ -57,10 +58,13 @@ AstroPoint AstroPoint::Opposite() const {
 }
 
 AstroPoint& AstroPoint::Normalize() {
-	if (Value < 0)
-		Value += 360 * (1 - int(Value) / 360);
-	else if (Value >= 360)
-		Value -= 360 * (int(Value) / 360);
+	if (Value < 0 || Value >= 360) {
+		Value = fmod(Value, 360);
+		if (Value < 0)
+			Value += 360;
+		if (Value >= 360)		// a tiny negative value rounds up to 360 when 360 is added
+			Value = 0;
+	}
 	return *this;
 }
 
@@ -70,5 +74,11 @@ AstroPoint AstroPoint::Normalize() const {
 }
 
 AstroPoint AstroPoint::MidPoint(AstroPoint const& p1, AstroPoint const& p2) {
-	return AstroPoint((p1 + p2) / 2).Normalize();
+	// on the shorter arc between the two: the midpoint of 350 and 10 is 0, not 180
+	double delta = fmod(p2.Value - p1.Value, 360);
+	if (delta > 180)
+		delta -= 360;
+	else if (delta < -180)
+		delta += 360;
+	return AstroPoint(p1.Value + delta / 2).Normalize();
 }

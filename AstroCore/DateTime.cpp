@@ -2,6 +2,7 @@
 #include "DateTime.h"
 #include <assert.h>
 #include <array>
+#include <cmath>
 
 using namespace std;
 
@@ -55,7 +56,7 @@ void DateTime::Set(long Year, long Month, double Day, double Hour, double Minute
 }
 
 void DateTime::Set(SYSTEMTIME const& st, bool bGregorianCalendar) noexcept {
-	const double dblDay = st.wDay + (st.wHour / 24) + (st.wMinute / 1440) + (st.wSecond / 86400);
+	const double dblDay = st.wDay + (st.wHour / 24.0) + (st.wMinute / 1440.0) + (st.wSecond / 86400.0) + (st.wMilliseconds / 86400000.0);
 	Set(DateToJD(st.wYear, st.wMonth, dblDay, bGregorianCalendar), bGregorianCalendar);
 }
 
@@ -70,10 +71,19 @@ void DateTime::SetTime(long hour, long minute, long second) noexcept {
 }
 
 void DateTime::Get(long& Year, long& Month, long& Day, long& Hour, long& Minute, double& Second) const noexcept {
-	const double JD = m_Julian + 0.5;
-	double tempZ = 0;
-	double F = modf(JD, &tempZ);
-	const long Z = static_cast<long>(tempZ);
+	//
+	// The time of day is worked out in whole milliseconds. Splitting the fraction of the day with floating point
+	// arithmetic can land a hair under a whole minute (07:00:00 came back as 06:59:59.99999), and the Julian day
+	// of a modern date can't be told apart from its neighbours below about 0.05 milliseconds anyway.
+	//
+	const long long totalMs = std::llround((m_Julian + 0.5) * 86400000.0);
+	long long dayNumber = totalMs / 86400000;
+	long long msOfDay = totalMs % 86400000;
+	if (msOfDay < 0) {
+		msOfDay += 86400000;
+		dayNumber--;
+	}
+	const long Z = static_cast<long>(dayNumber);
 	long A = 0;
 
 	if (m_GregorianCalendar) {
@@ -88,8 +98,7 @@ void DateTime::Get(long& Year, long& Month, long& Day, long& Hour, long& Minute,
 	const long D = INT(365.25 * C);
 	long E = INT((0.0 + B - D) / 30.6001);
 
-	double dblDay = 0.0 + B - D - INT(30.6001 * E) + F;
-	Day = static_cast<long>(dblDay);
+	Day = B - D - INT(30.6001 * E);
 
 	if (E < 14)
 		Month = E - 1;
@@ -101,10 +110,9 @@ void DateTime::Get(long& Year, long& Month, long& Day, long& Hour, long& Minute,
 	else
 		Year = C - 4715;
 
-	F = modf(dblDay, &tempZ);
-	Hour = INT(F * 24);
-	Minute = INT((F - (Hour) / 24.0) * 1440.0);
-	Second = (F - (Hour / 24.0) - (Minute / 1440.0)) * 86400.0;
+	Hour = static_cast<long>(msOfDay / 3600000);
+	Minute = static_cast<long>((msOfDay / 60000) % 60);
+	Second = (msOfDay % 60000) / 1000.0;
 }
 
 void DateTime::Set(double JD, bool bGregorianCalendar) noexcept {
