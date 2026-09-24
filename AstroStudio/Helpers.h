@@ -34,6 +34,8 @@ struct Helpers abstract final {
 	static CString GetZodiacSignName(ZodiacSign sign);
 	static std::vector<Planet> GetStandardPlanets();
 	// a chart for the info with the usual planet set (the standard planets plus Chiron, True Node and Lilith)
+	// every house system the app offers, in the order of the drop-down lists
+	static std::vector<HouseSystem> const& HouseSystems();
 	// fills a house system drop-down list; the item data of each entry is the HouseSystem
 	static void FillHouseSystems(CComboBox combo);
 	static ChartData CreateChartData(ChartInfo info, HouseSystem houseSystem = HouseSystem::Koch);

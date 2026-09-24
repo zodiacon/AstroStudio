@@ -4,6 +4,7 @@
 #include "Helpers.h"
 #include "Aspects.h"
 #include "DefaultFont.h"
+#include <filesystem>
 #include <ToolbarHelper.h>
 #include <DarkMode/DmlibColor.h>
 #include <DarkMode/DarkModeSubclass.h>
@@ -70,7 +71,9 @@ LRESULT CChartView::OnLocationUpdated(UINT, WPARAM wParam, LPARAM, BOOL&) {
 
 	// The time is deliberately left alone - it was captured when the chart was
 	// created, and shifting it now would silently change the chart.
+	m_NotModifying++;		// the program filled this in; the user hasn't edited anything
 	SendMessage(WM_RECALC, static_cast<WPARAM>(Recalc::Houses));
+	m_NotModifying--;
 
 	// Has to come after the copy above: SetLocationPending refreshes the
 	// latitude/longitude fields and the location text from the chart's info,
@@ -126,9 +129,93 @@ void CChartView::PageActivated(bool active) {
 	ui.UIEnable(ID_CHART_STEP_BACK, active && !m_AutoStep);
 	ui.UIEnable(ID_CHART_STEP_FORWARD, active && !m_AutoStep);
 	ui.UIEnable(ID_CHART_AUTOSTEP, active);
+	ui.UIEnable(ID_FILE_SAVE, active);
+	ui.UIEnable(ID_FILE_SAVE_AS, active);
 	if (active)
 		ui.UISetCheck(ID_CHART_AUTOSTEP, m_AutoStep);	// the menu and toolbars are shared; show this chart's state
 	UpdateAutoStepTimer();
+}
+
+void CChartView::SetFile(PCWSTR title, PCWSTR filePath) {
+	m_Title = title;
+	m_FilePath = filePath ? filePath : L"";
+	m_Modified = false;
+	UpdateTitle();
+}
+
+PCWSTR CChartView::FilePath() const {
+	return m_FilePath.IsEmpty() ? nullptr : (PCWSTR)m_FilePath;
+}
+
+void CChartView::SetModified(bool modified) {
+	if (m_Modified == modified)
+		return;
+	m_Modified = modified;
+	UpdateTitle();
+}
+
+void CChartView::UpdateTitle() {
+	if (m_Title.IsEmpty())
+		return;
+	// a chart that has never been saved has no file to be out of step with, so it gets no marker
+	CString title = m_Title;
+	if (m_Modified && !m_FilePath.IsEmpty())
+		title += L" *";
+	Frame()->SetViewTitle(this, title);
+}
+
+bool CChartView::Save(bool saveAs) {
+	CString path = m_FilePath;
+	if (path.IsEmpty() || saveAs) {
+		// offer the chart's own name, without the characters a file name can't have
+		static const wchar_t invalid[] = { 92, L'/', L':', L'*', L'?', 34, L'<', L'>', L'|', 0 };
+		CString suggestion = m_FilePath.IsEmpty() ? m_Title : CString(std::filesystem::path((PCWSTR)m_FilePath).stem().c_str());
+		for (int i = 0; i < suggestion.GetLength(); i++)
+			if (wcschr(invalid, suggestion[i]))
+				suggestion.SetAt(i, L'_');
+
+		CFileDialog dlg(FALSE, ChartFile::Extension, suggestion, OFN_OVERWRITEPROMPT | OFN_PATHMUSTEXIST | OFN_HIDEREADONLY | OFN_EXPLORER, ChartFile::Filter, m_hWnd);
+		auto ok = dlg.DoModal(m_hWnd) == IDOK;
+		if (!ok)
+			return false;
+		path = dlg.m_szFileName;
+	}
+
+	std::wstring error;
+	if (!ChartFile::Save(m_Data, path, error)) {
+		CString message;
+		message.Format(L"The chart could not be saved to %s:\n\n%s", (PCWSTR)path, error.c_str());
+		AtlMessageBox(m_hWnd, (PCWSTR)message, L"Astro Studio", MB_ICONWARNING);
+		return false;
+	}
+
+	m_FilePath = path;
+	m_Title = std::filesystem::path((PCWSTR)path).stem().c_str();
+	m_Modified = false;
+	UpdateTitle();
+	Frame()->AddRecentFile(path);
+	return true;
+}
+
+LRESULT CChartView::OnSave(WORD, WORD wID, HWND, BOOL&) {
+	Save(wID == ID_FILE_SAVE_AS);
+	return 0;
+}
+
+bool CChartView::CanClose() {
+	if (!m_Modified)
+		return true;
+
+	Frame()->ActivateView(this);		// so the user can see which chart is being asked about
+	CString message;
+	message.Format(L"Save changes to \"%s\"?", (PCWSTR)m_Title);
+	switch (AtlMessageBox(m_hWnd, (PCWSTR)message, L"Astro Studio", MB_YESNOCANCEL | MB_ICONQUESTION)) {
+		case IDYES:
+			return Save(false);		// false if the user cancelled the Save As or it failed: stay open
+		case IDNO:
+			return true;
+	}
+	return false;
 }
 
 void CChartView::CreateStepToolBar() {
@@ -258,7 +345,10 @@ LRESULT CChartView::OnTimer(UINT, WPARAM wParam, LPARAM, BOOL& handled) {
 		return 0;
 	}
 	// every tick is a step forward; running out of years switches auto step off
-	if (!StepTime(1))
+	m_NotModifying++;		// ticks aren't edits (the chart is only being watched moving)
+	bool stepped = StepTime(1);
+	m_NotModifying--;
+	if (!stepped)
 		SetAutoStep(false);
 	return 0;
 }
@@ -358,6 +448,8 @@ void CChartView::UpdateAspectGridScrollBarTheme() {
 }
 
 LRESULT CChartView::OnRecalc(UINT, WPARAM wp, LPARAM, BOOL&) {
+	if (m_NotModifying == 0)
+		SetModified(true);
 	switch (static_cast<Recalc>(wp)) {
 	case Recalc::Houses:
 		m_Data.CalcHouses(m_Calc);

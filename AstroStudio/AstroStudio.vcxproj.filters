@@ -51,6 +51,9 @@
     <ClCompile Include="D2DChartDrawing.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="ChartFile.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
     <ClCompile Include="TimeStep.cpp">
       <Filter>Views</Filter>
     </ClCompile>
@@ -135,6 +138,9 @@
       <Filter>Resource Files</Filter>
     </ClInclude>
     <ClInclude Include="D2DChartDrawing.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="ChartFile.h">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="TimeStep.h">

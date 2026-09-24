@@ -224,6 +224,7 @@
     <ClCompile Include="TimeControls.cpp" />
     <ClCompile Include="TimeZones.cpp" />
     <ClCompile Include="TimeStep.cpp" />
+    <ClCompile Include="ChartFile.cpp" />
     <ClCompile Include="NewChartDlg.cpp" />
     <ClCompile Include="ChartView.cpp" />
     <ClCompile Include="DefaultFont.cpp" />
@@ -256,6 +257,7 @@
     <ClInclude Include="TimeControls.h" />
     <ClInclude Include="TimeZones.h" />
     <ClInclude Include="TimeStep.h" />
+    <ClInclude Include="ChartFile.h" />
     <ClInclude Include="NewChartDlg.h" />
     <ClInclude Include="ChartView.h" />
     <ClInclude Include="DefaultFont.h" />

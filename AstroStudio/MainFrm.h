@@ -5,6 +5,7 @@
 #pragma once
 
 #include "Interfaces.h"
+#include <atlmisc.h>
 #include <NativeCustomTabView.h>
 #include <TabViewHelper.h>
 #include "resource.h"
@@ -32,11 +33,14 @@ protected:
 		COMMAND_ID_HANDLER(ID_TOOL_EPHEMERIS, OnToolEphemeris)
 		COMMAND_ID_HANDLER(ID_NEW_CHART, OnNewChart)
 		COMMAND_ID_HANDLER(ID_NEW_CHARTFORNOW, OnNewChartNow)
+		COMMAND_ID_HANDLER(ID_FILE_OPEN, OnFileOpen)
+		COMMAND_RANGE_HANDLER(ID_FILE_MRU_FIRST, ID_FILE_MRU_LAST, OnFileRecent)
 		COMMAND_ID_HANDLER(ID_OPTIONS_DARKMODE, OnToggleDarkMode)
 		MESSAGE_HANDLER(WM_GETMINMAXINFO, OnGetMinMaxInfo)
 		MESSAGE_HANDLER(WM_LOCATION_READY, OnLocationReady)
 		COMMAND_ID_HANDLER(ID_WINDOW_CLOSE_ALL, OnWindowCloseAll)
 		MESSAGE_HANDLER(WM_CREATE, OnCreate)
+		MESSAGE_HANDLER(WM_CLOSE, OnClose)
 		MESSAGE_HANDLER(WM_DESTROY, OnDestroy)
 		COMMAND_RANGE_HANDLER(ID_WINDOW_TABFIRST, ID_WINDOW_TABLAST, OnWindowActivate)
 		CHAIN_MSG_MAP(CAutoUpdateUI)
@@ -45,13 +49,27 @@ protected:
 
 private:
 	void InitMenu(HMENU menu);
+	// The view behind a tab, or null. (The tab view keeps each page's data as a message map; asking it for
+	// an IView with dynamic_cast is safe for every kind of page.)
+	IView* ViewOfPage(int page) const;
+	int PageOfView(IView* view) const;
+	// shows a tab and tells the pages, which SetActivePage alone doesn't
+	void ActivatePage(int page);
+	// asks every view whether it can close (they may ask the user to save)
+	bool CanCloseAll();
+	bool OpenChartFile(PCWSTR path);
+	// keeps the menu and the saved list in step
+	void RecentFilesChanged();
 	BOOL AddToolBarToUI(HWND) override;
 
 	// Inherited via IMainFrame
 	HWND GetHwnd() const override;
 	BOOL TrackPopupMenu(HMENU hMenu, DWORD flags, int x, int y) override;
 	CUpdateUIBase& GetUI() override;
-	IView* AddChartView(ChartData data, PCWSTR title = nullptr);
+	IView* AddChartView(ChartData data, PCWSTR title = nullptr, PCWSTR filePath = nullptr) override;
+	void AddRecentFile(PCWSTR path) override;
+	void SetViewTitle(IView* view, PCWSTR title) override;
+	void ActivateView(IView* view) override;
 	ChartInfo& DefaultChartInfo() override;
 	IView* NewChartWithDialog(ChartInfo const* initial = nullptr) override;
 	bool IsLocationPending() const override;
@@ -72,6 +90,9 @@ private:
 	LRESULT OnWindowCloseAll(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/);
 	LRESULT OnWindowActivate(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/);
 	LRESULT OnPageActivated(int /*idCtrl*/, LPNMHDR /*pnmh*/, BOOL& /*bHandled*/);
+	LRESULT OnFileRecent(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/);
+	LRESULT OnFileOpen(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/);
+	LRESULT OnClose(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, BOOL& /*bHandled*/);
 	LRESULT OnNewChart(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/);
 	LRESULT OnNewChartNow(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/);
 	LRESULT OnToggleDarkMode(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/);
@@ -81,4 +102,5 @@ private:
 	int m_CurrentPage{ -1 };
 	bool m_LocationPending{ false };
 	ChartInfo m_DefaultChartInfo{};
+	CRecentDocumentList m_Recent;
 };

@@ -9,6 +9,7 @@
 #include "AspectGridWnd.h"
 #include "AspectListView.h"
 #include "TimeStep.h"
+#include "ChartFile.h"
 #include <CustomSplitterWindow.h>
 #include <NativeCustomTabView.h>
 #include <atlscrl.h>
@@ -26,6 +27,11 @@ public:
 
 	BOOL PreTranslateMessage(MSG* pMsg);
 	void PageActivated(bool active) override;
+	// Sets the tab text (title, until the chart is saved under a name) and the file the chart lives in, if any.
+	void SetFile(PCWSTR title, PCWSTR filePath);
+	PCWSTR FilePath() const override;
+	// asks whether to save unsaved changes
+	bool CanClose() override;
 
 	BEGIN_MSG_MAP(CChartView)
 		MESSAGE_HANDLER(WM_RECALC, OnRecalc)
@@ -45,9 +51,17 @@ public:
 		COMMAND_ID_HANDLER(ID_CHART_STEP_BACK, OnStep)
 		COMMAND_ID_HANDLER(ID_CHART_STEP_FORWARD, OnStep)
 		COMMAND_ID_HANDLER(ID_CHART_AUTOSTEP, OnAutoStep)
+		COMMAND_ID_HANDLER(ID_FILE_SAVE, OnSave)
+		COMMAND_ID_HANDLER(ID_FILE_SAVE_AS, OnSave)
 	END_MSG_MAP()
 
 private:
+	// Writes the chart to its file, asking for a name first if it has none (or saveAs). False if it wasn't saved.
+	bool Save(bool saveAs);
+	void SetModified(bool modified);
+	// The tab text: the title, marked with * when the chart came from a file (or was saved to one) and has changed since.
+	void UpdateTitle();
+	LRESULT OnSave(WORD /*wNotifyCode*/, WORD wID, HWND /*hWndCtl*/, BOOL& /*bHandled*/);
 	void CreateStepToolBar();
 	// Moves the chart's time by the toolbar's step count and unit; direction is 1 (forward) or -1 (back).
 	// Returns false if it couldn't (no chart yet, or the result is outside the years the ephemeris covers).
@@ -88,5 +102,8 @@ private:
 	CStatic m_StepLabel;
 	CComboBox m_StepCount, m_StepUnit, m_StepInterval;
 	bool m_AutoStep{ false };
+	CString m_FilePath, m_Title;
+	bool m_Modified{ false };
+	int m_NotModifying{ 0 };		// while above 0, changes (system updates, auto step ticks) don't count as edits
 	bool m_PageActive{ false };
 };

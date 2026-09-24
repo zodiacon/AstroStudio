@@ -11,6 +11,8 @@
 #include "ToolbarHelper.h"
 #include "ChartView.h"
 #include "NewChartDlg.h"
+#include "ChartFile.h"
+#include <filesystem>
 #include "TimeZones.h"
 #include "NetworkHelper.h"
 #include <WTLHelper.h>
@@ -18,6 +20,10 @@
 #define WINDOW_MENU_POSITION	6
 
 namespace {
+	// where the recent files list is kept (under HKEY_CURRENT_USER), and how many it holds
+	constexpr PCWSTR RecentFilesKey = LR"(Software\AstroStudio)";
+	constexpr int MaxRecentFiles = 8;
+
 	// Owned by the thread pool callback until it is posted to the frame, which
 	// then takes ownership - the same hand-off CChartDetailsView::OnHere uses.
 	struct LocationRequest {
@@ -83,6 +89,8 @@ LRESULT CMainFrame::OnCreate(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/
 	UIEnable(ID_CHART_STEP_BACK, FALSE);
 	UIEnable(ID_CHART_STEP_FORWARD, FALSE);
 	UIEnable(ID_CHART_AUTOSTEP, FALSE);
+	UIEnable(ID_FILE_SAVE, FALSE);
+	UIEnable(ID_FILE_SAVE_AS, FALSE);
 	UISetCheck(ID_OPTIONS_DARKMODE, WTLHelper::IsDarkMode());
 
 	CImageList images;
@@ -101,6 +109,13 @@ LRESULT CMainFrame::OnCreate(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/
 
 	CMenuHandle menuMain = GetMenu();
 	m_view.SetWindowMenu(menuMain.GetSubMenu(WINDOW_MENU_POSITION));
+
+	// the recent files list fills in at the "(empty)" item of the File menu (the first menu)
+	m_Recent.SetMaxEntries(MaxRecentFiles);
+	m_Recent.SetMaxItemLength(60);
+	m_Recent.SetMenuHandle(menuMain.GetSubMenu(0));
+	m_Recent.ReadFromRegistry(RecentFilesKey);
+	UIEnable(ID_FILE_MRU_FIRST, m_Recent.m_arrDocs.GetSize() > 0);
 
 	PostMessage(WM_COMMAND, ID_TOOL_EPHEMERIS);
 
@@ -139,6 +154,7 @@ LRESULT CMainFrame::OnNewChartNow(WORD, WORD, HWND, BOOL&) {
 	pView->Create(m_view, rcDefault, nullptr, WS_CHILD | WS_VISIBLE | WS_CLIPCHILDREN, 0);
 	pView->ChartForNow();
 	m_view.AddPage(pView->m_hWnd, L"NewChart", 1, pView);
+	pView->SetFile(L"NewChart", nullptr);
 
 	return 0;
 }
@@ -173,13 +189,84 @@ LRESULT CMainFrame::OnToggleDarkMode(WORD, WORD, HWND, BOOL&) {
 	return 0;
 }
 
-IView* CMainFrame::AddChartView(ChartData data, PCWSTR title) {
+IView* CMainFrame::AddChartView(ChartData data, PCWSTR title, PCWSTR filePath) {
 	auto pView = new CChartView(this);
 	pView->Create(m_view, rcDefault, nullptr, WS_CHILD | WS_VISIBLE | WS_CLIPCHILDREN, 0);
 	m_view.AddPage(pView->m_hWnd, title ? title : L"Chart", 1, pView);
 	pView->Chart(std::move(data));
+	pView->SetFile(title ? title : L"Chart", filePath);
 
 	return pView;
+}
+
+LRESULT CMainFrame::OnFileOpen(WORD, WORD, HWND, BOOL&) {
+	CSimpleFileDialog dlg(TRUE, ChartFile::Extension, nullptr, OFN_FILEMUSTEXIST | OFN_PATHMUSTEXIST | OFN_EXPLORER | OFN_ENABLESIZING, ChartFile::Filter, m_hWnd);
+	WTLHelper::SuspendHook();
+	auto ok = dlg.DoModal(m_hWnd) == IDOK;
+	WTLHelper::ResumeHook();
+	if(ok)
+		OpenChartFile(dlg.m_szFileName);
+	return 0;
+}
+
+bool CMainFrame::OpenChartFile(PCWSTR path) {
+	// a chart that is already open is shown, not opened a second time
+	for (int i = 0; i < m_view.GetPageCount(); i++) {
+		auto view = ViewOfPage(i);
+		if (view && view->FilePath() && _wcsicmp(view->FilePath(), path) == 0) {
+			ActivatePage(i);
+			AddRecentFile(path);
+			return true;
+		}
+	}
+
+	ChartData data;
+	std::wstring error;
+	if (!ChartFile::Load(path, data, error)) {
+		CString message;
+		message.Format(L"%s could not be opened:\n\n%s", path, error.c_str());
+		AtlMessageBox(m_hWnd, (PCWSTR)message, L"Astro Studio", MB_ICONWARNING);
+		return false;
+	}
+	auto title = std::filesystem::path(path).stem().wstring();
+	AddChartView(std::move(data), title.c_str(), path);
+	AddRecentFile(path);
+	return true;
+}
+
+void CMainFrame::AddRecentFile(PCWSTR path) {
+	m_Recent.AddToList(path);
+	RecentFilesChanged();
+}
+
+void CMainFrame::RecentFilesChanged() {
+	// with nothing in the list the menu shows a disabled "(empty)"; the menu updater would enable it again
+	UIEnable(ID_FILE_MRU_FIRST, m_Recent.m_arrDocs.GetSize() > 0);
+	m_Recent.WriteToRegistry(RecentFilesKey);
+}
+
+LRESULT CMainFrame::OnFileRecent(WORD, WORD wID, HWND, BOOL&) {
+	CString path;
+	if (!m_Recent.GetFromList(wID, path))
+		return 0;
+
+	if (::GetFileAttributes(path) == INVALID_FILE_ATTRIBUTES) {
+		// gone (moved, deleted, a drive that isn't there): say so and drop it from the list
+		CString message;
+		message.Format(L"%s could not be found.\n\nIt has been removed from the recent files.", (PCWSTR)path);
+		AtlMessageBox(m_hWnd, (PCWSTR)message, L"Astro Studio", MB_ICONWARNING);
+		m_Recent.RemoveFromList(wID);
+		RecentFilesChanged();
+		return 0;
+	}
+	OpenChartFile(path);
+	return 0;
+}
+
+LRESULT CMainFrame::OnClose(UINT, WPARAM, LPARAM, BOOL& bHandled) {
+	// leaving the program: every chart with unsaved changes gets to ask first
+	bHandled = CanCloseAll() ? FALSE : TRUE;
+	return 0;
 }
 
 IView* CMainFrame::NewChartWithDialog(ChartInfo const* initial) {
@@ -222,8 +309,11 @@ LRESULT CMainFrame::OnAppAbout(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCt
 
 LRESULT CMainFrame::OnWindowClose(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/) {
 	int nActivePage = m_view.GetActivePage();
-	if (nActivePage != -1)
+	if (nActivePage != -1) {
+		if (auto view = ViewOfPage(nActivePage); view && !view->CanClose())
+			return 0;		// the user cancelled
 		m_view.RemovePage(nActivePage);
+	}
 	else
 		::MessageBeep((UINT)-1);
 
@@ -231,40 +321,70 @@ LRESULT CMainFrame::OnWindowClose(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWn
 }
 
 LRESULT CMainFrame::OnWindowCloseAll(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/) {
+	if (!CanCloseAll())
+		return 0;		// the user cancelled
 	m_view.RemoveAllPages();
 
 	return 0;
 }
 
 LRESULT CMainFrame::OnWindowActivate(WORD /*wNotifyCode*/, WORD wID, HWND /*hWndCtl*/, BOOL& /*bHandled*/) {
-	int nPage = wID - ID_WINDOW_TABFIRST;
-	m_view.SetActivePage(nPage);
-
-	// SetActivePage doesn't announce the change (clicking a tab does), so the pages would not hear that
-	// they were shown or hidden; pass on the same notification a click sends.
-	NMHDR nmhdr{};
-	nmhdr.hwndFrom = m_view;
-	nmhdr.idFrom = nPage;
-	nmhdr.code = TBVN_PAGEACTIVATED;
-	BOOL handled = TRUE;
-	OnPageActivated(0, &nmhdr, handled);
-
+	ActivatePage(wID - ID_WINDOW_TABFIRST);
 	return 0;
 }
 
 LRESULT CMainFrame::OnPageActivated(int, LPNMHDR hdr, BOOL&) {
 	auto page = static_cast<int>(hdr->idFrom);
-	if (m_CurrentPage >= 0 && m_CurrentPage < m_view.GetPageCount()) {
-		((IView*)(CChartView*)m_view.GetPageData(m_CurrentPage))->PageActivated(false);
-	}
-	if (page >= 0) {
-		auto view = (IView*)(CChartView*)m_view.GetPageData(page);
-		ATLASSERT(view);
+	if (auto previous = ViewOfPage(m_CurrentPage))
+		previous->PageActivated(false);
+	if (auto view = ViewOfPage(page))
 		view->PageActivated(true);
-	}
 	m_CurrentPage = page;
 
 	return 0;
+}
+
+IView* CMainFrame::ViewOfPage(int page) const {
+	if (page < 0 || page >= m_view.GetPageCount())
+		return nullptr;
+	return dynamic_cast<IView*>(static_cast<CMessageMap*>(m_view.GetPageData(page)));
+}
+
+int CMainFrame::PageOfView(IView* view) const {
+	for (int i = 0; i < m_view.GetPageCount(); i++)
+		if (ViewOfPage(i) == view)
+			return i;
+	return -1;
+}
+
+void CMainFrame::ActivatePage(int page) {
+	m_view.SetActivePage(page);
+
+	// SetActivePage doesn't announce the change (clicking a tab does), so the pages would not hear that
+	// they were shown or hidden; pass on the same notification a click sends.
+	NMHDR nmhdr{};
+	nmhdr.hwndFrom = m_view;
+	nmhdr.idFrom = page;
+	nmhdr.code = TBVN_PAGEACTIVATED;
+	BOOL handled = TRUE;
+	OnPageActivated(0, &nmhdr, handled);
+}
+
+void CMainFrame::SetViewTitle(IView* view, PCWSTR title) {
+	if (int page = PageOfView(view); page >= 0)
+		m_view.SetPageTitle(page, title);
+}
+
+void CMainFrame::ActivateView(IView* view) {
+	if (int page = PageOfView(view); page >= 0 && page != m_view.GetActivePage())
+		ActivatePage(page);
+}
+
+bool CMainFrame::CanCloseAll() {
+	for (int i = 0; i < m_view.GetPageCount(); i++)
+		if (auto view = ViewOfPage(i); view && !view->CanClose())
+			return false;
+	return true;
 }
 
 void CMainFrame::InitMenu(HMENU menu) {

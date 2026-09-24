@@ -151,8 +151,8 @@ std::vector<Planet> Helpers::GetStandardPlanets() {
 	return planets;
 }
 
-void Helpers::FillHouseSystems(CComboBox combo) {
-	HouseSystem systems[] = {
+std::vector<HouseSystem> const& Helpers::HouseSystems() {
+	static const std::vector<HouseSystem> systems = {
 		HouseSystem::Placidus,
 		HouseSystem::Koch,
 		HouseSystem::Porphyrius,
@@ -171,8 +171,11 @@ void Helpers::FillHouseSystems(CComboBox combo) {
 		HouseSystem::SunshineAlt,
 		HouseSystem::APCHouses,
 	};
+	return systems;
+}
 
-	for (auto system : systems) {
+void Helpers::FillHouseSystems(CComboBox combo) {
+	for (auto system : HouseSystems()) {
 		int n = combo.AddString(StringHelper::HouseSystemToString(system));
 		combo.SetItemData(n, (int)system);
 	}

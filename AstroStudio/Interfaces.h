@@ -9,7 +9,14 @@ struct IMainFrame abstract {
 	virtual HWND GetHwnd() const = 0;
 	virtual BOOL TrackPopupMenu(HMENU hMenu, DWORD flags, int x, int y) = 0;
 	virtual CUpdateUIBase& GetUI() = 0;
-	virtual IView* AddChartView(ChartData data, PCWSTR title = nullptr) = 0;
+	// Opens a chart in a new tab. filePath is the file it came from, if any.
+	virtual IView* AddChartView(ChartData data, PCWSTR title = nullptr, PCWSTR filePath = nullptr) = 0;
+	// Puts a chart file at the top of the File menu's recent files list (after it was opened or saved).
+	virtual void AddRecentFile(PCWSTR path) = 0;
+	// changes the text of a view's tab
+	virtual void SetViewTitle(IView* view, PCWSTR title) = 0;
+	// brings a view's tab to the front
+	virtual void ActivateView(IView* view) = 0;
 	virtual ChartInfo& DefaultChartInfo() = 0;
 
 	// Asks for the details of a new chart (the dialog opens with `initial`, or with the current time and
@@ -26,6 +33,15 @@ struct IView {
 	virtual void PageActivated(bool active) {}
 	virtual bool ProcessCommand(UINT cmd) {
 		return false;
+	}
+	// Called before the view is closed - one tab, all of them, or the program exiting. A view with unsaved
+	// work asks the user here; returning false cancels the closing.
+	virtual bool CanClose() {
+		return true;
+	}
+	// the file the view's document lives in, or null
+	virtual PCWSTR FilePath() const {
+		return nullptr;
 	}
 };
 
