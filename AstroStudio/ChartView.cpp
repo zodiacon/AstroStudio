@@ -4,6 +4,7 @@
 #include "Helpers.h"
 #include "Aspects.h"
 #include "DefaultFont.h"
+#include <ToolbarHelper.h>
 #include <DarkMode/DmlibColor.h>
 #include <DarkMode/DarkModeSubclass.h>
 
@@ -117,6 +118,183 @@ void CChartView::DisplayHouses(CDCHandle dc, int x, int y) const {
 	}
 }
 
+void CChartView::PageActivated(bool active) {
+	// the Chart menu and the shortcuts apply to the chart page that is showing
+	m_PageActive = active;
+	auto& ui = Frame()->GetUI();
+	// stepping by hand is off the table while auto step is running
+	ui.UIEnable(ID_CHART_STEP_BACK, active && !m_AutoStep);
+	ui.UIEnable(ID_CHART_STEP_FORWARD, active && !m_AutoStep);
+	ui.UIEnable(ID_CHART_AUTOSTEP, active);
+	if (active)
+		ui.UISetCheck(ID_CHART_AUTOSTEP, m_AutoStep);	// the menu and toolbars are shared; show this chart's state
+	UpdateAutoStepTimer();
+}
+
+void CChartView::CreateStepToolBar() {
+	ToolBarButtonInfo buttons[] = {
+		{ ID_CHART_STEP_BACK, IDI_BACK, BTNS_BUTTON, L"Back" },
+		{ ID_CHART_STEP_FORWARD, IDI_FORWARD, BTNS_BUTTON, L"Forward" },
+		{ 0 },
+	};
+	CreateSimpleReBar(ATL_SIMPLE_REBAR_NOBORDER_STYLE);
+	CToolBarCtrl tb(ToolbarHelper::CreateAndInitToolBar(m_hWndToolBar, buttons, _countof(buttons)));
+
+	// The label and the two combo boxes live inside the toolbar, on separators made as wide as they are.
+	// These have to be there before the toolbar joins the rebar, which sizes the band from its buttons.
+	int dpi = CClientDC(m_hWnd).GetDeviceCaps(LOGPIXELSX);
+	auto px = [&](int value) { return MulDiv(value, dpi, 96); };
+	int firstSlot = tb.GetButtonCount();
+	tb.AddSeparator(px(40));	// "Step:"
+	tb.AddSeparator(px(54));	// count
+	tb.AddSeparator(px(94));	// unit
+
+	// then the auto step check button and its interval
+	tb.AddSeparator(px(10));
+	CImageList images = tb.GetImageList();
+	tb.AddButton(ID_CHART_AUTOSTEP, BTNS_CHECK | BTNS_SHOWTEXT, TBSTATE_ENABLED, images.AddIcon(AtlLoadIconImage(IDI_PLAY, 0, 24, 24)), L"Auto", 0);
+	int intervalSlot = tb.GetButtonCount();
+	tb.AddSeparator(px(84));	// interval
+
+	AddSimpleReBarBand(tb);
+	Frame()->AddToolBarToUI(tb);
+
+	CFontHandle font(AtlGetDefaultGuiFont());
+	const int comboHeight = px(22), dropHeight = px(220);
+	// the closed combo box is comboHeight high and centered in the toolbar; dropHeight is room for its list
+	auto slotRect = [&](int slot, int dropHeight) {
+		CRect item;
+		tb.GetItemRect(firstSlot + slot, &item);
+		int top = item.top + (item.Height() - comboHeight) / 2;
+		return CRect(item.left, top, item.right - px(4), top + comboHeight + dropHeight);
+	};
+
+	CRect rc = slotRect(0, 0);
+	m_StepLabel.Create(tb, rc, L"Step:", WS_CHILD | WS_VISIBLE | SS_RIGHT | SS_CENTERIMAGE);
+	m_StepLabel.SetFont(font);
+
+	CRect countRect = slotRect(1, dropHeight);
+	m_StepCount.Create(tb, countRect, nullptr, WS_CHILD | WS_VISIBLE | WS_VSCROLL | WS_TABSTOP | CBS_DROPDOWNLIST, 0, IDC_STEPCOUNT);
+	m_StepCount.SetFont(font);
+	for (int i = 1; i <= 30; i++) {
+		CString text;
+		text.Format(L"%d", i);
+		m_StepCount.AddString(text);
+	}
+	m_StepCount.SetCurSel(0);
+
+	struct UnitItem {
+		PCWSTR Text;
+		StepUnit Unit;
+	};
+	const UnitItem units[] = {
+		{ L"Minutes", StepUnit::Minute }, { L"Hours", StepUnit::Hour }, { L"Days", StepUnit::Day },
+		{ L"Weeks", StepUnit::Week }, { L"Months", StepUnit::Month }, { L"Years", StepUnit::Year },
+	};
+	CRect unitRect = slotRect(2, dropHeight);
+	m_StepUnit.Create(tb, unitRect, nullptr, WS_CHILD | WS_VISIBLE | WS_VSCROLL | WS_TABSTOP | CBS_DROPDOWNLIST, 0, IDC_STEPUNIT);
+	m_StepUnit.SetFont(font);
+	for (auto const& unit : units) {
+		int n = m_StepUnit.AddString(unit.Text);
+		m_StepUnit.SetItemData(n, (DWORD_PTR)unit.Unit);
+		if (unit.Unit == StepUnit::Day)
+			m_StepUnit.SetCurSel(n);
+	}
+
+	struct IntervalItem {
+		PCWSTR Text;
+		UINT Milliseconds;
+	};
+	const IntervalItem intervals[] = {
+		{ L"100 msec", 100 }, { L"200 msec", 200 }, { L"500 msec", 500 }, { L"1 sec", 1000 },
+		{ L"2 sec", 2000 }, { L"3 sec", 3000 }, { L"5 sec", 5000 }, { L"10 sec", 10000 },
+	};
+	CRect intervalRect = slotRect(intervalSlot - firstSlot, dropHeight);
+	m_StepInterval.Create(tb, intervalRect, nullptr, WS_CHILD | WS_VISIBLE | WS_VSCROLL | WS_TABSTOP | CBS_DROPDOWNLIST, 0, IDC_STEPINTERVAL);
+	m_StepInterval.SetFont(font);
+	for (auto const& interval : intervals) {
+		int n = m_StepInterval.AddString(interval.Text);
+		m_StepInterval.SetItemData(n, interval.Milliseconds);
+		if (interval.Milliseconds == 1000)
+			m_StepInterval.SetCurSel(n);
+	}
+}
+
+void CChartView::UpdateAutoStepTimer() {
+	constexpr UINT_PTR AutoStepTimer = 1;
+	KillTimer(AutoStepTimer);
+	if (!m_AutoStep || !m_PageActive)
+		return;
+
+	int selected = m_StepInterval.m_hWnd ? m_StepInterval.GetCurSel() : -1;
+	UINT interval = selected < 0 ? 1000 : (UINT)m_StepInterval.GetItemData(selected);
+	SetTimer(AutoStepTimer, interval);
+}
+
+void CChartView::SetAutoStep(bool on) {
+	m_AutoStep = on;
+	if (m_PageActive) {
+		auto& ui = Frame()->GetUI();
+		ui.UISetCheck(ID_CHART_AUTOSTEP, on);
+		ui.UIEnable(ID_CHART_STEP_BACK, !on);
+		ui.UIEnable(ID_CHART_STEP_FORWARD, !on);
+	}
+	UpdateAutoStepTimer();
+}
+
+LRESULT CChartView::OnAutoStep(WORD, WORD, HWND, BOOL&) {
+	SetAutoStep(!m_AutoStep);
+	return 0;
+}
+
+LRESULT CChartView::OnIntervalChanged(WORD, WORD, HWND, BOOL&) {
+	UpdateAutoStepTimer();		// restarts the timer with the new interval
+	return 0;
+}
+
+LRESULT CChartView::OnTimer(UINT, WPARAM wParam, LPARAM, BOOL& handled) {
+	if (wParam != 1) {
+		handled = FALSE;
+		return 0;
+	}
+	// every tick is a step forward; running out of years switches auto step off
+	if (!StepTime(1))
+		SetAutoStep(false);
+	return 0;
+}
+
+bool CChartView::StepTime(int direction) {
+	if (m_Data.AllPlanets().empty() || m_StepCount.m_hWnd == nullptr)
+		return false;		// no chart loaded yet
+
+	int selected = m_StepCount.GetCurSel();
+	int count = (selected < 0 ? 0 : selected) + 1;
+	int unitIndex = m_StepUnit.GetCurSel();
+	auto unit = unitIndex < 0 ? StepUnit::Day : (StepUnit)m_StepUnit.GetItemData(unitIndex);
+
+	auto& info = m_Data.Info();
+	DateTime ut = info.Time;
+	TimeZoneInfo tz = info.TimeZone;
+	if (!TimeStep::Step(ut, tz, unit, direction * count)) {
+		::MessageBeep(MB_ICONWARNING);		// past the years the ephemeris covers
+		return false;
+	}
+	info.Time = ut;
+	info.TimeZone = tz;
+
+	SendMessage(WM_RECALC, static_cast<WPARAM>(Recalc::All));
+	m_DetailsView.UpdateControls();
+	return true;
+}
+
+LRESULT CChartView::OnStep(WORD, WORD wID, HWND, BOOL&) {
+	// a disabled menu item or button doesn't stop the Alt+Left/Right shortcuts
+	if (m_AutoStep)
+		return 0;
+	StepTime(wID == ID_CHART_STEP_FORWARD ? 1 : -1);
+	return 0;
+}
+
 LRESULT CChartView::OnCreate(UINT, WPARAM, LPARAM, BOOL&) {
 	m_hWndClient = m_Splitter.Create(m_hWnd, rcDefault, nullptr, WS_CHILD | WS_VISIBLE | WS_CLIPCHILDREN | WS_CLIPSIBLINGS, WS_EX_TRANSPARENT);
 	m_ChartDrawing.Create(m_Splitter, rcDefault, nullptr, WS_CHILD | WS_VISIBLE | WS_CLIPCHILDREN | WS_CLIPSIBLINGS);
@@ -142,6 +320,8 @@ LRESULT CChartView::OnCreate(UINT, WPARAM, LPARAM, BOOL&) {
 
 	m_Splitter.SetSplitterPanes(m_ChartDrawing, m_DetailsTabs);
 	m_Splitter.SetSplitterPosPct(50);
+
+	CreateStepToolBar();
 
 	DarkMode::setDarkWndNotifySafe(m_hWnd);
 	UpdateAspectGridScrollBarTheme();

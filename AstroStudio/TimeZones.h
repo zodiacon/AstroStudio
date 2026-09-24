@@ -2,6 +2,9 @@
 
 #include "ChartData.h"
 
+// Years the built-in ephemeris can calculate (astronomical numbering: 0 is 1 BC).
+constexpr long MinChartYear = -3000, MaxChartYear = 3000;
+
 // A wall-clock date and time, in whatever time zone it was entered in.
 struct LocalDateTime {
 	long Year{ 2000 }, Month{ 1 }, Day{ 1 };
@@ -36,7 +39,13 @@ struct TimeZones abstract final {
 
 	// Wall-clock time in the zone to UT. tz.OffsetUT is updated to the offset in effect at that time.
 	static DateTime LocalToUt(LocalDateTime const& local, TimeZoneInfo& tz);
-	static LocalDateTime UtToLocal(DateTime const& ut, TimeZoneInfo const& tz);
+	// If offset is given it receives the offset (minutes east of UT) in effect at that UT.
+	static LocalDateTime UtToLocal(DateTime const& ut, TimeZoneInfo const& tz, int* offset = nullptr);
+
+	// Wall-clock fields to a DateTime holding them as if they were UT, and back (whole seconds; dates
+	// before 15 October 1582 are Julian). Plain calendar arithmetic, no zone involved.
+	static DateTime FieldsToDateTime(LocalDateTime const& fields);
+	static LocalDateTime DateTimeToFields(DateTime const& dt);
 
 	// "+05:30" style text
 	static CString FormatOffset(int minutes);

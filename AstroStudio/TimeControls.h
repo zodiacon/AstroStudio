@@ -11,7 +11,7 @@
 class CTimeControls {
 public:
 	// Years the built-in ephemeris can calculate (astronomical numbering: 0 is 1 BC).
-	static constexpr long MinYear = -3000, MaxYear = 3000;
+	static constexpr long MinYear = MinChartYear, MaxYear = MaxChartYear;
 
 	enum class Error {
 		None,

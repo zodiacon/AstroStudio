@@ -223,6 +223,7 @@
     <ClCompile Include="LocationControls.cpp" />
     <ClCompile Include="TimeControls.cpp" />
     <ClCompile Include="TimeZones.cpp" />
+    <ClCompile Include="TimeStep.cpp" />
     <ClCompile Include="NewChartDlg.cpp" />
     <ClCompile Include="ChartView.cpp" />
     <ClCompile Include="DefaultFont.cpp" />
@@ -254,6 +255,7 @@
     <ClInclude Include="LocationControls.h" />
     <ClInclude Include="TimeControls.h" />
     <ClInclude Include="TimeZones.h" />
+    <ClInclude Include="TimeStep.h" />
     <ClInclude Include="NewChartDlg.h" />
     <ClInclude Include="ChartView.h" />
     <ClInclude Include="DefaultFont.h" />
@@ -277,6 +279,7 @@
   </ItemGroup>
   <ItemGroup>
     <Image Include="res\AstroStudio.ico" />
+    <Image Include="res\back.ico" />
     <Image Include="res\Chart.ico" />
     <Image Include="res\ChartNow.ico" />
     <Image Include="res\clip_copy.ico" />
@@ -290,6 +293,7 @@
     <Image Include="res\fontreset.ico" />
     <Image Include="res\FormatFontLarger.ico" />
     <Image Include="res\FormatFontSmaller.ico" />
+    <Image Include="res\Forward.ico" />
     <Image Include="res\Globe.ico" />
     <Image Include="res\glyph.ico" />
     <Image Include="res\grid.ico" />

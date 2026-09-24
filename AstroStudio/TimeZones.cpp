@@ -140,7 +140,7 @@ DateTime TimeZones::LocalToUt(LocalDateTime const& local, TimeZoneInfo& tz) {
 	return DateTime(jd, DateTime::AfterPapalReform(jd));
 }
 
-LocalDateTime TimeZones::UtToLocal(DateTime const& ut, TimeZoneInfo const& tz) {
+LocalDateTime TimeZones::UtToLocal(DateTime const& ut, TimeZoneInfo const& tz, int* offsetOut) {
 	int offset = tz.OffsetUT;
 	if (auto zone = tz.Name.empty() ? nullptr : Find(tz.Name)) {
 		offset = zone->BaseOffset;
@@ -149,7 +149,17 @@ LocalDateTime TimeZones::UtToLocal(DateTime const& ut, TimeZoneInfo const& tz) {
 		if (ToSystemTime(ToFields(ut.Julian()), utc) && ::SystemTimeToTzSpecificLocalTimeEx(&zone->Info, &utc, &local) && MinutesBetween(local, utc, found))
 			offset = found;
 	}
+	if (offsetOut)
+		*offsetOut = offset;
 	return ToFields(ut.Julian() + offset / 1440.0);
+}
+
+DateTime TimeZones::FieldsToDateTime(LocalDateTime const& fields) {
+	return ToDateTime(fields);
+}
+
+LocalDateTime TimeZones::DateTimeToFields(DateTime const& dt) {
+	return ToFields(dt.Julian());
 }
 
 CString TimeZones::FormatOffset(int minutes) {

@@ -51,6 +51,9 @@
     <ClCompile Include="D2DChartDrawing.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="TimeStep.cpp">
+      <Filter>Views</Filter>
+    </ClCompile>
     <ClCompile Include="TimeZones.cpp">
       <Filter>Views</Filter>
     </ClCompile>
@@ -133,6 +136,9 @@
     </ClInclude>
     <ClInclude Include="D2DChartDrawing.h">
       <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="TimeStep.h">
+      <Filter>Views</Filter>
     </ClInclude>
     <ClInclude Include="TimeZones.h">
       <Filter>Views</Filter>
@@ -255,6 +261,12 @@
     </Image>
     <Image Include="res\Globe.ico">
       <Filter>Resource Files\Icons</Filter>
+    </Image>
+    <Image Include="res\back.ico">
+      <Filter>Resource Files</Filter>
+    </Image>
+    <Image Include="res\Forward.ico">
+      <Filter>Resource Files</Filter>
     </Image>
   </ItemGroup>
   <ItemGroup>

@@ -15,7 +15,7 @@
 #include "NetworkHelper.h"
 #include <WTLHelper.h>
 
-#define WINDOW_MENU_POSITION	5
+#define WINDOW_MENU_POSITION	6
 
 namespace {
 	// Owned by the thread pool callback until it is posted to the frame, which
@@ -79,6 +79,10 @@ LRESULT CMainFrame::OnCreate(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/
 	m_hWndClient = m_view.Create(m_hWnd, rcDefault, nullptr, 
 		WS_CHILD | WS_VISIBLE | WS_CLIPSIBLINGS | WS_CLIPCHILDREN);
 	UISetCheck(ID_VIEW_STATUS_BAR, 1);
+	// stepping applies to chart pages only; a chart enables these while it is the active page
+	UIEnable(ID_CHART_STEP_BACK, FALSE);
+	UIEnable(ID_CHART_STEP_FORWARD, FALSE);
+	UIEnable(ID_CHART_AUTOSTEP, FALSE);
 	UISetCheck(ID_OPTIONS_DARKMODE, WTLHelper::IsDarkMode());
 
 	CImageList images;
@@ -235,6 +239,15 @@ LRESULT CMainFrame::OnWindowCloseAll(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*
 LRESULT CMainFrame::OnWindowActivate(WORD /*wNotifyCode*/, WORD wID, HWND /*hWndCtl*/, BOOL& /*bHandled*/) {
 	int nPage = wID - ID_WINDOW_TABFIRST;
 	m_view.SetActivePage(nPage);
+
+	// SetActivePage doesn't announce the change (clicking a tab does), so the pages would not hear that
+	// they were shown or hidden; pass on the same notification a click sends.
+	NMHDR nmhdr{};
+	nmhdr.hwndFrom = m_view;
+	nmhdr.idFrom = nPage;
+	nmhdr.code = TBVN_PAGEACTIVATED;
+	BOOL handled = TRUE;
+	OnPageActivated(0, &nmhdr, handled);
 
 	return 0;
 }

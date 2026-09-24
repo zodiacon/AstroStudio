@@ -80,7 +80,14 @@ BEGIN
     BEGIN
         MENUITEM "&Status Bar",                 ID_VIEW_STATUS_BAR
     END
-    POPUP "&Tool"
+    POPUP "&Chart"
+    BEGIN
+        MENUITEM "Step &Back\tAlt+Left",        ID_CHART_STEP_BACK
+        MENUITEM "Step &Forward\tAlt+Right",    ID_CHART_STEP_FORWARD
+        MENUITEM SEPARATOR
+        MENUITEM "&Auto Step",                  ID_CHART_AUTOSTEP
+    END
+    POPUP "&Tools"
     BEGIN
         MENUITEM "&Ephemeris",                  ID_TOOL_EPHEMERIS
     END
@@ -159,21 +166,27 @@ IDI_CHARTNOW            ICON                    "res\\ChartNow.ico"
 
 IDI_GLOBE               ICON                    "res\\Globe.ico"
 
+IDI_BACK                ICON                    "res\\back.ico"
+
+IDI_FORWARD             ICON                    "res\\Forward.ico"
+
 
 /////////////////////////////////////////////////////////////////////////////
 //
 // Dialog
 //
 
-IDD_ABOUTBOX DIALOGEX 0, 0, 187, 103
+IDD_ABOUTBOX DIALOGEX 0, 0, 229, 113
 STYLE DS_SETFONT | DS_MODALFRAME | WS_POPUP | WS_CAPTION | WS_SYSMENU
 CAPTION "About Astro Studio"
 FONT 9, "Segoe UI", 0, 0, 0x0
 BEGIN
-    DEFPUSHBUTTON   "OK",IDOK,68,82,50,14
-    CTEXT           "Place search: Open-Meteo.com geocoding\nGeoNames data, CC BY 4.0",IDC_STATIC,7,52,173,20
-    CTEXT           "Astro Studio v1.0\n\n©2022-2026 Pavel Yosifovich",IDC_STATIC,36,14,107,32
+    DEFPUSHBUTTON   "OK",IDOK,89,93,50,14
+    CTEXT           "Place search: Open-Meteo.com geocoding\nGeoNames data, CC BY 4.0",IDC_STATIC,7,59,215,20
+    CTEXT           "Astro Studio v0.3\n\n©2022-2026 Pavel Yosifovich",IDC_STATIC,57,14,107,27
     ICON            IDR_MAINFRAME,IDC_STATIC,7,7,20,20
+    CONTROL         "<a>https://github.com/zodiacon/astrostudio</a>",IDC_LINK,
+                    "SysLink",WS_TABSTOP,50,42,130,14
 END
 
 IDD_CHARTDETAILS DIALOGEX 0, 0, 440, 327
@@ -279,9 +292,9 @@ BEGIN
     IDD_ABOUTBOX, DIALOG
     BEGIN
         LEFTMARGIN, 7
-        RIGHTMARGIN, 180
+        RIGHTMARGIN, 222
         TOPMARGIN, 7
-        BOTTOMMARGIN, 72
+        BOTTOMMARGIN, 107
     END
 
     IDD_CHARTDETAILS, DIALOG
@@ -314,6 +327,8 @@ BEGIN
     VK_DELETE,      ID_EDIT_CUT,            VIRTKEY, SHIFT
     VK_INSERT,      ID_EDIT_COPY,           VIRTKEY, CONTROL
     VK_INSERT,      ID_EDIT_PASTE,          VIRTKEY, SHIFT
+    VK_LEFT,        ID_CHART_STEP_BACK,     VIRTKEY, ALT
+    VK_RIGHT,       ID_CHART_STEP_FORWARD,  VIRTKEY, ALT
     VK_F6,          ID_NEXT_PANE,           VIRTKEY 
     VK_F6,          ID_PREV_PANE,           VIRTKEY, SHIFT
 END
@@ -325,8 +340,8 @@ END
 //
 
 VS_VERSION_INFO VERSIONINFO
- FILEVERSION 0,2,0,0
- PRODUCTVERSION 0,2,0,0
+ FILEVERSION 0,3,0,0
+ PRODUCTVERSION 0,3,0,0
  FILEFLAGSMASK 0x3fL
 #ifdef _DEBUG
  FILEFLAGS 0x1L
@@ -343,12 +358,12 @@ BEGIN
         BEGIN
             VALUE "CompanyName", "Scorpio Software LLC"
             VALUE "FileDescription", "Astrology Studio"
-            VALUE "FileVersion", "0.2.0.0"
+            VALUE "FileVersion", "0.3.0.0"
             VALUE "InternalName", "AstroStudio"
             VALUE "LegalCopyright", "©2022-2026 Pavel Yosifovich"
             VALUE "OriginalFilename", "AstroStudio.exe"
             VALUE "ProductName", "Astro Studio - Astrology Studio"
-            VALUE "ProductVersion", "0.2.0.0"
+            VALUE "ProductVersion", "0.3.0.0"
         END
     END
     BLOCK "VarFileInfo"
