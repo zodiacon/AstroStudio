@@ -3,12 +3,12 @@
 #include "TimeZones.h"
 
 enum class StepUnit {
-	Minute, Hour, Day, Week, Month, Year,
+	Second, Minute, Hour, Day, Week, Month, Year,
 };
 
 // Moves a chart's time forward or backward by whole units.
 //
-// Minutes and hours are exact durations of UT. Days, weeks, months and years are calendar steps in the
+// Seconds, minutes and hours are exact durations of UT. Days, weeks, months and years are calendar steps in the
 // chart's own wall-clock time, so 21:00 stays 21:00 across a DST change (the day is then 23 or 25 hours
 // of UT). A month or year step that lands on a day the target month doesn't have goes to that month's
 // last day (31 January + 1 month = 28 or 29 February); one that lands in the days the Gregorian reform

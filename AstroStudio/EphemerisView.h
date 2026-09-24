@@ -84,6 +84,7 @@ protected:
 	ALT_MSG_MAP(1)
 		COMMAND_ID_HANDLER(ID_NEW_CHART, OnNewChart)
 		COMMAND_ID_HANDLER(ID_EDIT_COPY, OnEditCopy)
+		COMMAND_ID_HANDLER(ID_FILE_EXPORT, OnExport)
 	END_MSG_MAP()
 
 	enum class ColumnType {
@@ -91,10 +92,20 @@ protected:
 	};
 
 	void UpdateUI(CUpdateUIBase& ui);
+	// the menu and shared toolbar show this view's state while it is the page showing
+	void PageActivated(bool active) override;
 
 private:
 	void UpdateList();
-	CString GetRowPhenom(int row) const;
+	// what happens in the row's day (ingresses, stations), with glyphs or in words; the row after it must exist
+	CString GetRowPhenom(int row, bool glyphs) const;
+	// calculates the rows up to (not including) index count
+	void EnsureRows(size_t count);
+	// The text of one cell as plain text (no glyphs, no font needed), for the clipboard and files.
+	CString PlainCellText(int row, ColumnType type);
+	// The rows as a table with a header line: tab separated for the clipboard, or CSV for a file. Columns are in
+	// the order they are shown in.
+	CString BuildTable(std::vector<int> const& rows, bool csv);
 	void CreateFonts();
 	void UpdateViewUI();
 	void AutoSizeColumns();
@@ -122,6 +133,7 @@ private:
 	LRESULT OnChangeFontSize(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/);
 	LRESULT OnViewGridLines(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/);
 	LRESULT OnEditCopy(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/);
+	LRESULT OnExport(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/);
 	LRESULT OnNewChart(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/);
 	LRESULT OnDestroy(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, BOOL& /*bHandled*/);
 	LRESULT OnTimer(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, BOOL& /*bHandled*/);

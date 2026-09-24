@@ -230,6 +230,7 @@
     <ClCompile Include="DefaultFont.cpp" />
     <ClCompile Include="EphemerisView.cpp" />
     <ClCompile Include="GraphicChartView.cpp" />
+    <ClCompile Include="ChartImage.cpp" />
     <ClCompile Include="Helpers.cpp" />
     <ClCompile Include="MainFrm.cpp" />
     <ClCompile Include="NetworkHelper.cpp" />
@@ -263,6 +264,7 @@
     <ClInclude Include="DefaultFont.h" />
     <ClInclude Include="EphemerisView.h" />
     <ClInclude Include="GraphicChartView.h" />
+    <ClInclude Include="ChartImage.h" />
     <ClInclude Include="Helpers.h" />
     <ClInclude Include="Interfaces.h" />
     <ClInclude Include="Json.h" />

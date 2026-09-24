@@ -24,8 +24,9 @@ bool TimeStep::Step(DateTime& ut, TimeZoneInfo& tz, StepUnit unit, int count) {
 	TimeZoneInfo zone = tz;
 	DateTime result;
 
-	if (unit == StepUnit::Minute || unit == StepUnit::Hour) {
-		double seconds = (double)count * (unit == StepUnit::Minute ? 60 : 3600);
+	if (unit == StepUnit::Second || unit == StepUnit::Minute || unit == StepUnit::Hour) {
+		double unitSeconds = unit == StepUnit::Second ? 1 : unit == StepUnit::Minute ? 60 : 3600;
+		double seconds = (double)count * unitSeconds;
 		// snapped to a whole second so repeated steps don't drift
 		double jd = std::round((ut.Julian() * 86400.0) + seconds) / 86400.0;
 		result = FromJulian(jd);

@@ -91,8 +91,10 @@ LRESULT CMainFrame::OnCreate(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/
 	UIEnable(ID_CHART_STEP_BACK, FALSE);
 	UIEnable(ID_CHART_STEP_FORWARD, FALSE);
 	UIEnable(ID_CHART_AUTOSTEP, FALSE);
+	UIEnable(ID_CHART_LIVE, FALSE);
 	UIEnable(ID_FILE_SAVE, FALSE);
 	UIEnable(ID_FILE_SAVE_AS, FALSE);
+	UIEnable(ID_FILE_EXPORT, FALSE);
 	UISetCheck(ID_OPTIONS_DARKMODE, WTLHelper::IsDarkMode());
 
 	CImageList images;

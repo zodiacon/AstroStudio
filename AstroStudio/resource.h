@@ -99,13 +99,15 @@
 #define ID_CHART_STEP_BACK              32788
 #define ID_CHART_STEP_FORWARD           32789
 #define ID_CHART_AUTOSTEP               32790
+#define ID_FILE_EXPORT                  32791
+#define ID_CHART_LIVE                   32792
 
 // Next default values for new objects
 // 
 #ifdef APSTUDIO_INVOKED
 #ifndef APSTUDIO_READONLY_SYMBOLS
 #define _APS_NEXT_RESOURCE_VALUE        232
-#define _APS_NEXT_COMMAND_VALUE         32791
+#define _APS_NEXT_COMMAND_VALUE         32793
 #define _APS_NEXT_CONTROL_VALUE         1039
 #define _APS_NEXT_SYMED_VALUE           108
 #endif

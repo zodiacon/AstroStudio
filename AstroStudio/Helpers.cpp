@@ -207,3 +207,22 @@ COLORREF Helpers::Lighten(COLORREF color, int offset) {
 
 	return RGB(r, g, b);
 }
+
+bool Helpers::CopyTextToClipboard(HWND owner, PCWSTR text) {
+	auto bytes = (wcslen(text) + 1) * sizeof(wchar_t);
+	HGLOBAL mem = ::GlobalAlloc(GMEM_MOVEABLE, bytes);
+	if (!mem)
+		return false;
+	memcpy(::GlobalLock(mem), text, bytes);
+	::GlobalUnlock(mem);
+	if (!::OpenClipboard(owner)) {
+		::GlobalFree(mem);
+		return false;
+	}
+	::EmptyClipboard();
+	bool ok = ::SetClipboardData(CF_UNICODETEXT, mem) != nullptr;
+	::CloseClipboard();
+	if (!ok)
+		::GlobalFree(mem);		// the clipboard owns it only if it took it
+	return ok;
+}

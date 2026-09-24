@@ -61,6 +61,7 @@ BEGIN
         MENUITEM "&Open Chart...\tCtrl+O",      ID_FILE_OPEN
         MENUITEM "&Save\tCtrl+S",               ID_FILE_SAVE
         MENUITEM "Save Chart &As...",           ID_FILE_SAVE_AS
+        MENUITEM "&Export...",                  ID_FILE_EXPORT
         MENUITEM SEPARATOR
         MENUITEM "&Print...\tCtrl+P",           ID_FILE_PRINT
         MENUITEM "Print Pre&view",              ID_FILE_PRINT_PREVIEW
@@ -91,6 +92,7 @@ BEGIN
         MENUITEM "Step &Forward\tAlt+Right",    ID_CHART_STEP_FORWARD
         MENUITEM SEPARATOR
         MENUITEM "&Auto Step",                  ID_CHART_AUTOSTEP
+        MENUITEM "&Live",                       ID_CHART_LIVE
     END
     POPUP "&Tools"
     BEGIN
@@ -117,6 +119,8 @@ IDR_CONTEXT MENU
 BEGIN
     POPUP "ephemeris"
     BEGIN
+        MENUITEM "&Copy\tCtrl+C",               ID_EDIT_COPY
+        MENUITEM SEPARATOR
         MENUITEM "&Chart",                      ID_NEW_CHART
     END
 END
@@ -427,6 +431,8 @@ BEGIN
     ID_FILE_CLOSE           "Close the active document\nClose"
     ID_FILE_SAVE            "Save the active document\nSave"
     ID_FILE_SAVE_AS         "Save the active document with a new name\nSave As"
+    ID_FILE_EXPORT          "Export the chart as a picture, or the ephemeris as a CSV file\nExport"
+    ID_CHART_LIVE           "Keep the chart at the current time\nLive"
     ID_FILE_PAGE_SETUP      "Change the printing options\nPage Setup"
     ID_FILE_PRINT_SETUP     "Change the printer and printing options\nPrint Setup"
     ID_FILE_PRINT           "Print the active document\nPrint"

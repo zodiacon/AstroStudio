@@ -57,20 +57,10 @@ CString CEphemerisView::GetColumnText(HWND h, int row, int col) {
 	CString text;
 	switch (type) {
 		case ColumnType::Time: return Helpers::FormatDateTime(m_StartTime.AddDays(row));
-		case ColumnType::Phenom: return GetRowPhenom(row);
+		case ColumnType::Phenom: return GetRowPhenom(row, (m_FormatOptions & FormatOptions::UseGlyphs) == FormatOptions::UseGlyphs);
 
 		default:
-			while (m_Items.size() <= row + 1) {
-				RowData data;
-				data.Date = m_StartTime.AddDays(m_Increment * (int)m_Items.size());
-				for (auto p : m_Planets) {
-					PlanetData pd;
-					pd.Position = m_Calc.CalcPlanet(p, data.Date);
-					pd.Planet = p;
-					data.Planets.push_back(pd);
-				}
-				m_Items.push_back(std::move(data));
-			}
+			EnsureRows(row + 2);
 			ATLASSERT(row < m_Items.size());
 			auto& item = m_Items[row];
 			int index = int(type) - int(ColumnType::Planet);
@@ -141,11 +131,32 @@ void CEphemerisView::UpdateUI(CUpdateUIBase& ui) {
 	UpdateViewUI();
 }
 
+void CEphemerisView::PageActivated(bool active) {
+	if (active)
+		UpdateViewUI();
+	else
+		Frame()->GetUI().UIEnable(ID_FILE_EXPORT, FALSE);	// the next page enables it again if it can export
+}
+
 void CEphemerisView::UpdateList() {
 	m_List.RedrawItems(m_List.GetTopIndex(), m_List.GetTopIndex() + m_List.GetCountPerPage());
 }
 
-CString CEphemerisView::GetRowPhenom(int row) const {
+void CEphemerisView::EnsureRows(size_t count) {
+	while (m_Items.size() < count) {
+		RowData data;
+		data.Date = m_StartTime.AddDays(m_Increment * (int)m_Items.size());
+		for (auto p : m_Planets) {
+			PlanetData pd;
+			pd.Position = m_Calc.CalcPlanet(p, data.Date);
+			pd.Planet = p;
+			data.Planets.push_back(pd);
+		}
+		m_Items.push_back(std::move(data));
+	}
+}
+
+CString CEphemerisView::GetRowPhenom(int row, bool glyphs) const {
 	CString text;
 	auto& item = m_Items[row];
 	if (!item.PhenomCalculated) {
@@ -198,7 +209,7 @@ CString CEphemerisView::GetRowPhenom(int row) const {
 			}
 		}
 	}
-	return (m_FormatOptions & FormatOptions::UseGlyphs) == FormatOptions::UseGlyphs ? item.PhenomGlyph : item.PhenomText;
+	return glyphs ? item.PhenomGlyph : item.PhenomText;
 }
 
 void CEphemerisView::CreateFonts() {
@@ -216,6 +227,7 @@ void CEphemerisView::UpdateViewUI() {
 	ui.UISetCheck(ID_VIEW_SECONDS, (m_FormatOptions & FormatOptions::ShowSeconds) == FormatOptions::ShowSeconds);
 	ui.UIEnable(ID_FONT_BIGGER, m_FontSize < 180);
 	ui.UIEnable(ID_FONT_SMALLER, m_FontSize > 70);
+	ui.UIEnable(ID_FILE_EXPORT, TRUE);
 	ui.UISetCheck(ID_VIEW_GRIDLINES, (m_List.GetExtendedListViewStyle() & LVS_EX_GRIDLINES) != 0);
 }
 
@@ -394,8 +406,118 @@ LRESULT CEphemerisView::OnViewGridLines(WORD, WORD, HWND, BOOL&) {
 	return 0;
 }
 
+CString CEphemerisView::PlainCellText(int row, ColumnType type) {
+	EnsureRows(row + 2);
+	if (type == ColumnType::Time)
+		return Helpers::FormatDateTime(m_StartTime.AddDays(row)).Trim();
+	if (type == ColumnType::Phenom)
+		return GetRowPhenom(row, false);
+
+	auto& pp = m_Items[row].Planets[int(type) - int(ColumnType::Planet)];
+	auto longitude = pp.Position.Longitude;
+	if (pp.Position.Speed < 0)
+		longitude.Flags |= AstroPointFlags::Retro;
+	return Helpers::FormatLongitude(longitude, m_FormatOptions & ~FormatOptions::UseGlyphs);
+}
+
+CString CEphemerisView::BuildTable(std::vector<int> const& rows, bool csv) {
+	const wchar_t separator = csv ? L',' : L'\t';
+	auto cell = [&](CString text) {
+		if (csv) {
+			if (text.FindOneOf(L",\"\r\n") >= 0) {
+				text.Replace(L"\"", L"\"\"");
+				text = L"\"" + text + L"\"";
+			}
+		}
+		else {
+			text.Replace(L'\t', L' ');
+		}
+		return text;
+	};
+
+	int count = m_List.GetHeader().GetItemCount();
+	std::vector<int> order(count);
+	m_List.GetColumnOrderArray(count, order.data());
+	auto columns = GetColumnManager(m_List);
+
+	CString table;
+	for (int i = 0; i < count; i++) {
+		WCHAR name[128]{};
+		LVCOLUMN column{ LVCF_TEXT };
+		column.pszText = name;
+		column.cchTextMax = _countof(name);
+		m_List.GetColumn(order[i], &column);
+		if (i > 0)
+			table += separator;
+		table += cell(name);
+	}
+	table += L"\r\n";
+
+	for (int row : rows) {
+		for (int i = 0; i < count; i++) {
+			if (i > 0)
+				table += separator;
+			table += cell(PlainCellText(row, columns->GetColumnTag<ColumnType>(order[i])));
+		}
+		table += L"\r\n";
+	}
+	return table;
+}
+
 LRESULT CEphemerisView::OnEditCopy(WORD, WORD, HWND, BOOL&) {
-	return LRESULT();
+	// the selected rows, as text for a spreadsheet or a text editor
+	std::vector<int> rows;
+	for (int row = m_List.GetNextItem(-1, LVNI_SELECTED); row >= 0; row = m_List.GetNextItem(row, LVNI_SELECTED))
+		rows.push_back(row);
+	if (rows.empty())
+		return 0;
+
+	CWaitCursor wait;
+	if (!Helpers::CopyTextToClipboard(m_hWnd, BuildTable(rows, false)))
+		AtlMessageBox(m_hWnd, L"The rows could not be copied to the clipboard.", L"Astro Studio", MB_ICONWARNING);
+	return 0;
+}
+
+LRESULT CEphemerisView::OnExport(WORD, WORD, HWND, BOOL&) {
+	static constexpr wchar_t filter[] = L"CSV files (*.csv)\0*.csv\0All files (*.*)\0*.*\0";
+	CSimpleFileDialog dlg(FALSE, L"csv", L"Ephemeris", OFN_OVERWRITEPROMPT | OFN_PATHMUSTEXIST | OFN_HIDEREADONLY | OFN_EXPLORER | OFN_ENABLESIZING, filter, m_hWnd);
+	WTLHelper::SuspendHook();
+	auto ok = dlg.DoModal(m_hWnd) == IDOK;
+	WTLHelper::ResumeHook();
+	if (!ok)
+		return 0;
+
+	// every row of the list
+	CWaitCursor wait;
+	std::vector<int> rows(m_List.GetItemCount());
+	for (int i = 0; i < (int)rows.size(); i++)
+		rows[i] = i;
+	CString table = BuildTable(rows, true);
+
+	// UTF-8 with a byte order mark, which is how Excel knows it is UTF-8 (the degree signs need it)
+	int length = ::WideCharToMultiByte(CP_UTF8, 0, table, table.GetLength(), nullptr, 0, nullptr, nullptr);
+	std::string bytes("\xEF\xBB\xBF");
+	bytes.resize(3 + length);
+	::WideCharToMultiByte(CP_UTF8, 0, table, table.GetLength(), bytes.data() + 3, length, nullptr, nullptr);
+
+	DWORD error = ERROR_SUCCESS;
+	HANDLE file = ::CreateFileW(dlg.m_szFileName, GENERIC_WRITE, 0, nullptr, CREATE_ALWAYS, FILE_ATTRIBUTE_NORMAL, nullptr);
+	if (file == INVALID_HANDLE_VALUE)
+		error = ::GetLastError();
+	else {
+		DWORD written = 0;
+		if (!::WriteFile(file, bytes.data(), (DWORD)bytes.size(), &written, nullptr))
+			error = ::GetLastError();
+		::CloseHandle(file);
+	}
+	if (error != ERROR_SUCCESS) {
+		WCHAR reason[256]{};
+		::FormatMessageW(FORMAT_MESSAGE_FROM_SYSTEM | FORMAT_MESSAGE_IGNORE_INSERTS, nullptr, error, 0, reason, _countof(reason), nullptr);
+		CString message;
+		message.Format(L"The ephemeris could not be saved to %s:\n\n%s", dlg.m_szFileName, reason);
+		AtlMessageBox(m_hWnd, (PCWSTR)message, L"Astro Studio", MB_ICONWARNING);
+	}
+	return 0;
 }
 
 LRESULT CEphemerisView::OnNewChart(WORD, WORD, HWND, BOOL&) {

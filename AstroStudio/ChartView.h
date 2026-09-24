@@ -43,6 +43,7 @@ public:
 		COMMAND_ID_HANDLER(ID_CHART_STEP_BACK, OnStep)
 		COMMAND_ID_HANDLER(ID_CHART_STEP_FORWARD, OnStep)
 		COMMAND_ID_HANDLER(ID_CHART_AUTOSTEP, OnAutoStep)
+		COMMAND_ID_HANDLER(ID_CHART_LIVE, OnLive)
 		COMMAND_HANDLER(IDC_STEPINTERVAL, CBN_SELCHANGE, OnIntervalChanged)
 		CHAIN_MSG_MAP(CVirtualListView)
 		CHAIN_MSG_MAP(BaseFrame)
@@ -51,8 +52,10 @@ public:
 		COMMAND_ID_HANDLER(ID_CHART_STEP_BACK, OnStep)
 		COMMAND_ID_HANDLER(ID_CHART_STEP_FORWARD, OnStep)
 		COMMAND_ID_HANDLER(ID_CHART_AUTOSTEP, OnAutoStep)
+		COMMAND_ID_HANDLER(ID_CHART_LIVE, OnLive)
 		COMMAND_ID_HANDLER(ID_FILE_SAVE, OnSave)
 		COMMAND_ID_HANDLER(ID_FILE_SAVE_AS, OnSave)
+		COMMAND_ID_HANDLER(ID_FILE_EXPORT, OnExport)
 	END_MSG_MAP()
 
 private:
@@ -62,6 +65,8 @@ private:
 	// The tab text: the title, marked with * when the chart came from a file (or was saved to one) and has changed since.
 	void UpdateTitle();
 	LRESULT OnSave(WORD /*wNotifyCode*/, WORD wID, HWND /*hWndCtl*/, BOOL& /*bHandled*/);
+	// File > Export: the chart wheel as a PNG picture
+	LRESULT OnExport(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/);
 	void CreateStepToolBar();
 	// Moves the chart's time by the toolbar's step count and unit; direction is 1 (forward) or -1 (back).
 	// Returns false if it couldn't (no chart yet, or the result is outside the years the ephemeris covers).
@@ -69,6 +74,13 @@ private:
 	// Auto step runs its timer only while it is switched on and this chart is the page showing.
 	void UpdateAutoStepTimer();
 	void SetAutoStep(bool on);
+	// Live keeps the chart at the current time (the timer, at the interval of the drop-down, sets it to now). It shares
+	// the timer with auto step and excludes it; the user changing anything in the details view ends it.
+	void SetLive(bool on);
+	void TickLive();
+	// what the toolbar and menu show for the stepping commands: none of them applies while the time moves by itself
+	void UpdateStepUI();
+	LRESULT OnLive(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/);
 	LRESULT OnStep(WORD /*wNotifyCode*/, WORD wID, HWND /*hWndCtl*/, BOOL& /*bHandled*/);
 	LRESULT OnAutoStep(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/);
 	LRESULT OnIntervalChanged(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/);
@@ -102,6 +114,7 @@ private:
 	CStatic m_StepLabel;
 	CComboBox m_StepCount, m_StepUnit, m_StepInterval;
 	bool m_AutoStep{ false };
+	bool m_Live{ false };
 	CString m_FilePath, m_Title;
 	bool m_Modified{ false };
 	int m_NotModifying{ 0 };		// while above 0, changes (system updates, auto step ticks) don't count as edits

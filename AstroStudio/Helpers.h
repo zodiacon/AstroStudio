@@ -39,6 +39,8 @@ struct Helpers abstract final {
 	// fills a house system drop-down list; the item data of each entry is the HouseSystem
 	static void FillHouseSystems(CComboBox combo);
 	static ChartData CreateChartData(ChartInfo info, HouseSystem houseSystem = HouseSystem::Koch);
+	// puts text on the clipboard; false if the clipboard could not be opened
+	static bool CopyTextToClipboard(HWND owner, PCWSTR text);
 	static COLORREF Darken(COLORREF color, int offset);
 	static COLORREF Lighten(COLORREF color, int offset);
 };

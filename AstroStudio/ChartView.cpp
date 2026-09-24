@@ -126,13 +126,18 @@ void CChartView::PageActivated(bool active) {
 	m_PageActive = active;
 	auto& ui = Frame()->GetUI();
 	// stepping by hand is off the table while auto step is running
-	ui.UIEnable(ID_CHART_STEP_BACK, active && !m_AutoStep);
-	ui.UIEnable(ID_CHART_STEP_FORWARD, active && !m_AutoStep);
+	ui.UIEnable(ID_CHART_STEP_BACK, active && !m_AutoStep && !m_Live);
+	ui.UIEnable(ID_CHART_STEP_FORWARD, active && !m_AutoStep && !m_Live);
 	ui.UIEnable(ID_CHART_AUTOSTEP, active);
+	ui.UIEnable(ID_CHART_LIVE, active);
 	ui.UIEnable(ID_FILE_SAVE, active);
 	ui.UIEnable(ID_FILE_SAVE_AS, active);
-	if (active)
-		ui.UISetCheck(ID_CHART_AUTOSTEP, m_AutoStep);	// the menu and toolbars are shared; show this chart's state
+	ui.UIEnable(ID_FILE_EXPORT, active);
+	if (active) {
+		// the menu and toolbars are shared; show this chart's state
+		ui.UISetCheck(ID_CHART_AUTOSTEP, m_AutoStep);
+		ui.UISetCheck(ID_CHART_LIVE, m_Live);
+	}
 	UpdateAutoStepTimer();
 }
 
@@ -164,15 +169,20 @@ void CChartView::UpdateTitle() {
 	Frame()->SetViewTitle(this, title);
 }
 
+// the name without the characters a file name can't have
+static CString SafeFileName(CString name) {
+	static const wchar_t invalid[] = { 92, L'/', L':', L'*', L'?', 34, L'<', L'>', L'|', 0 };
+	for (int i = 0; i < name.GetLength(); i++)
+		if (wcschr(invalid, name[i]))
+			name.SetAt(i, L'_');
+	return name;
+}
+
 bool CChartView::Save(bool saveAs) {
 	CString path = m_FilePath;
 	if (path.IsEmpty() || saveAs) {
-		// offer the chart's own name, without the characters a file name can't have
-		static const wchar_t invalid[] = { 92, L'/', L':', L'*', L'?', 34, L'<', L'>', L'|', 0 };
-		CString suggestion = m_FilePath.IsEmpty() ? m_Title : CString(std::filesystem::path((PCWSTR)m_FilePath).stem().c_str());
-		for (int i = 0; i < suggestion.GetLength(); i++)
-			if (wcschr(invalid, suggestion[i]))
-				suggestion.SetAt(i, L'_');
+		// offer the chart's own name
+		auto suggestion = SafeFileName(m_FilePath.IsEmpty() ? m_Title : CString(std::filesystem::path((PCWSTR)m_FilePath).stem().c_str()));
 
 		CSimpleFileDialog dlg(FALSE, ChartFile::Extension, suggestion, OFN_OVERWRITEPROMPT | OFN_PATHMUSTEXIST | OFN_HIDEREADONLY | OFN_EXPLORER | OFN_ENABLESIZING, ChartFile::Filter, m_hWnd);
 		WTLHelper::SuspendHook();
@@ -245,6 +255,10 @@ void CChartView::CreateStepToolBar() {
 	int intervalSlot = tb.GetButtonCount();
 	tb.AddSeparator(px(84));	// interval
 
+	// and Live, which keeps the chart at the current time
+	tb.AddSeparator(px(10));
+	tb.AddButton(ID_CHART_LIVE, BTNS_CHECK | BTNS_SHOWTEXT, TBSTATE_ENABLED, images.AddIcon(AtlLoadIconImage(IDI_CHARTNOW, 0, 24, 24)), L"Live", 0);
+
 	AddSimpleReBarBand(tb);
 	Frame()->AddToolBarToUI(tb);
 
@@ -277,7 +291,7 @@ void CChartView::CreateStepToolBar() {
 		StepUnit Unit;
 	};
 	const UnitItem units[] = {
-		{ L"Minutes", StepUnit::Minute }, { L"Hours", StepUnit::Hour }, { L"Days", StepUnit::Day },
+		{ L"Seconds", StepUnit::Second }, { L"Minutes", StepUnit::Minute }, { L"Hours", StepUnit::Hour }, { L"Days", StepUnit::Day },
 		{ L"Weeks", StepUnit::Week }, { L"Months", StepUnit::Month }, { L"Years", StepUnit::Year },
 	};
 	CRect unitRect = slotRect(2, dropHeight);
@@ -312,7 +326,7 @@ void CChartView::CreateStepToolBar() {
 void CChartView::UpdateAutoStepTimer() {
 	constexpr UINT_PTR AutoStepTimer = 1;
 	KillTimer(AutoStepTimer);
-	if (!m_AutoStep || !m_PageActive)
+	if ((!m_AutoStep && !m_Live) || !m_PageActive)
 		return;
 
 	int selected = m_StepInterval.m_hWnd ? m_StepInterval.GetCurSel() : -1;
@@ -320,15 +334,52 @@ void CChartView::UpdateAutoStepTimer() {
 	SetTimer(AutoStepTimer, interval);
 }
 
+void CChartView::UpdateStepUI() {
+	if (!m_PageActive)
+		return;
+	auto& ui = Frame()->GetUI();
+	ui.UISetCheck(ID_CHART_AUTOSTEP, m_AutoStep);
+	ui.UISetCheck(ID_CHART_LIVE, m_Live);
+	ui.UIEnable(ID_CHART_STEP_BACK, !m_AutoStep && !m_Live);
+	ui.UIEnable(ID_CHART_STEP_FORWARD, !m_AutoStep && !m_Live);
+}
+
 void CChartView::SetAutoStep(bool on) {
+	if (on)
+		m_Live = false;
 	m_AutoStep = on;
-	if (m_PageActive) {
-		auto& ui = Frame()->GetUI();
-		ui.UISetCheck(ID_CHART_AUTOSTEP, on);
-		ui.UIEnable(ID_CHART_STEP_BACK, !on);
-		ui.UIEnable(ID_CHART_STEP_FORWARD, !on);
-	}
+	UpdateStepUI();
 	UpdateAutoStepTimer();
+}
+
+void CChartView::SetLive(bool on) {
+	if (on)
+		m_AutoStep = false;
+	m_Live = on;
+	UpdateStepUI();
+	UpdateAutoStepTimer();
+	if (on)
+		TickLive();		// no waiting for the first tick
+}
+
+void CChartView::TickLive() {
+	if (m_Data.AllPlanets().empty())
+		return;
+	auto& info = m_Data.Info();
+	info.Time = DateTime::Now();
+	int offset = info.TimeZone.OffsetUT;
+	TimeZones::UtToLocal(info.Time, info.TimeZone, &offset);
+	info.TimeZone.OffsetUT = offset;
+
+	m_NotModifying++;		// following the clock isn't an edit
+	SendMessage(WM_RECALC, static_cast<WPARAM>(Recalc::All));
+	m_NotModifying--;
+	m_DetailsView.UpdateControls();
+}
+
+LRESULT CChartView::OnLive(WORD, WORD, HWND, BOOL&) {
+	SetLive(!m_Live);
+	return 0;
 }
 
 LRESULT CChartView::OnAutoStep(WORD, WORD, HWND, BOOL&) {
@@ -344,6 +395,10 @@ LRESULT CChartView::OnIntervalChanged(WORD, WORD, HWND, BOOL&) {
 LRESULT CChartView::OnTimer(UINT, WPARAM wParam, LPARAM, BOOL& handled) {
 	if (wParam != 1) {
 		handled = FALSE;
+		return 0;
+	}
+	if (m_Live) {
+		TickLive();
 		return 0;
 	}
 	// every tick is a step forward; running out of years switches auto step off
@@ -381,7 +436,7 @@ bool CChartView::StepTime(int direction) {
 
 LRESULT CChartView::OnStep(WORD, WORD wID, HWND, BOOL&) {
 	// a disabled menu item or button doesn't stop the Alt+Left/Right shortcuts
-	if (m_AutoStep)
+	if (m_AutoStep || m_Live)
 		return 0;
 	StepTime(wID == ID_CHART_STEP_FORWARD ? 1 : -1);
 	return 0;
@@ -422,6 +477,41 @@ LRESULT CChartView::OnCreate(UINT, WPARAM, LPARAM, BOOL&) {
 }
 
 LRESULT CChartView::OnEditCopy(WORD, WORD, HWND, BOOL&) {
+	// in a text box (the details view has several) Copy is the text box's own
+	HWND focus = ::GetFocus();
+	wchar_t className[16]{};
+	if (focus)
+		::GetClassName(focus, className, _countof(className));
+	if (_wcsicmp(className, L"Edit") == 0) {
+		::SendMessage(focus, WM_COPY, 0, 0);
+		return 0;
+	}
+
+	// anywhere else it is the chart wheel, as a picture
+	auto image = m_ChartDrawing.RenderImage(ChartImage::DefaultSize);
+	if (!image || !ChartImage::CopyToClipboard(m_hWnd, image))
+		AtlMessageBox(m_hWnd, L"The chart could not be copied to the clipboard.", L"Astro Studio", MB_ICONWARNING);
+	return 0;
+}
+
+LRESULT CChartView::OnExport(WORD, WORD, HWND, BOOL&) {
+	static constexpr wchar_t filter[] = L"PNG pictures (*.png)\0*.png\0";
+	CSimpleFileDialog dlg(FALSE, L"png", SafeFileName(m_Title), OFN_OVERWRITEPROMPT | OFN_PATHMUSTEXIST | OFN_HIDEREADONLY | OFN_EXPLORER | OFN_ENABLESIZING, filter, m_hWnd);
+	WTLHelper::SuspendHook();
+	auto ok = dlg.DoModal(m_hWnd) == IDOK;
+	WTLHelper::ResumeHook();
+	if (!ok)
+		return 0;
+
+	std::wstring error;
+	if (auto image = m_ChartDrawing.RenderImage(ChartImage::DefaultSize); !image)
+		error = L"The chart could not be drawn.";
+	else if (ChartImage::SavePng(image, dlg.m_szFileName, error))
+		return 0;
+
+	CString message;
+	message.Format(L"The picture could not be saved to %s:\n\n%s", dlg.m_szFileName, error.c_str());
+	AtlMessageBox(m_hWnd, (PCWSTR)message, L"Astro Studio", MB_ICONWARNING);
 	return 0;
 }
 
@@ -450,8 +540,11 @@ void CChartView::UpdateAspectGridScrollBarTheme() {
 }
 
 LRESULT CChartView::OnRecalc(UINT, WPARAM wp, LPARAM, BOOL&) {
-	if (m_NotModifying == 0)
+	if (m_NotModifying == 0) {
 		SetModified(true);
+		if (m_Live)
+			SetLive(false);		// the user took over the time, or the place
+	}
 	switch (static_cast<Recalc>(wp)) {
 	case Recalc::Houses:
 		m_Data.CalcHouses(m_Calc);
