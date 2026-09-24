@@ -98,6 +98,7 @@ protected:
 	void UpdateUI(CUpdateUIBase& ui);
 	// the menu and shared toolbar show this view's state while it is the page showing
 	void PageActivated(bool active) override;
+	void TextFontChanged() override;
 
 private:
 	void UpdateList();

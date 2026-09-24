@@ -216,3 +216,76 @@ TEST_CASE("Hard and soft aspects", "[Aspects]") {
 	a.Type = AspectType::Quincunx;
 	CHECK_FALSE(a.IsMajor());
 }
+
+TEST_CASE("Aspect settings start out with everything on", "[Aspects]") {
+	AspectSettings settings;
+	for (int i = 0; i < AspectSettings::AspectTypeCount; i++) {
+		CHECK(settings.AspectEnabled[i]);
+		CHECK(settings.AspectOrb[i] < 0);
+	}
+	for (int i = 0; i < AspectSettings::PlanetCount; i++) {
+		CHECK(settings.PlanetEnabled[i]);
+		CHECK(settings.PlanetOrbAdd[i] == 0);
+	}
+	CHECK(settings.OrbFor(AspectType::Trine) == Approx(8));
+	CHECK(settings.OrbFor(AspectType::Quincunx) == Approx(2));
+}
+
+TEST_CASE("An aspect can have an orb of its own", "[Aspects]") {
+	AspectSettings settings;
+	settings.CustomOrb(AspectType::Trine, 2).CustomOrb(AspectType::Conjunction, 10);
+	CHECK(settings.OrbFor(AspectType::Trine) == Approx(2));
+	CHECK(settings.OrbFor(AspectType::Sextile) == Approx(8));		// the others keep the general orb
+
+	AspectCalculator calc(settings);
+	CHECK(calc.CalcAspect(At(Planet::Mars, 0), At(Planet::Jupiter, 121.5)).Type == AspectType::Trine);
+	CHECK(calc.CalcAspect(At(Planet::Mars, 0), At(Planet::Jupiter, 123)).Type == AspectType::None);
+	CHECK(calc.CalcAspect(At(Planet::Mars, 0), At(Planet::Jupiter, 61)).Type == AspectType::Sextile);
+	CHECK(calc.CalcAspect(At(Planet::Mars, 0), At(Planet::Jupiter, 9.5)).Type == AspectType::Conjunction);
+}
+
+TEST_CASE("The conjunction's extra orb only applies to the general orb", "[Aspects]") {
+	AspectSettings settings;
+	settings.ConjunctionOrbAdd = 2;
+	CHECK(settings.OrbFor(AspectType::Conjunction) == Approx(10));
+	settings.CustomOrb(AspectType::Conjunction, 4);		// its own orb is the orb
+	CHECK(settings.OrbFor(AspectType::Conjunction) == Approx(4));
+}
+
+TEST_CASE("An aspect can be switched off", "[Aspects]") {
+	AspectSettings settings;
+	settings.AspectEnabled[static_cast<int>(AspectType::Trine)] = false;
+	settings.AspectEnabled[static_cast<int>(AspectType::Quincunx)] = false;
+	AspectCalculator calc(settings);
+	CHECK(calc.CalcAspect(At(Planet::Mars, 0), At(Planet::Jupiter, 120)).Type == AspectType::None);
+	CHECK(calc.CalcAspect(At(Planet::Mars, 0), At(Planet::Jupiter, 150)).Type == AspectType::None);
+	CHECK(calc.CalcAspect(At(Planet::Mars, 0), At(Planet::Jupiter, 90)).Type == AspectType::Square);
+}
+
+TEST_CASE("A planet can be left out", "[Aspects]") {
+	AspectSettings settings;
+	settings.PlanetEnabled[static_cast<int>(Planet::Mars)] = false;
+	AspectCalculator calc(settings);
+	CHECK(calc.CalcAspect(At(Planet::Mars, 0), At(Planet::Jupiter, 90)).Type == AspectType::None);
+	CHECK(calc.CalcAspect(At(Planet::Jupiter, 90), At(Planet::Mars, 0)).Type == AspectType::None);
+	CHECK(calc.CalcAspect(At(Planet::Saturn, 0), At(Planet::Jupiter, 90)).Type == AspectType::Square);
+
+	auto aspects = calc.Calculate({ At(Planet::Mars, 0), At(Planet::Jupiter, 90), At(Planet::Saturn, 180) });
+	// only Jupiter and Saturn are left to aspect each other
+	REQUIRE(aspects.size() == 1);
+	CHECK(aspects[0].Planet1.Planet == Planet::Jupiter);
+	CHECK(aspects[0].Planet2.Planet == Planet::Saturn);
+}
+
+TEST_CASE("A planet can have extra orb", "[Aspects]") {
+	AspectSettings settings;
+	settings.PlanetOrbAdd[static_cast<int>(Planet::Jupiter)] = 3;
+	settings.PlanetOrbAdd[static_cast<int>(Planet::Mars)] = 1;
+	AspectCalculator calc(settings);
+	// the larger of the two extras: 8 + 3
+	CHECK(calc.CalcAspect(At(Planet::Mars, 0), At(Planet::Jupiter, 10.5)).Type == AspectType::Conjunction);
+	CHECK(calc.CalcAspect(At(Planet::Mars, 0), At(Planet::Jupiter, 11.5)).Type == AspectType::None);
+	// and only for aspects that planet is in
+	CHECK(calc.CalcAspect(At(Planet::Mars, 0), At(Planet::Saturn, 8.5)).Type == AspectType::Conjunction);
+	CHECK(calc.CalcAspect(At(Planet::Venus, 0), At(Planet::Saturn, 8.5)).Type == AspectType::None);
+}

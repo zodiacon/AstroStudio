@@ -30,6 +30,7 @@ CString Helpers::FormatDateTime(DateTime const& dt, DateTimeFormatOptions option
 		time.Format(L"%02d.%02d ", dt.Hour(), dt.Minute());
 		text += time;
 	}
+	text.TrimRight();		// the parts are separated by a space, which the last one doesn't need
 	return text;
 }
 

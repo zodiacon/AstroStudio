@@ -45,6 +45,12 @@
     <ClCompile Include="EphemerisOptionsDlg.cpp">
       <Filter>Dialogs</Filter>
     </ClCompile>
+    <ClCompile Include="AspectOptionsDlg.cpp">
+      <Filter>Dialogs</Filter>
+    </ClCompile>
+    <ClCompile Include="AspectOptions.cpp">
+      <Filter>Helpers</Filter>
+    </ClCompile>
     <ClCompile Include="ChartImage.cpp">
       <Filter>Helpers</Filter>
     </ClCompile>
@@ -138,6 +144,12 @@
       <Filter>Dialogs</Filter>
     </ClInclude>
     <ClInclude Include="AppSettings.h">
+      <Filter>Helpers</Filter>
+    </ClInclude>
+    <ClInclude Include="AspectOptionsDlg.h">
+      <Filter>Dialogs</Filter>
+    </ClInclude>
+    <ClInclude Include="AspectOptions.h">
       <Filter>Helpers</Filter>
     </ClInclude>
     <ClInclude Include="ChartImage.h">

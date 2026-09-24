@@ -16,6 +16,7 @@
 #include "TimeZones.h"
 #include "NetworkHelper.h"
 #include "AppSettings.h"
+#include "AspectOptionsDlg.h"
 #include <WTLHelper.h>
 
 #define WINDOW_MENU_POSITION	6
@@ -87,6 +88,10 @@ LRESULT CMainFrame::OnCreate(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/
 	//m_view.m_bTabCloseButton = FALSE;
 	m_hWndClient = m_view.Create(m_hWnd, rcDefault, nullptr, 
 		WS_CHILD | WS_VISIBLE | WS_CLIPSIBLINGS | WS_CLIPCHILDREN);
+	if (AppSettings::Get().AlwaysOnTop()) {
+		SetWindowPos(HWND_TOPMOST, 0, 0, 0, 0, SWP_NOMOVE | SWP_NOSIZE | SWP_NOACTIVATE);
+		UISetCheck(ID_OPTIONS_ALWAYSONTOP, 1);
+	}
 	UISetCheck(ID_VIEW_STATUS_BAR, 1);
 	if (!AppSettings::Get().ViewStatusBar()) {
 		::ShowWindow(m_hWndStatusBar, SW_HIDE);
@@ -202,6 +207,56 @@ LRESULT CMainFrame::OnLocationReady(UINT, WPARAM wParam, LPARAM lParam, BOOL&) {
 
 bool CMainFrame::IsLocationPending() const {
 	return m_LocationPending;
+}
+
+LRESULT CMainFrame::OnAlwaysOnTop(WORD, WORD, HWND, BOOL&) {
+	bool top = (GetExStyle() & WS_EX_TOPMOST) == 0;
+	SetWindowPos(top ? HWND_TOPMOST : HWND_NOTOPMOST, 0, 0, 0, 0, SWP_NOMOVE | SWP_NOSIZE | SWP_NOACTIVATE);
+	UISetCheck(ID_OPTIONS_ALWAYSONTOP, top);
+	AppSettings::Get().AlwaysOnTop(top ? 1 : 0);
+	return 0;
+}
+
+LRESULT CMainFrame::OnFont(WORD, WORD, HWND, BOOL&) {
+	// The font of the text that isn't astrological symbols (those are always the symbol font): Consolas until the user
+	// picks another. lfHeight is kept in tenths of a point; the font dialog wants device units.
+	LOGFONT lf = AppSettings::Get().TextFont();
+	if (lf.lfFaceName[0] == 0) {
+		lf = {};
+		wcscpy_s(lf.lfFaceName, L"Consolas");
+		lf.lfWeight = FW_NORMAL;
+		lf.lfHeight = 100;
+	}
+	LOGFONT shown = lf;
+	shown.lfHeight = -MulDiv(lf.lfHeight, CClientDC(m_hWnd).GetDeviceCaps(LOGPIXELSY), 720);
+
+	CFontDialog dlg(&shown, CF_SCREENFONTS | CF_INITTOLOGFONTSTRUCT | CF_NOSCRIPTSEL | CF_NOVERTFONTS, nullptr, m_hWnd);
+	if (!WTLHelper::InvokeFontDialog(dlg))
+		return 0;
+
+	LOGFONT chosen{};
+	dlg.GetCurrentFont(&chosen);
+	chosen.lfHeight = std::clamp(dlg.GetSize(), 70, 180);
+	AppSettings::Get().TextFont(chosen);
+	for (int i = 0; i < m_view.GetPageCount(); i++)
+		if (auto view = ViewOfPage(i))
+			view->TextFontChanged();
+	return 0;
+}
+
+LRESULT CMainFrame::OnAspectOptions(WORD, WORD, HWND, BOOL&) {
+	CAspectOptionsDlg dlg;
+	dlg.SetOptions(AspectOptions::Current());
+	if (dlg.DoModal(m_hWnd) != IDOK)
+		return 0;
+
+	AspectOptions::Current() = dlg.GetOptions();
+	AspectOptions::StoreInSettings();
+	// every chart works its aspects out again
+	for (int i = 0; i < m_view.GetPageCount(); i++)
+		if (auto view = ViewOfPage(i))
+			view->AspectSettingsChanged();
+	return 0;
 }
 
 LRESULT CMainFrame::OnToggleDarkMode(WORD, WORD, HWND, BOOL&) {

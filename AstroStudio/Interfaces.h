@@ -39,6 +39,10 @@ struct IView {
 	virtual bool CanClose() {
 		return true;
 	}
+	// The text font (AppSettings::TextFont) was changed with Options > Font.
+	virtual void TextFontChanged() {}
+	// The aspect settings (AspectOptions::Current) changed: a view that shows aspects works them out again.
+	virtual void AspectSettingsChanged() {}
 	// the file the view's document lives in, or null
 	virtual PCWSTR FilePath() const {
 		return nullptr;

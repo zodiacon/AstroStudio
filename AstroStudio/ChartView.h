@@ -32,6 +32,7 @@ public:
 	PCWSTR FilePath() const override;
 	// asks whether to save unsaved changes
 	bool CanClose() override;
+	void AspectSettingsChanged() override;
 
 	BEGIN_MSG_MAP(CChartView)
 		MESSAGE_HANDLER(WM_RECALC, OnRecalc)
@@ -109,6 +110,8 @@ private:
 	LRESULT OnForwardMsg(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM lParam, BOOL& /*bHandled*/);
 	LRESULT OnThemeChanged(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, BOOL& /*bHandled*/);
 	LRESULT OnLocationUpdated(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, BOOL& /*bHandled*/);
+	// works out the chart's aspects by the current aspect settings and gives them to everything that shows them
+	void UpdateAspects();
 	void UpdateAspectGridScrollSize();
 	void UpdateAspectGridScrollBarTheme();
 

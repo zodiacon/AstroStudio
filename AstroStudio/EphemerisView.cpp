@@ -191,6 +191,22 @@ void CEphemerisView::UpdateUI(CUpdateUIBase& ui) {
 	UpdateViewUI();
 }
 
+void CEphemerisView::TextFontChanged() {
+	// the size of the chosen font becomes the ephemeris's
+	if (int size = AppSettings::Get().TextFont().lfHeight; size > 0)
+		m_FontSize = std::clamp(size, 70, 180);
+	auto images = m_List.GetImageList(LVSIL_SMALL);
+	images.SetIconSize(1, m_FontSize / 6);
+	m_List.SetImageList(images, LVSIL_SMALL);
+
+	CreateFonts();
+	SaveSettings();
+	UpdateNowStrip();
+	AutoSizeColumns();
+	m_List.RedrawWindow();
+	UpdateViewUI();
+}
+
 void CEphemerisView::PageActivated(bool active) {
 	if (active)
 		UpdateViewUI();
@@ -303,7 +319,15 @@ void CEphemerisView::CreateFonts() {
 	m_Font.CreatePointFont(m_FontSize, L"HamburgSymbols");
 	if (m_StdFont)
 		m_StdFont.DeleteObject();
-	m_StdFont.CreatePointFont(m_FontSize, L"Consolas");
+	// the text font the user chose with Options > Font, or Consolas; its size is the toolbar's
+	LOGFONT lf = AppSettings::Get().TextFont();
+	if (lf.lfFaceName[0] == 0) {
+		lf = {};
+		wcscpy_s(lf.lfFaceName, L"Consolas");
+		lf.lfWeight = FW_NORMAL;
+	}
+	lf.lfHeight = m_FontSize;
+	m_StdFont.CreatePointFontIndirect(&lf);
 }
 
 void CEphemerisView::UpdateViewUI() {

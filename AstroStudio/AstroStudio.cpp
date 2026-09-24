@@ -3,9 +3,9 @@
 
 #include "pch.h"
 #include "MainFrm.h"
-#include <ThemeHelper.h>
 #include <WTLHelper.h>
 #include "AppSettings.h"
+#include "AspectOptions.h"
 
 CAppModule _Module;
 AppSettings g_Settings;
@@ -48,6 +48,7 @@ int WINAPI _tWinMain(HINSTANCE hInstance, HINSTANCE /*hPrevInstance*/, LPTSTR lp
 	ATLASSERT(SUCCEEDED(hRes));
 
 	AppSettings::Get().Load(AppSettings::RegistryKey);
+	AspectOptions::LoadFromSettings();
 	// dark or not as the user last chose, and as the system is until then
 	int dark = AppSettings::Get().DarkMode();
 	if (dark < 0)

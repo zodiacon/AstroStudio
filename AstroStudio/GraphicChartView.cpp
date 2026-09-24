@@ -23,7 +23,8 @@ LRESULT CGraphicChartView::OnPaint(UINT, WPARAM, LPARAM, BOOL&) {
 	ApplyState();
 
 	m_RenderTarget->BeginDraw();
-	m_RenderTarget->Clear(D2D1::ColorF(D2D1::ColorF::LightGray));
+	// (the part of the window outside the square the chart is drawn in)
+	m_RenderTarget->Clear(WTLHelper::IsDarkMode() ? ColorFromRgb(20, 20, 20) : D2D1::ColorF(D2D1::ColorF::LightGray));
 	m_Drawing.Draw(m_RenderTarget, size);
 	if (m_RenderTarget->EndDraw() == D2DERR_RECREATE_TARGET)
 		m_RenderTarget.Release();	// device lost; recreated on the next paint
@@ -67,7 +68,15 @@ void CGraphicChartView::Refresh() {
 	HideTip();
 }
 
+LRESULT CGraphicChartView::OnThemeChanged(UINT, WPARAM, LPARAM, BOOL& handled) {
+	Invalidate();
+	handled = FALSE;		// the message goes to everything below the frame
+	return 0;
+}
+
 void CGraphicChartView::ApplyState() {
+	// the pictures (Export, Copy) follow the mode as well: they are what is on the screen
+	m_Drawing.DrawingParameters(WTLHelper::IsDarkMode() ? ChartDrawingParameters::Dark() : ChartDrawingParameters());
 	m_Drawing.Rotation(m_Rotation).Highlight(m_Selected);
 	m_Drawing.Transits(m_Transit).TransitAspects(&m_TransitAspects).TransitCaption(m_TransitCaption);
 }

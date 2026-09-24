@@ -8,6 +8,40 @@ float aspectAngles[] = {
     40, 80,
 };
 
+AspectSettings::AspectSettings() {
+	AspectEnabled.fill(true);
+	AspectOrb.fill(-1);
+	PlanetEnabled.fill(true);
+	PlanetOrbAdd.fill(0);
+}
+
+AspectSettings& AspectSettings::CustomOrb(AspectType type, double orb) {
+	if (int i = static_cast<int>(type); i >= 0 && i < AspectTypeCount)
+		AspectOrb[i] = static_cast<float>(orb);
+	return *this;
+}
+
+float AspectSettings::OrbFor(AspectType type) const {
+	int i = static_cast<int>(type);
+	if (i < 0 || i >= AspectTypeCount)
+		return 0;
+	if (AspectOrb[i] >= 0)
+		return AspectOrb[i];
+	bool major = type <= AspectType::Opposition;
+	float orb = major ? MajorAspectOrb : MinorAspectOrb;
+	return type == AspectType::Conjunction ? orb + ConjunctionOrbAdd : orb;
+}
+
+bool AspectSettings::IsEnabled(Planet planet) const {
+	int i = static_cast<int>(planet);
+	return i < 0 || i >= PlanetCount || PlanetEnabled[i];
+}
+
+float AspectSettings::OrbAdd(Planet planet) const {
+	int i = static_cast<int>(planet);
+	return i < 0 || i >= PlanetCount ? 0 : PlanetOrbAdd[i];
+}
+
 AspectCalculator::AspectCalculator(AspectSettings const& settings) : m_settings(settings) {
 }
 
@@ -17,7 +51,7 @@ std::vector<AspectData> AspectCalculator::Calculate(std::vector<PlanetPosition> 
 
     for(int i = 0; i < (int)planets.size(); i++)
         for(int j = 0; j < i; j++)
-            if (i != j) {
+            if (i != j && m_settings.IsEnabled(planets[i].Planet) && m_settings.IsEnabled(planets[j].Planet)) {
                 auto data = CalcAspect(planets[j], planets[i]);
                 if (data.Type != AspectType::None)
                     aspects.push_back(std::move(data));
@@ -32,7 +66,9 @@ float AspectCalculator::GetAspectAngle(AspectType type) {
 AspectType AspectCalculator::GetAspectType(Planet p1, Planet p2, float diff, float& dist) const {
     int count = m_settings.MajorOnly ? 5 : _countof(aspectAngles);
     dist = -1;
-    float extra = 0;
+    if (!m_settings.IsEnabled(p1) || !m_settings.IsEnabled(p2))
+        return AspectType::None;
+    float extra = std::max(m_settings.OrbAdd(p1), m_settings.OrbAdd(p2));
     if (p1 == Planet::Sun && p2 == Planet::Moon)
         extra += m_settings.SunMoonOrbAdd;
     else if (p1 == Planet::Sun)
@@ -42,11 +78,9 @@ AspectType AspectCalculator::GetAspectType(Planet p1, Planet p2, float diff, flo
     
     for (int i = 0; i < count; i++) {
         auto type = (AspectType)i;
-        bool major = i <= (int)AspectType::Opposition;       
-        auto orb = major ? m_settings.MajorAspectOrb : m_settings.MinorAspectOrb;
-        if (type == AspectType::Conjunction)
-            orb += m_settings.ConjunctionOrbAdd;
-        orb += extra;
+        if (!m_settings.AspectEnabled[i])
+            continue;
+        auto orb = m_settings.OrbFor(type) + extra;
 
         dist = fabs(diff - aspectAngles[i]);
         if (dist <= orb) {

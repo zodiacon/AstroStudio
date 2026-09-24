@@ -1,6 +1,7 @@
 #pragma once
 
 #include "AstroCalculator.h"
+#include <array>
 
 // all aspect angles are multiplied by 100 to keep them as simple integers
 
@@ -39,6 +40,11 @@ struct AspectData {
 };
 
 struct AspectSettings {
+	static constexpr int AspectTypeCount = 15;
+	static constexpr int PlanetCount = static_cast<int>(Planet::NumPlanets);
+
+	AspectSettings();
+
 	float MajorAspectOrb{ 8 };
 	float ConjunctionOrbAdd{ 0 };
 	float MinorAspectOrb{ 2 };
@@ -47,7 +53,20 @@ struct AspectSettings {
 	float SunMoonOrbAdd{ 0 };
 	bool MajorOnly{ false };
 
+	// Each aspect can be switched off, or given an orb of its own (negative: the general orb of its kind, major or minor,
+	// applies - with ConjunctionOrbAdd for the conjunction).
+	std::array<bool, AspectTypeCount> AspectEnabled;
+	std::array<float, AspectTypeCount> AspectOrb;
+	// A planet can be left out of the aspects altogether, or have extra orb for the aspects it takes part in (the larger of
+	// the two planets' extras is used; the Sun and Moon extras above come on top).
+	std::array<bool, PlanetCount> PlanetEnabled;
+	std::array<float, PlanetCount> PlanetOrbAdd;
+
 	AspectSettings& CustomOrb(AspectType type, double orb);
+	// the orb for an aspect of this type before any planet's extra
+	float OrbFor(AspectType type) const;
+	bool IsEnabled(Planet planet) const;
+	float OrbAdd(Planet planet) const;
 };
 
 class AspectCalculator {

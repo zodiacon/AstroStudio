@@ -98,7 +98,7 @@ HRESULT D2DChartDrawing::DrawNatal(ID2D1RenderTarget* rt) {
 	auto drawGlyph = [&](WCHAR glyph, IDWriteTextFormat* format, D2D1_POINT_2F const& pt) {
 		constexpr float half = 30;
 		rt->DrawText(&glyph, 1, format, D2D1::RectF(pt.x - half, pt.y - half, pt.x + half, pt.y + half),
-			use(Black), D2D1_DRAW_TEXT_OPTIONS_NONE);
+			use(m_params.TextColor), D2D1_DRAW_TEXT_OPTIONS_NONE);
 	};
 
 	auto& resources = D2DResources::Get();
@@ -108,12 +108,12 @@ HRESULT D2DChartDrawing::DrawNatal(ID2D1RenderTarget* rt) {
 	//
 	// draw ASC/DSC line
 	//
-	rt->DrawLine(PointByAngle(center, 495, houses.Asc), PointByAngle(center, 495, houses.Asc.Opposite()), use(Black), 2);
+	rt->DrawLine(PointByAngle(center, 495, houses.Asc), PointByAngle(center, 495, houses.Asc.Opposite()), use(m_params.TextColor), 2);
 
 	//
 	// draw MC/IC line
 	//
-	rt->DrawLine(PointByAngle(center, 495, houses.MC), PointByAngle(center, 495, houses.MC.Opposite()), use(Black), 2);
+	rt->DrawLine(PointByAngle(center, 495, houses.MC), PointByAngle(center, 495, houses.MC.Opposite()), use(m_params.TextColor), 2);
 
 	//
 	// draw zodiac
@@ -146,7 +146,7 @@ HRESULT D2DChartDrawing::DrawNatal(ID2D1RenderTarget* rt) {
 
 		if (m_params.FillZodiacBelts)
 			rt->FillGeometry(geometry, use(m_params.ElementColor[i % 4]));
-		rt->DrawGeometry(geometry, use(Black), 1);
+		rt->DrawGeometry(geometry, use(m_params.TextColor), 1);
 
 		drawGlyph(DefaultFont::Get().GetSignGlyph((ZodiacSign)i), resources.GlyphFormat(),PointOnCircle(center, glyphRadius, angle + 15));
 		angle -= 30;
@@ -159,7 +159,7 @@ HRESULT D2DChartDrawing::DrawNatal(ID2D1RenderTarget* rt) {
 		for (int i = 0; i < 12; i++) {
 			if (i % 3 == 0)
 				continue;
-			rt->DrawLine(center, PointByAngle(center, innerRadius, houses.Cusps[i]), use(Gray), 1);
+			rt->DrawLine(center, PointByAngle(center, innerRadius, houses.Cusps[i]), use(m_params.GridColor), 1);
 		}
 	}
 
@@ -184,7 +184,7 @@ HRESULT D2DChartDrawing::DrawNatal(ID2D1RenderTarget* rt) {
 	for (auto& pp : planets) {
 		auto pt = PointByAngle(center, r, pp.Longitude);
 		bool highlighted = m_highlight && !m_highlight->Transit && m_highlight->Planet == pp.Planet;
-		rt->FillEllipse(D2D1::Ellipse(pt, highlighted ? 6.f : 3.f, highlighted ? 6.f : 3.f), use(highlighted ? D2D1::ColorF(D2D1::ColorF::DarkOrange) : Blue));
+		rt->FillEllipse(D2D1::Ellipse(pt, highlighted ? 6.f : 3.f, highlighted ? 6.f : 3.f), use(highlighted ? D2D1::ColorF(D2D1::ColorF::DarkOrange) : m_params.DotColor));
 	}
 
 	//
@@ -313,7 +313,7 @@ HRESULT D2DChartDrawing::DrawTransitBand(ID2D1RenderTarget* rt) {
 	rt->FillEllipse(D2D1::Ellipse(center, TransitOuterRadius, TransitOuterRadius), brush);
 	brush->SetColor(m_params.BackColor);
 	rt->FillEllipse(D2D1::Ellipse(center, TransitInnerRadius, TransitInnerRadius), brush);
-	brush->SetColor(Gray);
+	brush->SetColor(m_params.GridColor);
 	rt->DrawEllipse(D2D1::Ellipse(center, TransitOuterRadius, TransitOuterRadius), brush, 1);
 	rt->DrawEllipse(D2D1::Ellipse(center, TransitInnerRadius, TransitInnerRadius), brush, 1);
 	return S_OK;
@@ -397,7 +397,7 @@ HRESULT D2DChartDrawing::DrawTransits(ID2D1RenderTarget* rt) {
 			if (fade) {
 				WCHAR glyph = DefaultFont::Get().GetAspectGlyph(aspect.Type);
 				rt->DrawText(&glyph, 1, resources.GlyphFormat(), D2D1::RectF(middle.x - 30, middle.y - 30, middle.x + 30, middle.y + 30),
-					use(Black), D2D1_DRAW_TEXT_OPTIONS_NONE);
+					use(m_params.TextColor), D2D1_DRAW_TEXT_OPTIONS_NONE);
 			}
 		}
 	}

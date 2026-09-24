@@ -230,6 +230,8 @@
     <ClCompile Include="DefaultFont.cpp" />
     <ClCompile Include="EphemerisView.cpp" />
     <ClCompile Include="GraphicChartView.cpp" />
+    <ClCompile Include="AspectOptions.cpp" />
+    <ClCompile Include="AspectOptionsDlg.cpp" />
     <ClCompile Include="ChartImage.cpp" />
     <ClCompile Include="EphemerisOptionsDlg.cpp" />
     <ClCompile Include="Helpers.cpp" />
@@ -266,6 +268,8 @@
     <ClInclude Include="EphemerisView.h" />
     <ClInclude Include="GraphicChartView.h" />
     <ClInclude Include="AppSettings.h" />
+    <ClInclude Include="AspectOptions.h" />
+    <ClInclude Include="AspectOptionsDlg.h" />
     <ClInclude Include="ChartImage.h" />
     <ClInclude Include="EphemerisOptionsDlg.h" />
     <ClInclude Include="Helpers.h" />

@@ -5,6 +5,7 @@
 #include "Aspects.h"
 #include "DefaultFont.h"
 #include "AppSettings.h"
+#include "AspectOptions.h"
 #include <filesystem>
 #include <ToolbarHelper.h>
 #include <DarkMode/DmlibColor.h>
@@ -24,8 +25,11 @@ void CChartView::Chart(ChartData data) {
 	m_DetailsView.SetChartData(&m_Data);
 	m_ChartDrawing.SetChartData(&m_Data);
 	m_AspectGrid.SetChartData(&m_Data);
+	UpdateAspects();
+}
 
-	AspectCalculator ac;
+void CChartView::UpdateAspects() {
+	AspectCalculator ac(AspectOptions::Current().Chart);
 	auto aspects = ac.Calculate(m_Data.AllPlanets());
 	m_AspectList.SetAspects(aspects);
 	m_AspectList.Refresh();
@@ -35,7 +39,11 @@ void CChartView::Chart(ChartData data) {
 	m_ChartDrawing.SetAspects(std::move(aspects));
 	m_ChartDrawing.Refresh();
 	if (m_Transits)
-		UpdateTransits();
+		UpdateTransits();		// their aspects are to this chart
+}
+
+void CChartView::AspectSettingsChanged() {
+	UpdateAspects();
 }
 
 void CChartView::ChartForNow() {
@@ -421,11 +429,8 @@ void CChartView::UpdateTransits() {
 	m_TransitData.Harmonic(m_Data.Harmonic());
 	m_TransitData.CalcPlanets(m_Calc);
 
-	// transits work with tight orbs and the major aspects
-	AspectSettings settings;
-	settings.MajorOnly = true;
-	settings.MajorAspectOrb = 3;
-	AspectCalculator calc(settings);
+	// (by default with tight orbs and the major aspects only)
+	AspectCalculator calc(AspectOptions::Current().Transit);
 	std::vector<AspectData> aspects;
 	for (auto const& transiting : m_TransitData.AllPlanets())
 		for (auto const& natal : m_Data.AllPlanets())
@@ -651,17 +656,7 @@ LRESULT CChartView::OnRecalc(UINT, WPARAM wp, LPARAM, BOOL&) {
 		m_Data.CalcHouses(m_Calc);
 		break;
 	}
-	AspectCalculator ac;
-	auto aspects = ac.Calculate(m_Data.AllPlanets());
-	m_AspectList.SetAspects(aspects);
-	m_AspectList.Refresh();
-	m_AspectGrid.SetAspects(aspects);
-	m_AspectGrid.Refresh();
-	UpdateAspectGridScrollSize();
-	m_ChartDrawing.SetAspects(std::move(aspects));
-	m_ChartDrawing.Refresh();
-	if (m_Transits)
-		UpdateTransits();		// their aspects are to this chart
+	UpdateAspects();
 	return 0;
 }
 

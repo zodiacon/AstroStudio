@@ -13,6 +13,8 @@ struct AppSettings : Settings {
 		SETTING(MainWindowPlacement, WINDOWPLACEMENT{}, SettingType::Binary);
 		SETTING(DarkMode, -1, SettingType::Int32);		// 1 dark, 0 light, -1 (never chosen): as the system is
 		SETTING(ViewStatusBar, 1, SettingType::Bool);
+		SETTING(AlwaysOnTop, 0, SettingType::Bool);
+		SETTING(TextFont, LOGFONT{}, SettingType::Binary);		// the font for text that is not astrological symbols (empty face: Consolas); lfHeight in tenths of a point
 		SETTING(LastHouseSystem, (int)'K', SettingType::Int32);		// the last one used for a chart (Koch to begin with)
 
 		// the chart view's Step, Auto and Live controls
@@ -28,12 +30,15 @@ struct AppSettings : Settings {
 		SETTING(EphemerisStep, 1, SettingType::Int32);		// days between rows
 		SETTING(EphemerisEclipses, 0, SettingType::Bool);
 		SETTING(EphemerisVoid, 0, SettingType::Bool);
+		SETTING_STRING(AspectSets, L"");		// the aspect settings (AspectOptions), as INI text; empty: the defaults
 		SETTING_STRING(EphemerisBodies, L"");		// the numbers of the bodies (Planet), comma separated; empty: the usual ones
 	END_SETTINGS
 
 	DEF_SETTING(MainWindowPlacement, WINDOWPLACEMENT)
 	DEF_SETTING(DarkMode, int)
 	DEF_SETTING(ViewStatusBar, int)
+	DEF_SETTING(AlwaysOnTop, int)
+	DEF_SETTING(TextFont, LOGFONT)
 	DEF_SETTING(LastHouseSystem, int)
 	DEF_SETTING(ChartStepCount, int)
 	DEF_SETTING(ChartStepUnit, int)
@@ -45,5 +50,6 @@ struct AppSettings : Settings {
 	DEF_SETTING(EphemerisStep, int)
 	DEF_SETTING(EphemerisEclipses, int)
 	DEF_SETTING(EphemerisVoid, int)
+	DEF_SETTING_STRING(AspectSets)
 	DEF_SETTING_STRING(EphemerisBodies)
 };

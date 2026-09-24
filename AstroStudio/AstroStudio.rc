@@ -102,6 +102,8 @@ BEGIN
     END
     POPUP "&Options"
     BEGIN
+        MENUITEM "&Aspects...",                 ID_OPTIONS_ASPECTS
+        MENUITEM SEPARATOR
         MENUITEM "&Always On Top",              ID_OPTIONS_ALWAYSONTOP
         MENUITEM "&Font...",                    ID_OPTIONS_FONT
         MENUITEM "&Dark Mode",                  ID_OPTIONS_DARKMODE
@@ -299,6 +301,33 @@ BEGIN
     PUSHBUTTON      "Cancel",IDCANCEL,278,155,50,14
 END
 
+IDD_ASPECTOPTIONS DIALOGEX 0, 0, 302, 235
+STYLE DS_SETFONT | DS_MODALFRAME | DS_FIXEDSYS | DS_CENTER | WS_POPUP | WS_CAPTION | WS_SYSMENU
+CAPTION "Aspects"
+FONT 9, "Segoe UI", 400, 0, 0x0
+BEGIN
+    LTEXT           "Settings for:",IDC_STATIC,7,9,44,8
+    COMBOBOX        IDC_ASP_SET,55,7,100,60,CBS_DROPDOWNLIST | WS_VSCROLL | WS_TABSTOP
+    LTEXT           "Major aspects orb:",IDC_STATIC,7,29,62,8
+    EDITTEXT        IDC_ASP_MAJORORB,72,27,28,14,ES_AUTOHSCROLL
+    LTEXT           "Minor aspects orb:",IDC_STATIC,110,29,62,8
+    EDITTEXT        IDC_ASP_MINORORB,175,27,28,14,ES_AUTOHSCROLL
+    CONTROL         "Major aspects only",IDC_ASP_MAJORONLY,"Button",BS_AUTOCHECKBOX | WS_TABSTOP,212,29,85,10
+    LTEXT           "Aspects:",IDC_STATIC,7,49,40,8
+    CONTROL         "",IDC_ASP_ASPECTS,"SysListView32",LVS_REPORT | LVS_SINGLESEL | LVS_SHOWSELALWAYS | WS_BORDER | WS_TABSTOP,7,59,146,118
+    LTEXT           "Orb of the selected aspect (empty: the general orb):",IDC_STATIC,7,181,146,16
+    EDITTEXT        IDC_ASP_ORB,7,199,40,14,ES_AUTOHSCROLL
+    LTEXT           "Planets:",IDC_STATIC,158,49,40,8
+    CONTROL         "",IDC_ASP_PLANETS,"SysListView32",LVS_REPORT | LVS_SINGLESEL | LVS_SHOWSELALWAYS | WS_BORDER | WS_TABSTOP,158,59,137,118
+    LTEXT           "Extra orb of the selected planet, for the aspects it takes part in:",IDC_STATIC,158,181,137,16
+    EDITTEXT        IDC_ASP_EXTRA,158,199,40,14,ES_AUTOHSCROLL
+    PUSHBUTTON      "Load...",IDC_ASP_LOAD,7,214,45,14
+    PUSHBUTTON      "Save...",IDC_ASP_SAVE,56,214,45,14
+    PUSHBUTTON      "Defaults",IDC_ASP_DEFAULTS,105,214,45,14
+    DEFPUSHBUTTON   "OK",IDOK,190,214,50,14
+    PUSHBUTTON      "Cancel",IDCANCEL,245,214,50,14
+END
+
 IDD_EPHEMERISOPTIONS DIALOGEX 0, 0, 246, 226
 STYLE DS_SETFONT | DS_MODALFRAME | DS_FIXEDSYS | DS_CENTER | WS_POPUP | WS_CAPTION | WS_SYSMENU
 CAPTION "Ephemeris Options"
@@ -471,6 +500,7 @@ BEGIN
     ID_CHART_LIVE           "Keep the chart at the current time\nLive"
     ID_CHART_TRANSITS       "Show the planets of another moment around the chart\nTransits"
     ID_EPHEMERIS_OPTIONS    "Choose the start date, the step and the bodies of the ephemeris\nOptions"
+    ID_OPTIONS_ASPECTS      "Choose the aspects, the planets and the orbs used for them\nAspects"
 END
 
 STRINGTABLE

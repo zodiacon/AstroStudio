@@ -20,6 +20,12 @@ struct ChartDrawingParameters {
 	D2D1_COLOR_F MinorAspectColor{ D2D1::ColorF(D2D1::ColorF::Purple) };
 	D2D1_COLOR_F AspectColor{ D2D1::ColorF(D2D1::ColorF::Black) };
 
+	// what is drawn in one colour: the glyphs, the outlines of the belts and the lines of the angles; the house lines; the
+	// dots that mark the planets' places
+	D2D1_COLOR_F TextColor{ D2D1::ColorF(D2D1::ColorF::Black) };
+	D2D1_COLOR_F GridColor{ D2D1::ColorF(D2D1::ColorF::Gray) };
+	D2D1_COLOR_F DotColor{ D2D1::ColorF(D2D1::ColorF::Blue) };
+
 	float MajorAspectWidth{ 3 };
 	float MinorAspectWidth{ 1.5f };
 	float ZodiacBeltWidth{ 40 };
@@ -29,6 +35,23 @@ struct ChartDrawingParameters {
 	bool DrawHouseLines{ true };
 	bool DrawVeryMinorAspects{ true };
 	bool DrawNonStandardPlanetAspects{ false };
+
+	// the colours for a dark background (the defaults are for a light one)
+	static ChartDrawingParameters Dark() {
+		ChartDrawingParameters p;
+		p.BackColor = ColorFromRgb(30, 30, 30);
+		p.ElementColor = { ColorFromRgb(190, 65, 15), ColorFromRgb(140, 128, 45), ColorFromRgb(50, 135, 70), ColorFromRgb(50, 105, 150) };
+		p.SoftAspectColor = ColorFromRgb(100, 160, 255);
+		p.HardAspectColor = ColorFromRgb(255, 95, 95);
+		p.MinorAspectColor = ColorFromRgb(195, 120, 235);
+		p.AspectColor = ColorFromRgb(225, 225, 225);
+		p.TextColor = ColorFromRgb(230, 230, 230);
+		p.GridColor = ColorFromRgb(115, 115, 115);
+		p.DotColor = ColorFromRgb(110, 170, 255);
+		p.TransitBandColor = ColorFromRgb(42, 52, 72);
+		p.TransitColor = ColorFromRgb(255, 115, 135);
+		return p;
+	}
 
 	// with transits: the band the transiting planets stand in, and their color
 	D2D1_COLOR_F TransitBandColor{ D2D1::ColorF(0.90f, 0.93f, 0.98f) };

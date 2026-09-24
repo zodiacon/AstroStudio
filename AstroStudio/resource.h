@@ -12,6 +12,7 @@
 #define ID_VIEW_GRIDLINES               106
 #define IDD_NEWCHART                    107
 #define IDD_EPHEMERISOPTIONS            232
+#define IDD_ASPECTOPTIONS               233
 #define IDR_MAINFRAME                   128
 #define IDS_TITLE                       129
 #define IDR_FONT                        201
@@ -88,6 +89,17 @@
 #define IDC_EPH_VOID                    1044
 #define IDC_EPH_STANDARD                1045
 #define IDC_EPH_ALL                     1046
+#define IDC_ASP_SET                     1047
+#define IDC_ASP_MAJORORB                1048
+#define IDC_ASP_MINORORB                1049
+#define IDC_ASP_MAJORONLY               1050
+#define IDC_ASP_ASPECTS                 1051
+#define IDC_ASP_ORB                     1052
+#define IDC_ASP_PLANETS                 1053
+#define IDC_ASP_EXTRA                   1054
+#define IDC_ASP_LOAD                    1055
+#define IDC_ASP_SAVE                    1056
+#define IDC_ASP_DEFAULTS                1057
 #define IDC_SYSLINK1                    1038
 #define IDC_LINK                        1038
 #define ID_WINDOW_CLOSE                 32772
@@ -112,14 +124,15 @@
 #define ID_CHART_LIVE                   32792
 #define ID_CHART_TRANSITS               32793
 #define ID_EPHEMERIS_OPTIONS            32794
+#define ID_OPTIONS_ASPECTS              32795
 
 // Next default values for new objects
 // 
 #ifdef APSTUDIO_INVOKED
 #ifndef APSTUDIO_READONLY_SYMBOLS
-#define _APS_NEXT_RESOURCE_VALUE        233
-#define _APS_NEXT_COMMAND_VALUE         32795
-#define _APS_NEXT_CONTROL_VALUE         1047
+#define _APS_NEXT_RESOURCE_VALUE        234
+#define _APS_NEXT_COMMAND_VALUE         32796
+#define _APS_NEXT_CONTROL_VALUE         1058
 #define _APS_NEXT_SYMED_VALUE           108
 #endif
 #endif
