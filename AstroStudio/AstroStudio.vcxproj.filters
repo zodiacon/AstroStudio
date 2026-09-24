@@ -263,10 +263,10 @@
       <Filter>Resource Files\Icons</Filter>
     </Image>
     <Image Include="res\back.ico">
-      <Filter>Resource Files</Filter>
+      <Filter>Resource Files\Icons</Filter>
     </Image>
     <Image Include="res\Forward.ico">
-      <Filter>Resource Files</Filter>
+      <Filter>Resource Files\Icons</Filter>
     </Image>
   </ItemGroup>
   <ItemGroup>

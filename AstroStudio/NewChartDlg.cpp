@@ -137,6 +137,11 @@ LRESULT CNewChartDlg::OnMonthOrYearChanged(WORD, WORD, HWND, BOOL&) {
 	return 0;
 }
 
+LRESULT CNewChartDlg::OnTimeKillFocus(WORD, WORD, HWND, BOOL&) {
+	m_Time.NormalizeTime();		// "9.30 pm" becomes 21:30:00
+	return 0;
+}
+
 LRESULT CNewChartDlg::OnManualToggled(WORD, WORD, HWND, BOOL&) {
 	m_Time.ManualToggled();
 	return 0;

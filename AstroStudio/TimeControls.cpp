@@ -14,7 +14,6 @@ void CTimeControls::Init(CWindow parent) {
 	m_Day.Attach(m_Parent.GetDlgItem(IDC_DAY));
 	m_Month.Attach(m_Parent.GetDlgItem(IDC_MONTH));
 	m_Zone.Attach(m_Parent.GetDlgItem(IDC_TIMEZONE));
-	m_Time.Attach(m_Parent.GetDlgItem(IDC_TIME));
 
 	for (auto name : MonthNames)
 		m_Month.AddString(name);
@@ -33,6 +32,8 @@ void CTimeControls::Init(CWindow parent) {
 		m_Zone.SetItemData(n, i);
 	}
 
+	m_Parent.GetDlgItem(IDC_TIME).SendMessage(EM_LIMITTEXT, 14);		// "12:30:45 p.m."
+	m_Parent.GetDlgItem(IDC_TIME).SendMessage(EM_SETCUEBANNER, TRUE, (LPARAM)L"hh:mm:ss");
 	m_Parent.GetDlgItem(IDC_YEAR).SendMessage(EM_LIMITTEXT, 5);		// "-3000"
 	m_Parent.GetDlgItem(IDC_TZOFFSET).SendMessage(EM_LIMITTEXT, 6);	// "+05:30"
 	UpdateEnabled();
@@ -46,14 +47,9 @@ void CTimeControls::Set(DateTime const& ut, TimeZoneInfo const& tz) {
 	UpdateDays();
 	m_Day.SetCurSel(local.Day - 1);
 
-	SYSTEMTIME st{};
-	st.wYear = 2000;
-	st.wMonth = 1;
-	st.wDay = 1;
-	st.wHour = (WORD)local.Hour;
-	st.wMinute = (WORD)local.Minute;
-	st.wSecond = (WORD)local.Second;
-	m_Time.SetSystemTime(GDT_VALID, &st);
+	CString time;
+	time.Format(L"%02d:%02d:%02d", local.Hour, local.Minute, local.Second);
+	m_Parent.SetDlgItemText(IDC_TIME, time);
 
 	// A manual chart has no zone of its own; the list still shows one, so that switching the override
 	// off lands on something sensible.
@@ -111,11 +107,14 @@ CTimeControls::Error CTimeControls::Get(DateTime& ut, TimeZoneInfo& tz) const {
 	if (skipped || local.Day > DateTime::DaysInMonth(local.Month, DateTime::IsLeap(local.Year, gregorian)))
 		return Error::Date;
 
-	SYSTEMTIME st;
-	m_Time.GetSystemTime(&st);
-	local.Hour = st.wHour;
-	local.Minute = st.wMinute;
-	local.Second = st.wSecond;
+	CString time;
+	m_Parent.GetDlgItemText(IDC_TIME, time);
+	int hour, minute, second;
+	if (!ParseTime(time, hour, minute, second))
+		return Error::Time;
+	local.Hour = hour;
+	local.Minute = minute;
+	local.Second = second;
 
 	TimeZoneInfo zone;
 	if (m_Parent.IsDlgButtonChecked(IDC_MANUALTZ)) {
@@ -141,6 +140,7 @@ UINT CTimeControls::ControlFor(Error error) {
 	switch (error) {
 		case Error::Year: return IDC_YEAR;
 		case Error::Date: return IDC_DAY;
+		case Error::Time: return IDC_TIME;
 		case Error::Offset: return IDC_TZOFFSET;
 	}
 	return 0;
@@ -150,9 +150,115 @@ PCWSTR CTimeControls::Message(Error error) {
 	switch (error) {
 		case Error::Year: return L"The year must be a number between -3000 and 3000 (0 is 1 BC, -1 is 2 BC).";
 		case Error::Date: return L"That date doesn't exist.";
+		case Error::Time: return L"The time must look like 21:45:10 or 9:30 pm (hours, minutes and seconds; 24-hour unless am/pm is given).";
 		case Error::Offset: return L"The UT offset must look like +05:30, -4 or +0:45 (up to 15:59).";
 	}
 	return L"";
+}
+
+bool CTimeControls::ParseTime(PCWSTR text, int& hour, int& minute, int& second) {
+	CString s(text);
+	s.Trim();
+	s.MakeLower();
+	if (s.IsEmpty())
+		return false;
+
+	// an optional am/pm at the end: "pm", "p.m.", "p", with or without a space before it
+	int meridiem = 0;		// 1 = am, 2 = pm
+	int letters = 0;
+	while (letters < s.GetLength() && !iswalpha(s[letters]))
+		letters++;
+	if (letters < s.GetLength()) {
+		CString suffix;
+		for (int i = letters; i < s.GetLength(); i++)
+			if (s[i] != L'.' && s[i] != L' ')
+				suffix += s[i];
+		if (suffix == L"am" || suffix == L"a")
+			meridiem = 1;
+		else if (suffix == L"pm" || suffix == L"p")
+			meridiem = 2;
+		else
+			return false;
+		s = s.Left(letters);
+		s.Trim();
+	}
+
+	// the numbers: either one run of digits (930, 2145, 214510) or up to three groups split by : . or space
+	int values[3] = { 0, 0, 0 };
+	int count = 0;
+	bool digitsOnly = true;
+	for (int i = 0; i < s.GetLength(); i++)
+		if (!iswdigit(s[i]))
+			digitsOnly = false;
+	if (s.IsEmpty())
+		return false;
+
+	if (digitsOnly) {
+		int length = s.GetLength();
+		if (length > 6)
+			return false;
+		if (length <= 2) {
+			values[0] = _wtoi(s);
+			count = 1;
+		}
+		else {
+			// the last two digits are the seconds if there are five or six of them, else the minutes
+			int hourDigits = length % 2 == 0 ? length - (length == 6 ? 4 : 2) : length - (length == 5 ? 4 : 2);
+			values[0] = _wtoi(s.Left(hourDigits));
+			CString rest = s.Mid(hourDigits);
+			values[1] = _wtoi(rest.Left(2));
+			count = 2;
+			if (rest.GetLength() == 4) {
+				values[2] = _wtoi(rest.Mid(2));
+				count = 3;
+			}
+		}
+	}
+	else {
+		int pos = 0;
+		while (pos <= s.GetLength()) {
+			int start = pos;
+			while (pos < s.GetLength() && iswdigit(s[pos]))
+				pos++;
+			int digits = pos - start;
+			if (digits < 1 || digits > 2 || count >= 3)
+				return false;
+			values[count++] = _wtoi(s.Mid(start, digits));
+			if (pos == s.GetLength())
+				break;
+			if (s[pos] != L':' && s[pos] != L'.' && s[pos] != L' ')
+				return false;
+			pos++;
+		}
+	}
+
+	if (values[1] > 59 || values[2] > 59)
+		return false;
+	if (meridiem) {
+		if (values[0] < 1 || values[0] > 12)
+			return false;
+		values[0] %= 12;		// 12 am is 0, 12 pm is 12
+		if (meridiem == 2)
+			values[0] += 12;
+	}
+	else if (values[0] > 23) {
+		return false;
+	}
+
+	hour = values[0];
+	minute = values[1];
+	second = values[2];
+	return true;
+}
+
+void CTimeControls::NormalizeTime() {
+	CString text;
+	m_Parent.GetDlgItemText(IDC_TIME, text);
+	int hour, minute, second;
+	if (!text.IsEmpty() && ParseTime(text, hour, minute, second)) {
+		text.Format(L"%02d:%02d:%02d", hour, minute, second);
+		m_Parent.SetDlgItemText(IDC_TIME, text);
+	}
 }
 
 void CTimeControls::UpdateDays() {

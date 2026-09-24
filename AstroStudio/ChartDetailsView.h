@@ -46,7 +46,7 @@ public:
 		COMMAND_HANDLER(IDC_DAY, CBN_SELCHANGE, OnTimeChanged)
 		COMMAND_HANDLER(IDC_MONTH, CBN_SELCHANGE, OnMonthOrYearChanged)
 		COMMAND_HANDLER(IDC_YEAR, EN_KILLFOCUS, OnMonthOrYearChanged)
-		NOTIFY_HANDLER(IDC_TIME, DTN_DATETIMECHANGE, OnTimeNotify)
+		COMMAND_HANDLER(IDC_TIME, EN_KILLFOCUS, OnTimeChanged)
 		COMMAND_HANDLER(IDC_TIMEZONE, CBN_SELCHANGE, OnTimeChanged)
 		COMMAND_HANDLER(IDC_MANUALTZ, BN_CLICKED, OnManualToggled)
 		COMMAND_HANDLER(IDC_TZOFFSET, EN_KILLFOCUS, OnTimeChanged)
@@ -63,6 +63,7 @@ public:
 		COMMAND_HANDLER(IDC_EAST, BN_CLICKED, OnLocationChanged)
 		COMMAND_HANDLER(IDC_WEST, BN_CLICKED, OnLocationChanged)
 		MESSAGE_HANDLER(WM_INITDIALOG, OnInitView)
+		MESSAGE_HANDLER(WM_FORWARDMSG, OnForwardMsg)
 		MESSAGE_HANDLER(WM_HERE_RESULT, OnHereResult)
 		MESSAGE_HANDLER(WM_LOOKUP_RESULT, OnLookupResult)
 		CHAIN_MSG_MAP(CCustomDraw)
@@ -83,12 +84,12 @@ private:
 	// reads the date, time and zone controls into the chart and recalculates
 	void ApplyTimeFromControls();
 
+	LRESULT OnForwardMsg(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, BOOL& /*bHandled*/);
 	LRESULT OnInitView(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, BOOL& /*bHandled*/);
 	LRESULT OnHouseSystemChanged(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/);
 	LRESULT OnTimeChanged(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/);
 	LRESULT OnMonthOrYearChanged(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/);
 	LRESULT OnManualToggled(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/);
-	LRESULT OnTimeNotify(int /*idCtrl*/, LPNMHDR /*pnmh*/, BOOL& /*bHandled*/);
 	LRESULT OnHarmonicChanged(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/);
 	LRESULT OnNow(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/);
 	LRESULT OnHere(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/);

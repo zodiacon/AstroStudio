@@ -161,6 +161,12 @@ void CChartDetailsView::UpdateControls(Recalc type) {
 	}
 }
 
+// The chart page forwards keyboard messages here (see CChartView::OnForwardMsg) so the dialog gets its
+// keys: Tab moves between the fields and Enter presses the default button, Apply.
+LRESULT CChartDetailsView::OnForwardMsg(UINT, WPARAM, LPARAM lParam, BOOL&) {
+	return PreTranslateMessage(reinterpret_cast<LPMSG>(lParam));
+}
+
 LRESULT CChartDetailsView::OnInitView(UINT, WPARAM, LPARAM, BOOL&) {
 	m_ctlHouseSystem.Attach(GetDlgItem(IDC_HOUSESYSTEM));
 	m_ctlPlanets.Attach(GetDlgItem(IDC_PLANETS));
@@ -239,11 +245,6 @@ void CChartDetailsView::ApplyTimeFromControls() {
 }
 
 LRESULT CChartDetailsView::OnTimeChanged(WORD, WORD, HWND, BOOL&) {
-	ApplyTimeFromControls();
-	return 0;
-}
-
-LRESULT CChartDetailsView::OnTimeNotify(int, LPNMHDR, BOOL&) {
 	ApplyTimeFromControls();
 	return 0;
 }
