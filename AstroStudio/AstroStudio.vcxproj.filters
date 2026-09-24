@@ -42,6 +42,9 @@
     <ClCompile Include="EphemerisView.cpp">
       <Filter>Views</Filter>
     </ClCompile>
+    <ClCompile Include="EphemerisOptionsDlg.cpp">
+      <Filter>Dialogs</Filter>
+    </ClCompile>
     <ClCompile Include="ChartImage.cpp">
       <Filter>Helpers</Filter>
     </ClCompile>
@@ -130,6 +133,9 @@
     </ClInclude>
     <ClInclude Include="Interfaces.h">
       <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="EphemerisOptionsDlg.h">
+      <Filter>Dialogs</Filter>
     </ClInclude>
     <ClInclude Include="ChartImage.h">
       <Filter>Helpers</Filter>

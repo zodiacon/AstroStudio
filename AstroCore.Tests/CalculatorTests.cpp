@@ -220,3 +220,34 @@ TEST_CASE("The calculator fills in a chart", "[Calculator]") {
 	calc.Calculate(chart);
 	CHECK(Diff(chart.GetPlanet(0).Longitude, 2 * 280.37) < 0.05);
 }
+
+TEST_CASE("Ingresses and stations exist for every body the ephemeris can show", "[Calculator]") {
+	// Once a body missing from the calculator's step table threw out of these searches (and closed the program). Some of
+	// these bodies need ephemeris files the test doesn't have; then the position is zero, and the search must still end.
+	AstroCalculator calc;
+	const Planet bodies[] = {
+		Planet::Sun, Planet::Moon, Planet::Mercury, Planet::Venus, Planet::Mars, Planet::Jupiter, Planet::Saturn, Planet::Uranus,
+		Planet::Neptune, Planet::Pluto, Planet::MeanNode, Planet::TrueNode, Planet::Lilith, Planet::OscuApog, Planet::Chiron,
+		Planet::Pholus, Planet::Ceres, Planet::Pallas, Planet::Juno, Planet::Vesta, Planet::Earth,
+	};
+	for (auto planet : bodies) {
+		INFO("planet " << (int)planet);
+		CHECK_NOTHROW(calc.CalcPlanetIngress(planet, DateTime(2026, 9, 1), false));
+		CHECK_NOTHROW(calc.CalcPlanetIngress(planet, DateTime(2026, 9, 1), true));
+		if (planet != Planet::Sun && planet != Planet::Moon)
+			CHECK_NOTHROW(calc.CalcPlanetStation(planet, DateTime(2026, 9, 1)));
+	}
+}
+
+TEST_CASE("The nodes have ingresses and stations", "[Calculator]") {
+	AstroCalculator calc;
+	for (auto node : { Planet::MeanNode, Planet::TrueNode }) {
+		INFO("node " << (int)node);
+		auto start = DateTime(2026, 9, 1);
+		auto ingress = calc.CalcPlanetIngress(node, start);
+		// the nodes go backward through a sign in about a year and a half
+		CHECK(ingress.Time.Julian() - start.Julian() < 700);
+		auto at = calc.CalcPlanet(node, ingress.Time).Longitude;
+		CHECK(std::min(at.DegreeInSign(), 30 - at.DegreeInSign()) < 0.01);
+	}
+}

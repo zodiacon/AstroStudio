@@ -26,6 +26,26 @@ struct StationData : PlanetPhenom {
 	bool IsTurningRetrograde;
 };
 
+enum class EclipseKind {
+	Total, Annular, Hybrid, Partial, Penumbral,
+};
+
+struct EclipseData {
+	DateTime Maximum;		// UT of the greatest eclipse (for a solar one, the greatest anywhere on Earth)
+	bool Solar;
+	EclipseKind Kind;
+};
+
+// A stretch during which the Moon makes no exact major aspect (conjunction, sextile, square, trine, opposition) to any
+// planet, from the last one it made in its sign until it leaves the sign.
+struct VoidOfCourseData {
+	DateTime Start, End;	// End is the Moon's ingress into the next sign
+	ZodiacSign Sign;		// the sign the Moon is in
+	bool WholeSign;			// it made no aspect at all in the sign: the void starts at the ingress into the sign
+	Planet LastPlanet;		// the last aspect: with this planet
+	double LastAngle;		// and of this angle (0, 60, 90, 120 or 180 degrees)
+};
+
 enum class HouseSystem {
 	Placidus = 'P', 
 	Koch = 'K', 
@@ -69,12 +89,23 @@ public:
 	IngressData CalcPlanetIngress(Planet planet, DateTime start, bool reverse = false) const;
 	StationData CalcPlanetStation(Planet planet, DateTime start) const;
 
+	// The solar and lunar eclipses whose maximum falls in [from, to), in time order.
+	std::vector<EclipseData> CalcEclipses(DateTime const& from, DateTime const& to) const;
+	// The void of course periods of the Moon that overlap [from, to), in time order. The aspects looked for are to the
+	// Sun and the planets up to Saturn, and to Uranus, Neptune and Pluto too when outerPlanets is set.
+	std::vector<VoidOfCourseData> CalcVoidOfCourse(DateTime const& from, DateTime const& to, bool outerPlanets = true) const;
+
 	bool Calculate(ChartData& data);
 
 	double Epsilon{ .00001 };
 	int MaxIterations{ 1000 };
 
 private:
+	double Longitude(int planet, double jd) const;
+	// the time the Moon changes sign after (forward) or before jd
+	double MoonSignChange(double jd, bool forward) const;
+	VoidOfCourseData CalcVoid(double entered, double left, bool outerPlanets) const;
+
 	static inline bool s_init{ false };
 	int m_SweFlags;
 };

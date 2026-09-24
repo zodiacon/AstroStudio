@@ -2,11 +2,41 @@
 #include "EphemerisView.h"
 #include "ChartData.h"
 #include "TimeZones.h"
+#include "EphemerisOptionsDlg.h"
+#include "Aspects.h"
 #include <ToolbarHelper.h>
 
 #include "ColorHelper.h"
 #include "WTLHelper.h"
 #include "DarkMode/DarkModeSubclass.h"
+
+namespace {
+	DateTime FromJd(double jd) {
+		return DateTime(jd, DateTime::AfterPapalReform(jd));
+	}
+
+	PCWSTR EclipseKindName(EclipseKind kind) {
+		switch (kind) {
+			case EclipseKind::Total: return L"total";
+			case EclipseKind::Annular: return L"annular";
+			case EclipseKind::Hybrid: return L"hybrid";
+			case EclipseKind::Partial: return L"partial";
+			default: return L"penumbral";
+		}
+	}
+
+	AspectType MajorAspectType(double angle) {
+		if (angle == 0)
+			return AspectType::Conjunction;
+		if (angle == 60)
+			return AspectType::Sextile;
+		if (angle == 90)
+			return AspectType::Square;
+		if (angle == 120)
+			return AspectType::Trine;
+		return AspectType::Opposition;
+	}
+}
 
 ColorOptions DarkColors{
 	RGB(30, 30, 30),
@@ -56,7 +86,11 @@ CString CEphemerisView::GetColumnText(HWND h, int row, int col) {
 	auto type = GetColumnManager(h)->GetColumnTag<ColumnType>(col);
 	CString text;
 	switch (type) {
-		case ColumnType::Time: return Helpers::FormatDateTime(m_StartTime.AddDays(row));
+		case ColumnType::Time: return Helpers::FormatDateTime(m_StartTime.AddDays(m_Increment * row));
+		case ColumnType::MoonVoid:
+			EnsureRows(row + 2);
+			CalcExtras(row);
+			return (m_FormatOptions & FormatOptions::UseGlyphs) == FormatOptions::UseGlyphs ? m_Items[row].VoidGlyph : m_Items[row].VoidText;
 		case ColumnType::Phenom: return GetRowPhenom(row, (m_FormatOptions & FormatOptions::UseGlyphs) == FormatOptions::UseGlyphs);
 
 		default:
@@ -94,11 +128,21 @@ DWORD CEphemerisView::OnItemPrePaint(int, LPNMCUSTOMDRAW cd) {
 }
 
 DWORD CEphemerisView::OnSubItemPrePaint(int, LPNMCUSTOMDRAW cd) {
+	auto lv = (NMLVCUSTOMDRAW*)cd;
+	auto colType = GetColumnManager(m_List)->GetColumnTag<ColumnType>(lv->iSubItem);
+	const bool glyphs = (m_FormatOptions & FormatOptions::UseGlyphs) == FormatOptions::UseGlyphs;
+	// which rows have an eclipse or a void has to be known before the cell is drawn, which may be before its text was asked for
+	if (m_ShowEclipses && colType == ColumnType::Phenom) {
+		EnsureRows((size_t)cd->dwItemSpec + 2);
+		GetRowPhenom((int)cd->dwItemSpec, glyphs);
+	}
+	if (m_ShowVoid && colType == ColumnType::MoonVoid) {
+		EnsureRows((size_t)cd->dwItemSpec + 2);
+		CalcExtras((int)cd->dwItemSpec);
+	}
 	if ((int)cd->dwItemSpec >= m_Items.size())
 		return CDRF_DODEFAULT;
 
-	auto lv = (NMLVCUSTOMDRAW*)cd;
-	auto colType = GetColumnManager(m_List)->GetColumnTag<ColumnType>(lv->iSubItem);
 	CDCHandle dc(cd->hdc);
 
 	lv->clrTextBk = CLR_INVALID;
@@ -122,8 +166,23 @@ DWORD CEphemerisView::OnSubItemPrePaint(int, LPNMCUSTOMDRAW cd) {
 	}
 	else if (highlight && colType == ColumnType::Time)
 		lv->clrTextBk = WTLHelper::IsDarkMode() ? RGB(20, 20, 0) : RGB(220, 220, 0);
+	else if (colType == ColumnType::Phenom && item.HasEclipse)
+		lv->clrTextBk = WTLHelper::IsDarkMode() ? RGB(110, 70, 0) : RGB(255, 215, 110);
+	else if (colType == ColumnType::MoonVoid && !item.VoidText.IsEmpty()) {
+		// The Moon is void of course: the longer it is in the row's stretch of time, the stronger the purple - from a hint
+		// for an hour or two up to full strength for all of it.
+		bool dark = WTLHelper::IsDarkMode();
+		COLORREF none = dark ? RGB(38, 38, 38) : RGB(255, 255, 255), full = dark ? RGB(95, 55, 175) : RGB(175, 145, 240);
+		double weight = 0.2 + 0.8 * item.VoidFraction;
+		auto mix = [&](int shift) {
+			int a = (none >> shift) & 0xff, b = (full >> shift) & 0xff;
+			return (int)std::lround(a + (b - a) * weight);
+		};
+		lv->clrTextBk = RGB(mix(0), mix(8), mix(16));
+	}
 
-	dc.SelectFont(colType != ColumnType::Time && (m_FormatOptions & FormatOptions::UseGlyphs) == FormatOptions::UseGlyphs ? m_Font : m_StdFont);
+	bool glyphColumn = colType == ColumnType::Phenom || colType == ColumnType::MoonVoid || colType >= ColumnType::Planet;
+	dc.SelectFont(glyphColumn && glyphs ? m_Font : m_StdFont);
 	return CDRF_NEWFONT | CDRF_SKIPPOSTPAINT;
 }
 
@@ -206,6 +265,31 @@ CString CEphemerisView::GetRowPhenom(int row, bool glyphs) const {
 				auto dt = L" (" + Helpers::FormatDateTime(station.Time, DateTimeFormatOptions::TimeOnly) + L")";
 				item.PhenomGlyph += dt;
 				item.PhenomText += dt;
+			}
+		}
+
+		//
+		// eclipses, when they are asked for: at the new moon or full moon, which is the Sun and Moon in conjunction or opposition
+		//
+		if (m_ShowEclipses) {
+			const double from = item.Date.Julian(), to = next.Date.Julian();
+			EnsureEclipses(to);
+			for (auto const& eclipse : m_Eclipses) {
+				double jd = eclipse.Maximum.Julian();
+				if (jd < from || jd >= to)
+					continue;
+				if (!item.PhenomGlyph.IsEmpty())
+					item.PhenomGlyph += L" | ";
+				if (!item.PhenomText.IsEmpty())
+					item.PhenomText += L" | ";
+				// the time; with steps longer than a day the date too
+				auto when = L" (" + Helpers::FormatDateTime(FromJd(jd), to - from < 1.5 ? DateTimeFormatOptions::TimeOnly : DateTimeFormatOptions::None).Trim() + L")";
+				auto& font = DefaultFont::Get();
+				// the glyph font has no letters: Sun, conjunction or opposition, Moon
+				item.PhenomGlyph += font.GetPlanetGlyphAsString(Planet::Sun) + CString(L" ") +
+					font.GetAspectGlyphAsString(eclipse.Solar ? AspectType::Conjunction : AspectType::Opposition) + L" " + font.GetPlanetGlyphAsString(Planet::Moon) + when;
+				item.PhenomText += CString(eclipse.Solar ? L"Solar " : L"Lunar ") + EclipseKindName(eclipse.Kind) + L" eclipse" + when;
+				item.HasEclipse = true;
 			}
 		}
 	}
@@ -312,6 +396,8 @@ LRESULT CEphemerisView::OnCreate(UINT, WPARAM, LPARAM, BOOL&) {
 		{ ID_FONT_SMALLER, IDI_FONT_SMALLER },
 		{ ID_FONT_SIZE_DEFAULT, IDI_FONT_SIZE_DEFAULT },
 		{ ID_VIEW_GRIDLINES, IDI_GRID, BTNS_CHECK },
+		{ 0 },
+		{ ID_EPHEMERIS_OPTIONS, IDI_EVENT, 0, L"Options" },
 	};
 
 	CreateSimpleReBar(ATL_SIMPLE_REBAR_NOBORDER_STYLE);
@@ -342,14 +428,7 @@ LRESULT CEphemerisView::OnCreate(UINT, WPARAM, LPARAM, BOOL&) {
 		SetTimer(NowTimerId, NowIntervalMs);
 	}
 
-	auto cm = GetColumnManager(m_List);
-	cm->AddColumn(L"Date", LVCFMT_LEFT, 120, ColumnType::Time);
-	int i = 0;
-	for (auto& p : m_Planets) {
-		cm->AddColumn(Helpers::GetPlanetName(p), LVCFMT_LEFT, 100, ColumnType(int(ColumnType::Planet) + i++));
-	}
-	cm->AddColumn(L"Phenomena", LVCFMT_LEFT, 420, ColumnType::Phenom);
-	cm->UpdateColumns();
+	RebuildColumns();
 
 	m_StartTime = DateTime::Today();
 	m_StartTime = m_StartTime.AddDays(-30);
@@ -409,9 +488,13 @@ LRESULT CEphemerisView::OnViewGridLines(WORD, WORD, HWND, BOOL&) {
 CString CEphemerisView::PlainCellText(int row, ColumnType type) {
 	EnsureRows(row + 2);
 	if (type == ColumnType::Time)
-		return Helpers::FormatDateTime(m_StartTime.AddDays(row)).Trim();
+		return Helpers::FormatDateTime(m_StartTime.AddDays(m_Increment * row)).Trim();
 	if (type == ColumnType::Phenom)
 		return GetRowPhenom(row, false);
+	if (type == ColumnType::MoonVoid) {
+		CalcExtras(row);
+		return m_Items[row].VoidText;
+	}
 
 	auto& pp = m_Items[row].Planets[int(type) - int(ColumnType::Planet)];
 	auto longitude = pp.Position.Longitude;
@@ -462,6 +545,144 @@ CString CEphemerisView::BuildTable(std::vector<int> const& rows, bool csv) {
 		table += L"\r\n";
 	}
 	return table;
+}
+
+void CEphemerisView::RebuildColumns() {
+	auto cm = GetColumnManager(m_List);
+	cm->Clear();
+	cm->AddColumn(L"Date", LVCFMT_LEFT, 120, ColumnType::Time);
+	int i = 0;
+	for (auto& p : m_Planets)
+		cm->AddColumn(Helpers::GetPlanetName(p), LVCFMT_LEFT, 100, ColumnType(int(ColumnType::Planet) + i++));
+	cm->AddColumn(L"Phenomena", LVCFMT_LEFT, 320, ColumnType::Phenom);
+	if (m_ShowVoid)
+		cm->AddColumn(L"Moon void of course", LVCFMT_LEFT, 200, ColumnType::MoonVoid);
+	cm->UpdateColumns();
+}
+
+void CEphemerisView::ApplySettings(EphemerisSettings const& settings) {
+	CWaitCursor wait;
+	m_StartTime = settings.Start;
+	m_Increment = settings.Step;
+	m_Planets = settings.Planets;
+	m_ShowEclipses = settings.Eclipses;
+	m_ShowVoid = settings.VoidOfCourse;
+
+	m_Items.clear();
+	m_Items.reserve(2000);
+	m_Eclipses.clear();
+	m_EclipsesUntil = 0;
+	m_Voids.clear();
+	m_VoidsUntil = 0;
+
+	m_List.SetItemCount(0);
+	RebuildColumns();
+	m_List.SetItemCount(2000);
+	m_List.EnsureVisible(0, FALSE);
+	m_List.RedrawWindow();
+	UpdateNowStrip();
+}
+
+LRESULT CEphemerisView::OnOptions(WORD, WORD, HWND, BOOL&) {
+	EphemerisSettings settings;
+	settings.Start = m_StartTime;
+	settings.Step = m_Increment;
+	settings.Planets = m_Planets;
+	settings.Eclipses = m_ShowEclipses;
+	settings.VoidOfCourse = m_ShowVoid;
+
+	CEphemerisOptionsDlg dlg;
+	dlg.SetSettings(settings);
+	if (dlg.DoModal(m_hWnd) == IDOK)
+		ApplySettings(dlg.GetSettings());
+	return 0;
+}
+
+
+void CEphemerisView::EnsureEclipses(double until) const {
+	if (m_EclipsesUntil == 0)
+		m_EclipsesUntil = m_StartTime.Julian() - 1;
+	while (m_EclipsesUntil < until) {
+		double to = std::max(until, m_EclipsesUntil + 366);
+		auto found = m_Calc.CalcEclipses(FromJd(m_EclipsesUntil), FromJd(to));
+		m_Eclipses.insert(m_Eclipses.end(), found.begin(), found.end());
+		m_EclipsesUntil = to;
+	}
+}
+
+void CEphemerisView::EnsureVoids(double until) const {
+	if (m_VoidsUntil == 0)
+		m_VoidsUntil = m_StartTime.Julian() - 1;
+	while (m_VoidsUntil < until) {
+		double to = std::max(until, m_VoidsUntil + 30);
+		// the first period found is the one that was in progress at the end of the last stretch: the same one again
+		for (auto const& period : m_Calc.CalcVoidOfCourse(FromJd(m_VoidsUntil), FromJd(to)))
+			if (m_Voids.empty() || period.End.Julian() > m_Voids.back().End.Julian() + 1e-6)
+				m_Voids.push_back(period);
+		m_VoidsUntil = to;
+	}
+}
+
+void CEphemerisView::CalcExtras(int row) const {
+	auto& item = m_Items[row];
+	if (item.ExtrasCalculated)
+		return;
+	item.ExtrasCalculated = true;
+
+	// the stretch of time the row stands for: from its date to the next row's
+	const double from = item.Date.Julian(), to = m_Items[row + 1].Date.Julian();
+	const bool oneDay = to - from < 1.5;
+	// times only when the rows are days; with longer steps the date is needed as well
+	auto stamp = [&](double jd) {
+		return Helpers::FormatDateTime(FromJd(jd), oneDay ? DateTimeFormatOptions::TimeOnly : DateTimeFormatOptions::None).Trim();
+	};
+
+	if (m_ShowVoid) {
+		double voidTime = 0;
+		EnsureVoids(to);
+		for (auto const& period : m_Voids) {
+			double start = period.Start.Julian(), end = period.End.Julian();
+			if (end <= from || start >= to)
+				continue;
+			bool startsHere = start >= from, endsHere = end < to;
+			voidTime += std::min(end, to) - std::max(start, from);
+			// In words for the plain font; with glyphs, numbers and dashes only for the glyph font, which has no letters (a
+			// dash is the open end of a void that began before the row or goes on after it).
+			CString text, glyphs;
+			if (startsHere && endsHere)
+				text = glyphs = stamp(start) + L" - " + stamp(end);
+			else if (startsHere) {
+				text = L"from " + stamp(start);
+				glyphs = stamp(start) + L" -";
+			}
+			else if (endsHere) {
+				text = L"until " + stamp(end);
+				glyphs = L"- " + stamp(end);
+			}
+			else {
+				text = L"all through";
+				glyphs = L"-";
+			}
+			if (startsHere) {
+				if (period.WholeSign) {
+					text += L" (no aspect in the sign)";
+					glyphs += L" (-)";
+				}
+				else {
+					auto type = MajorAspectType(period.LastAngle);
+					text += L" (" + CString(Helpers::GetAspectName(type)).MakeLower() + L" " + Helpers::GetPlanetName(period.LastPlanet) + L")";
+					glyphs += L" (" + DefaultFont::Get().GetAspectGlyphAsString(type) + L" " + DefaultFont::Get().GetPlanetGlyphAsString(period.LastPlanet) + L")";
+				}
+			}
+			if (!item.VoidText.IsEmpty()) {
+				item.VoidText += L" | ";
+				item.VoidGlyph += L" | ";
+			}
+			item.VoidText += text;
+			item.VoidGlyph += glyphs;
+		}
+		item.VoidFraction = std::clamp(voidTime / (to - from), 0.0, 1.0);
+	}
 }
 
 LRESULT CEphemerisView::OnEditCopy(WORD, WORD, HWND, BOOL&) {

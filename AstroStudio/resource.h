@@ -11,6 +11,7 @@
 #define ID_FONT_SIZE_DEFAULT            105
 #define ID_VIEW_GRIDLINES               106
 #define IDD_NEWCHART                    107
+#define IDD_EPHEMERISOPTIONS            232
 #define IDR_MAINFRAME                   128
 #define IDS_TITLE                       129
 #define IDR_FONT                        201
@@ -80,6 +81,13 @@
 #define IDC_STEPCOUNT                   1035
 #define IDC_STEPUNIT                    1036
 #define IDC_STEPINTERVAL                1037
+#define IDC_EPH_TODAY                   1040
+#define IDC_EPH_STEP                    1041
+#define IDC_EPH_BODIES                  1042
+#define IDC_EPH_ECLIPSES                1043
+#define IDC_EPH_VOID                    1044
+#define IDC_EPH_STANDARD                1045
+#define IDC_EPH_ALL                     1046
 #define IDC_SYSLINK1                    1038
 #define IDC_LINK                        1038
 #define ID_WINDOW_CLOSE                 32772
@@ -103,14 +111,15 @@
 #define ID_FILE_EXPORT                  32791
 #define ID_CHART_LIVE                   32792
 #define ID_CHART_TRANSITS               32793
+#define ID_EPHEMERIS_OPTIONS            32794
 
 // Next default values for new objects
 // 
 #ifdef APSTUDIO_INVOKED
 #ifndef APSTUDIO_READONLY_SYMBOLS
-#define _APS_NEXT_RESOURCE_VALUE        232
-#define _APS_NEXT_COMMAND_VALUE         32794
-#define _APS_NEXT_CONTROL_VALUE         1039
+#define _APS_NEXT_RESOURCE_VALUE        233
+#define _APS_NEXT_COMMAND_VALUE         32795
+#define _APS_NEXT_CONTROL_VALUE         1047
 #define _APS_NEXT_SYMED_VALUE           108
 #endif
 #endif

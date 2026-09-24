@@ -15,6 +15,8 @@
 #include "Interfaces.h"
 #include "WTLHelper.h"
 
+struct EphemerisSettings;
+
 struct ColorOptions {
 	COLORREF RetroBackColor{ RGB(220, 220, 220) };
 	COLORREF RetroTextColor{ CLR_INVALID };
@@ -74,6 +76,7 @@ protected:
 		COMMAND_ID_HANDLER(ID_FONT_SMALLER, OnChangeFontSize)
 		COMMAND_ID_HANDLER(ID_FONT_SIZE_DEFAULT, OnChangeFontSize)
 		COMMAND_ID_HANDLER(ID_VIEW_GRIDLINES, OnViewGridLines)
+		COMMAND_ID_HANDLER(ID_EPHEMERIS_OPTIONS, OnOptions)
 		MESSAGE_HANDLER(WM_CREATE, OnCreate)
 		MESSAGE_HANDLER(WM_DESTROY, OnDestroy)
 		MESSAGE_HANDLER(WM_TIMER, OnTimer)
@@ -87,8 +90,9 @@ protected:
 		COMMAND_ID_HANDLER(ID_FILE_EXPORT, OnExport)
 	END_MSG_MAP()
 
+	// Planet is last: the columns of the bodies follow it, one value each
 	enum class ColumnType {
-		Time, SiderealTime, Phenom, Planet
+		Time, SiderealTime, Phenom, MoonVoid, Planet
 	};
 
 	void UpdateUI(CUpdateUIBase& ui);
@@ -110,6 +114,15 @@ private:
 	void UpdateViewUI();
 	void AutoSizeColumns();
 	void UpdateNowStrip();
+	// the columns for the bodies and the extras that are on
+	void RebuildColumns();
+	// starts the list over with other settings
+	void ApplySettings(EphemerisSettings const& settings);
+	// The void of course text of a row (the row after it must exist). Eclipses (which go in the Phenomena column) and voids are worked out
+	// for as far as rows have been asked for, a stretch at a time, and kept.
+	void CalcExtras(int row) const;
+	void EnsureEclipses(double until) const;
+	void EnsureVoids(double until) const;
 
 	struct PlanetData {
 		Planet Planet;
@@ -121,6 +134,10 @@ private:
 		std::vector<PlanetData> Planets;
 		mutable CString PhenomGlyph, PhenomText;
 		mutable bool PhenomCalculated{ false };
+		mutable bool HasEclipse{ false };		// the Phenomena cell has an eclipse in it (which is then shown in colour)
+		mutable CString VoidText, VoidGlyph;
+		mutable double VoidFraction{ 0 };		// how much of the row's stretch of time the Moon is void of course (0 to 1)
+		mutable bool ExtrasCalculated{ false };
 	};
 	// Handler prototypes (uncomment arguments if needed):
 	//	LRESULT MessageHandler(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, BOOL& /*bHandled*/)
@@ -133,6 +150,7 @@ private:
 	LRESULT OnChangeFontSize(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/);
 	LRESULT OnViewGridLines(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/);
 	LRESULT OnEditCopy(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/);
+	LRESULT OnOptions(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/);
 	LRESULT OnExport(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/);
 	LRESULT OnNewChart(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/);
 	LRESULT OnDestroy(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, BOOL& /*bHandled*/);
@@ -155,4 +173,9 @@ private:
 	int m_FontSize{ 100 };
 	std::vector<RowData> m_Items;
 	std::vector<Planet> m_Planets;
+	bool m_ShowEclipses{ false }, m_ShowVoid{ false };
+	mutable std::vector<EclipseData> m_Eclipses;
+	mutable double m_EclipsesUntil{ 0 };
+	mutable std::vector<VoidOfCourseData> m_Voids;
+	mutable double m_VoidsUntil{ 0 };
 };

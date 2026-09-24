@@ -231,6 +231,7 @@
     <ClCompile Include="EphemerisView.cpp" />
     <ClCompile Include="GraphicChartView.cpp" />
     <ClCompile Include="ChartImage.cpp" />
+    <ClCompile Include="EphemerisOptionsDlg.cpp" />
     <ClCompile Include="Helpers.cpp" />
     <ClCompile Include="MainFrm.cpp" />
     <ClCompile Include="NetworkHelper.cpp" />
@@ -265,6 +266,7 @@
     <ClInclude Include="EphemerisView.h" />
     <ClInclude Include="GraphicChartView.h" />
     <ClInclude Include="ChartImage.h" />
+    <ClInclude Include="EphemerisOptionsDlg.h" />
     <ClInclude Include="Helpers.h" />
     <ClInclude Include="Interfaces.h" />
     <ClInclude Include="Json.h" />
