@@ -265,6 +265,7 @@
     <ClInclude Include="DefaultFont.h" />
     <ClInclude Include="EphemerisView.h" />
     <ClInclude Include="GraphicChartView.h" />
+    <ClInclude Include="AppSettings.h" />
     <ClInclude Include="ChartImage.h" />
     <ClInclude Include="EphemerisOptionsDlg.h" />
     <ClInclude Include="Helpers.h" />

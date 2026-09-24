@@ -45,6 +45,8 @@ public:
 		COMMAND_ID_HANDLER(ID_CHART_AUTOSTEP, OnAutoStep)
 		COMMAND_ID_HANDLER(ID_CHART_LIVE, OnLive)
 		COMMAND_ID_HANDLER(ID_CHART_TRANSITS, OnTransits)
+		COMMAND_HANDLER(IDC_STEPCOUNT, CBN_SELCHANGE, OnStepSettingChanged)
+		COMMAND_HANDLER(IDC_STEPUNIT, CBN_SELCHANGE, OnStepSettingChanged)
 		COMMAND_HANDLER(IDC_STEPINTERVAL, CBN_SELCHANGE, OnIntervalChanged)
 		CHAIN_MSG_MAP(CVirtualListView)
 		CHAIN_MSG_MAP(BaseFrame)
@@ -93,6 +95,9 @@ private:
 	LRESULT OnStep(WORD /*wNotifyCode*/, WORD wID, HWND /*hWndCtl*/, BOOL& /*bHandled*/);
 	LRESULT OnAutoStep(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/);
 	LRESULT OnIntervalChanged(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/);
+	// keeps what the step count, unit and interval boxes show for the next chart and the next run
+	LRESULT OnStepSettingChanged(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/);
+	void SaveStepSettings();
 	LRESULT OnTimer(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, BOOL& /*bHandled*/);
 
 	void DisplayPlanets(CDCHandle dc, int x, int y) const;

@@ -137,6 +137,9 @@
     <ClInclude Include="EphemerisOptionsDlg.h">
       <Filter>Dialogs</Filter>
     </ClInclude>
+    <ClInclude Include="AppSettings.h">
+      <Filter>Helpers</Filter>
+    </ClInclude>
     <ClInclude Include="ChartImage.h">
       <Filter>Helpers</Filter>
     </ClInclude>

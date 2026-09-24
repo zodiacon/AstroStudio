@@ -4,6 +4,7 @@
 #include "Helpers.h"
 #include "Aspects.h"
 #include "DefaultFont.h"
+#include "AppSettings.h"
 #include <filesystem>
 #include <ToolbarHelper.h>
 #include <DarkMode/DmlibColor.h>
@@ -46,7 +47,7 @@ void CChartView::ChartForNow() {
 	// placeholder and the details view says so until WM_LOCATION_UPDATED.
 	m_AwaitingLocation = Frame()->IsLocationPending();
 
-	Chart(Helpers::CreateChartData(std::move(info)));
+	Chart(Helpers::CreateChartData(std::move(info), static_cast<HouseSystem>(AppSettings::Get().LastHouseSystem())));
 	m_DetailsView.SetLocationPending(m_AwaitingLocation);
 }
 
@@ -289,7 +290,7 @@ void CChartView::CreateStepToolBar() {
 		text.Format(L"%d", i);
 		m_StepCount.AddString(text);
 	}
-	m_StepCount.SetCurSel(0);
+	m_StepCount.SetCurSel(std::clamp(AppSettings::Get().ChartStepCount(), 1, 30) - 1);
 
 	struct UnitItem {
 		PCWSTR Text;
@@ -305,9 +306,11 @@ void CChartView::CreateStepToolBar() {
 	for (auto const& unit : units) {
 		int n = m_StepUnit.AddString(unit.Text);
 		m_StepUnit.SetItemData(n, (DWORD_PTR)unit.Unit);
-		if (unit.Unit == StepUnit::Day)
+		if (static_cast<int>(unit.Unit) == AppSettings::Get().ChartStepUnit())
 			m_StepUnit.SetCurSel(n);
 	}
+	if (m_StepUnit.GetCurSel() < 0)
+		m_StepUnit.SetCurSel(m_StepUnit.FindStringExact(-1, L"Days"));
 
 	struct IntervalItem {
 		PCWSTR Text;
@@ -323,9 +326,11 @@ void CChartView::CreateStepToolBar() {
 	for (auto const& interval : intervals) {
 		int n = m_StepInterval.AddString(interval.Text);
 		m_StepInterval.SetItemData(n, interval.Milliseconds);
-		if (interval.Milliseconds == 1000)
+		if ((int)interval.Milliseconds == AppSettings::Get().ChartStepInterval())
 			m_StepInterval.SetCurSel(n);
 	}
+	if (m_StepInterval.GetCurSel() < 0)
+		m_StepInterval.SetCurSel(m_StepInterval.FindStringExact(-1, L"1 sec"));
 }
 
 void CChartView::UpdateAutoStepTimer() {
@@ -455,8 +460,24 @@ LRESULT CChartView::OnAutoStep(WORD, WORD, HWND, BOOL&) {
 }
 
 LRESULT CChartView::OnIntervalChanged(WORD, WORD, HWND, BOOL&) {
+	SaveStepSettings();
 	UpdateAutoStepTimer();		// restarts the timer with the new interval
 	return 0;
+}
+
+LRESULT CChartView::OnStepSettingChanged(WORD, WORD, HWND, BOOL&) {
+	SaveStepSettings();
+	return 0;
+}
+
+void CChartView::SaveStepSettings() {
+	auto& settings = AppSettings::Get();
+	if (int count = m_StepCount.GetCurSel(); count >= 0)
+		settings.ChartStepCount(count + 1);
+	if (int unit = m_StepUnit.GetCurSel(); unit >= 0)
+		settings.ChartStepUnit(static_cast<int>(m_StepUnit.GetItemData(unit)));
+	if (int interval = m_StepInterval.GetCurSel(); interval >= 0)
+		settings.ChartStepInterval(static_cast<int>(m_StepInterval.GetItemData(interval)));
 }
 
 LRESULT CChartView::OnTimer(UINT, WPARAM wParam, LPARAM, BOOL& handled) {

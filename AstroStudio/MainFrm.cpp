@@ -15,6 +15,7 @@
 #include <filesystem>
 #include "TimeZones.h"
 #include "NetworkHelper.h"
+#include "AppSettings.h"
 #include <WTLHelper.h>
 
 #define WINDOW_MENU_POSITION	6
@@ -87,6 +88,10 @@ LRESULT CMainFrame::OnCreate(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/
 	m_hWndClient = m_view.Create(m_hWnd, rcDefault, nullptr, 
 		WS_CHILD | WS_VISIBLE | WS_CLIPSIBLINGS | WS_CLIPCHILDREN);
 	UISetCheck(ID_VIEW_STATUS_BAR, 1);
+	if (!AppSettings::Get().ViewStatusBar()) {
+		::ShowWindow(m_hWndStatusBar, SW_HIDE);
+		UISetCheck(ID_VIEW_STATUS_BAR, 0);
+	}
 	// stepping applies to chart pages only; a chart enables these while it is the active page
 	UIEnable(ID_CHART_STEP_BACK, FALSE);
 	UIEnable(ID_CHART_STEP_FORWARD, FALSE);
@@ -135,6 +140,12 @@ LRESULT CMainFrame::OnCreate(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/
 }
 
 LRESULT CMainFrame::OnDestroy(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, BOOL& bHandled) {
+	// the settings the views and the frame have been keeping up to date go to the Registry now
+	WINDOWPLACEMENT wp{ sizeof(wp) };
+	if (GetWindowPlacement(&wp))
+		AppSettings::Get().MainWindowPlacement(wp);
+	AppSettings::Get().Save();
+
 	auto pLoop = _Module.GetMessageLoop();
 	pLoop->RemoveMessageFilter(this);
 	pLoop->RemoveIdleHandler(this);
@@ -195,6 +206,7 @@ bool CMainFrame::IsLocationPending() const {
 
 LRESULT CMainFrame::OnToggleDarkMode(WORD, WORD, HWND, BOOL&) {
 	WTLHelper::SwitchToMode(WTLHelper::IsDarkMode() ? DarkModeKind::Classic : DarkModeKind::Dark, m_hWnd);
+	AppSettings::Get().DarkMode(WTLHelper::IsDarkMode() ? 1 : 0);
 	InitMenu(GetMenu());
 	DrawMenuBar();
 	UISetCheck(ID_OPTIONS_DARKMODE, WTLHelper::IsDarkMode());
@@ -294,8 +306,10 @@ IView* CMainFrame::NewChartWithDialog(ChartInfo const* initial) {
 
 	CNewChartDlg dlg;
 	dlg.SetChartInfo(info);
+	dlg.SetHouseSystem(static_cast<HouseSystem>(AppSettings::Get().LastHouseSystem()));
 	if (dlg.DoModal(m_hWnd) != IDOK)
 		return nullptr;
+	AppSettings::Get().LastHouseSystem(static_cast<int>(dlg.GetHouseSystem()));
 
 	auto title = dlg.GetTitle();
 	return AddChartView(Helpers::CreateChartData(dlg.GetChartInfo(), dlg.GetHouseSystem()), title.IsEmpty() ? L"Chart" : (PCWSTR)title);
@@ -309,6 +323,7 @@ LRESULT CMainFrame::OnViewStatusBar(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*h
 	auto bVisible = !::IsWindowVisible(m_hWndStatusBar);
 	::ShowWindow(m_hWndStatusBar, bVisible ? SW_SHOWNOACTIVATE : SW_HIDE);
 	UISetCheck(ID_VIEW_STATUS_BAR, bVisible);
+	AppSettings::Get().ViewStatusBar(bVisible ? 1 : 0);
 	UpdateLayout();
 	return 0;
 }

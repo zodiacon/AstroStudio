@@ -116,6 +116,8 @@ private:
 	void UpdateNowStrip();
 	// the columns for the bodies and the extras that are on
 	void RebuildColumns();
+	// keeps what the toolbar and the options dialog set for the next run
+	void SaveSettings();
 	// starts the list over with other settings
 	void ApplySettings(EphemerisSettings const& settings);
 	// The void of course text of a row (the row after it must exist). Eclipses (which go in the Phenomena column) and voids are worked out

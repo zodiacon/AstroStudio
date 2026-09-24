@@ -4,6 +4,7 @@
 #include "TimeZones.h"
 #include "EphemerisOptionsDlg.h"
 #include "Aspects.h"
+#include "AppSettings.h"
 #include <ToolbarHelper.h>
 
 #include "ColorHelper.h"
@@ -378,12 +379,43 @@ void CEphemerisView::AutoSizeColumns() {
 }
 
 LRESULT CEphemerisView::OnCreate(UINT, WPARAM, LPARAM, BOOL&) {
+	// what the toolbar and the options dialog were set to last time (or the defaults)
+	auto& settings = AppSettings::Get();
+	m_FontSize = std::clamp(settings.EphemerisFontSize(), 70, 180);
+	m_FormatOptions = FormatOptions::ShowDegreeGlyph;
+	if (settings.EphemerisGlyphs())
+		m_FormatOptions |= FormatOptions::UseGlyphs;
+	if (settings.EphemerisSeconds())
+		m_FormatOptions |= FormatOptions::ShowSeconds;
+	m_Increment = std::clamp(settings.EphemerisStep(), 1, (int)EphemerisSettings::MaxStep);
+	m_ShowEclipses = settings.EphemerisEclipses() && m_Increment <= EphemerisSettings::MaxEclipseStep;
+	m_ShowVoid = settings.EphemerisVoid() && m_Increment <= EphemerisSettings::MaxVoidStep;
+	// the bodies: numbers of Planet values separated by commas
+	m_Planets.clear();
+	{
+		CString bodies(settings.EphemerisBodies().c_str());
+		int position = 0;
+		for (auto token = bodies.Tokenize(L",", position); !token.IsEmpty(); token = bodies.Tokenize(L",", position)) {
+			int value = _wtoi(token);
+			auto planet = static_cast<Planet>(value);
+			if (value >= 0 && value < (int)Planet::NumPlanets && planet != Planet::Earth &&
+				std::find(m_Planets.begin(), m_Planets.end(), planet) == m_Planets.end())
+				m_Planets.push_back(planet);
+		}
+	}
+	if (m_Planets.empty()) {
+		m_Planets = Helpers::GetStandardPlanets();
+		m_Planets.push_back(Planet::Chiron);
+		m_Planets.push_back(Planet::Lilith);
+		m_Planets.push_back(Planet::TrueNode);
+	}
+
 	m_hWndClient = m_List.Create(m_hWnd, rcDefault, nullptr,
 		WS_CHILD | WS_VISIBLE | WS_CLIPSIBLINGS | 0*WS_CLIPCHILDREN
 		| LVS_OWNERDATA | LVS_REPORT | LVS_SHOWSELALWAYS | LVS_NOSORTHEADER);
-	m_List.SetExtendedListViewStyle(LVS_EX_FULLROWSELECT | LVS_EX_DOUBLEBUFFER);
+	m_List.SetExtendedListViewStyle(LVS_EX_FULLROWSELECT | LVS_EX_DOUBLEBUFFER | (settings.EphemerisGridLines() ? LVS_EX_GRIDLINES : 0));
 	CImageList images;
-	images.Create(16, 16, ILC_COLOR32, 0, 1);
+	images.Create(16, m_FontSize / 6, ILC_COLOR32, 0, 1);
 	m_List.SetImageList(images, LVSIL_SMALL);
 
 	m_ColorOptions = WTLHelper::IsDarkMode() ? DarkColors : ColorOptions();
@@ -405,14 +437,6 @@ LRESULT CEphemerisView::OnCreate(UINT, WPARAM, LPARAM, BOOL&) {
 	AddSimpleReBarBand(tb);
 	Frame()->AddToolBarToUI(tb);
 	CreateFonts();
-
-	m_Planets = Helpers::GetStandardPlanets();
-	m_Planets.push_back(Planet::Chiron);
-	m_Planets.push_back(Planet::Lilith);
-	//m_Planets.push_back(PlanetType::OscuApog);
-	m_Planets.push_back(Planet::TrueNode);
-
-	m_FormatOptions = FormatOptions::UseGlyphs | FormatOptions::ShowDegreeGlyph;
 
 	// a second toolbar line with where the planets are right now
 	{
@@ -440,8 +464,27 @@ LRESULT CEphemerisView::OnCreate(UINT, WPARAM, LPARAM, BOOL&) {
 	return 0;
 }
 
+void CEphemerisView::SaveSettings() {
+	auto& settings = AppSettings::Get();
+	settings.EphemerisGlyphs((m_FormatOptions & FormatOptions::UseGlyphs) == FormatOptions::UseGlyphs ? 1 : 0);
+	settings.EphemerisSeconds((m_FormatOptions & FormatOptions::ShowSeconds) == FormatOptions::ShowSeconds ? 1 : 0);
+	settings.EphemerisGridLines((m_List.GetExtendedListViewStyle() & LVS_EX_GRIDLINES) ? 1 : 0);
+	settings.EphemerisFontSize(m_FontSize);
+	settings.EphemerisStep((int)std::lround(m_Increment));
+	settings.EphemerisEclipses(m_ShowEclipses ? 1 : 0);
+	settings.EphemerisVoid(m_ShowVoid ? 1 : 0);
+	std::wstring bodies;
+	for (auto planet : m_Planets) {
+		if (!bodies.empty())
+			bodies += L',';
+		bodies += std::to_wstring(static_cast<int>(planet));
+	}
+	settings.EphemerisBodies(bodies);
+}
+
 LRESULT CEphemerisView::OnViewGlyphs(WORD, WORD, HWND, BOOL&) {
 	m_FormatOptions ^= FormatOptions::UseGlyphs;
+	SaveSettings();
 	UpdateNowStrip();
 	UpdateList();
 	AutoSizeColumns();
@@ -452,6 +495,7 @@ LRESULT CEphemerisView::OnViewGlyphs(WORD, WORD, HWND, BOOL&) {
 
 LRESULT CEphemerisView::OnViewSeconds(WORD, WORD, HWND, BOOL&) {
 	m_FormatOptions ^= FormatOptions::ShowSeconds;
+	SaveSettings();
 	UpdateNowStrip();
 	UpdateList();
 	AutoSizeColumns();
@@ -470,6 +514,7 @@ LRESULT CEphemerisView::OnChangeFontSize(WORD, WORD id, HWND, BOOL&) {
 	m_List.SetImageList(images, LVSIL_SMALL);
 
 	CreateFonts();
+	SaveSettings();
 	UpdateNowStrip();
 	AutoSizeColumns();
 	m_List.RedrawWindow();
@@ -481,6 +526,7 @@ LRESULT CEphemerisView::OnChangeFontSize(WORD, WORD id, HWND, BOOL&) {
 LRESULT CEphemerisView::OnViewGridLines(WORD, WORD, HWND, BOOL&) {
 	auto style = m_List.GetExtendedListViewStyle() ^ LVS_EX_GRIDLINES;
 	m_List.SetExtendedListViewStyle(style, LVS_EX_GRIDLINES);
+	SaveSettings();
 
 	return 0;
 }
@@ -567,6 +613,7 @@ void CEphemerisView::ApplySettings(EphemerisSettings const& settings) {
 	m_Planets = settings.Planets;
 	m_ShowEclipses = settings.Eclipses;
 	m_ShowVoid = settings.VoidOfCourse;
+	SaveSettings();
 
 	m_Items.clear();
 	m_Items.reserve(2000);
