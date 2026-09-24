@@ -20,6 +20,38 @@ ColorOptions DarkColors{
 	true, true
 };
 
+void CPlanetStrip::SetText(PCWSTR label, HFONT labelFont, PCWSTR text, HFONT font) {
+	m_Label = label;
+	m_LabelFont = labelFont;
+	m_Text = text;
+	m_Font = font;
+	if (m_hWnd)
+		Invalidate();
+}
+
+LRESULT CPlanetStrip::OnPaint(UINT msg, WPARAM wp, LPARAM, BOOL&) {
+	CPaintDC paintDc(msg == WM_PAINT ? m_hWnd : nullptr);
+	CDCHandle dc(msg == WM_PAINT ? paintDc.m_hDC : (HDC)wp);
+
+	CRect rc;
+	GetClientRect(&rc);
+	bool dark = WTLHelper::IsDarkMode();
+	dc.FillSolidRect(&rc, dark ? DarkMode::getCtrlBackgroundColor() : ::GetSysColor(COLOR_BTNFACE));
+	dc.SetBkMode(TRANSPARENT);
+	dc.SetTextColor(dark ? DarkMode::getTextColor() : ::GetSysColor(COLOR_BTNTEXT));
+	rc.left += 6;
+	const UINT flags = DT_SINGLELINE | DT_VCENTER | DT_NOPREFIX | DT_END_ELLIPSIS;
+	auto old = dc.SelectFont(m_LabelFont ? m_LabelFont : AtlGetDefaultGuiFont());
+	CSize size;
+	dc.GetTextExtent(m_Label, m_Label.GetLength(), &size);
+	dc.DrawText(m_Label, m_Label.GetLength(), &rc, flags);
+	rc.left += size.cx + 16;
+	dc.SelectFont(m_Font ? m_Font : AtlGetDefaultGuiFont());
+	dc.DrawText(m_Text, m_Text.GetLength(), &rc, flags);
+	dc.SelectFont(old);
+	return 0;
+}
+
 CString CEphemerisView::GetColumnText(HWND h, int row, int col) {
 	auto type = GetColumnManager(h)->GetColumnTag<ColumnType>(col);
 	CString text;
@@ -187,6 +219,57 @@ void CEphemerisView::UpdateViewUI() {
 	ui.UISetCheck(ID_VIEW_GRIDLINES, (m_List.GetExtendedListViewStyle() & LVS_EX_GRIDLINES) != 0);
 }
 
+void CEphemerisView::UpdateNowStrip() {
+	if (!m_NowStrip)
+		return;
+
+	// The whole line is in the glyph font when glyphs are on (the digits are in it too, like in the list),
+	// with planet names instead of glyphs when they are off.
+	bool glyphs = (m_FormatOptions & FormatOptions::UseGlyphs) == FormatOptions::UseGlyphs;
+	// the time is read once: the label shows it to the second, and it is what the positions are for
+	SYSTEMTIME st;
+	::GetSystemTime(&st);
+	DateTime now(st.wYear, st.wMonth, st.wDay, st.wHour, st.wMinute, st.wSecond + st.wMilliseconds / 1000.0, true);
+	// The positions depend only on the instant, which is what UT is; the label shows it as this machine's local time
+	// (and how far that is from UT), which is the clock the user is looking at.
+	SYSTEMTIME local;
+	::GetLocalTime(&local);
+	FILETIME ftUt, ftLocal;
+	::SystemTimeToFileTime(&st, &ftUt);
+	::SystemTimeToFileTime(&local, &ftLocal);
+	auto diff = [](FILETIME const& f) { return (long long)((ULARGE_INTEGER{ f.dwLowDateTime, f.dwHighDateTime }).QuadPart); };
+	int offset = (int)std::llround((diff(ftLocal) - diff(ftUt)) / 600000000.0);	// minutes east of UT
+	CString label;
+	label.Format(L"%04d/%02d/%02d %02d:%02d:%02d (UTC%c%02d:%02d) |", local.wYear, local.wMonth, local.wDay, local.wHour, local.wMinute, local.wSecond,
+		offset < 0 ? L'-' : L'+', abs(offset) / 60, abs(offset) % 60);
+	CString text;
+	for (auto p : m_Planets) {
+		auto pos = m_Calc.CalcPlanet(p, now);
+		pos.Longitude.Flags |= (pos.Speed < 0 ? AstroPointFlags::Retro : AstroPointFlags::None);
+		if (!text.IsEmpty())
+			text += L"    ";
+		text += glyphs ? (PCWSTR)DefaultFont::Get().GetPlanetGlyphAsString(p) : (PCWSTR)CString(Helpers::GetPlanetName(p)).Left(3);
+		text += L" " + Helpers::FormatLongitude(pos.Longitude, m_FormatOptions);
+	}
+	m_NowStrip.SetText(label, m_StdFont, text, glyphs ? m_Font : m_StdFont);
+
+	// the band is as high as the text
+	CClientDC dc(m_NowStrip);
+	auto old = dc.SelectFont(glyphs ? m_Font : m_StdFont);
+	TEXTMETRIC tm;
+	dc.GetTextMetrics(&tm);
+	dc.SelectFont(old);
+	int height = tm.tmHeight + 8;
+	CReBarCtrl rebar(m_hWndToolBar);
+	REBARBANDINFO info{ sizeof(info), RBBIM_CHILDSIZE };
+	rebar.GetBandInfo(NowBand, &info);
+	if ((int)info.cyMinChild != height) {
+		info.cyMinChild = info.cyChild = info.cyMaxChild = height;
+		rebar.SetBandInfo(NowBand, &info);
+		UpdateLayout();
+	}
+}
+
 void CEphemerisView::AutoSizeColumns() {
 	m_List.SetRedraw(FALSE);
 	int count = m_List.GetHeader().GetItemCount();
@@ -233,6 +316,20 @@ LRESULT CEphemerisView::OnCreate(UINT, WPARAM, LPARAM, BOOL&) {
 
 	m_FormatOptions = FormatOptions::UseGlyphs | FormatOptions::ShowDegreeGlyph;
 
+	// a second toolbar line with where the planets are right now
+	{
+		CClientDC dc(m_hWnd);
+		auto old = dc.SelectFont(m_Font);
+		TEXTMETRIC tm;
+		dc.GetTextMetrics(&tm);
+		dc.SelectFont(old);
+		RECT rcStrip{ 0, 0, 100, tm.tmHeight + 8 };
+		m_NowStrip.Create(m_hWndToolBar, rcStrip, nullptr, WS_CHILD | WS_VISIBLE | WS_CLIPSIBLINGS);
+		AddSimpleReBarBand(m_NowStrip, nullptr, TRUE, 0, TRUE);
+		UpdateNowStrip();
+		SetTimer(NowTimerId, NowIntervalMs);
+	}
+
 	auto cm = GetColumnManager(m_List);
 	cm->AddColumn(L"Date", LVCFMT_LEFT, 120, ColumnType::Time);
 	int i = 0;
@@ -254,6 +351,7 @@ LRESULT CEphemerisView::OnCreate(UINT, WPARAM, LPARAM, BOOL&) {
 
 LRESULT CEphemerisView::OnViewGlyphs(WORD, WORD, HWND, BOOL&) {
 	m_FormatOptions ^= FormatOptions::UseGlyphs;
+	UpdateNowStrip();
 	UpdateList();
 	AutoSizeColumns();
 	m_List.RedrawWindow();
@@ -263,6 +361,7 @@ LRESULT CEphemerisView::OnViewGlyphs(WORD, WORD, HWND, BOOL&) {
 
 LRESULT CEphemerisView::OnViewSeconds(WORD, WORD, HWND, BOOL&) {
 	m_FormatOptions ^= FormatOptions::ShowSeconds;
+	UpdateNowStrip();
 	UpdateList();
 	AutoSizeColumns();
 	m_List.RedrawWindow();
@@ -280,6 +379,7 @@ LRESULT CEphemerisView::OnChangeFontSize(WORD, WORD id, HWND, BOOL&) {
 	m_List.SetImageList(images, LVSIL_SMALL);
 
 	CreateFonts();
+	UpdateNowStrip();
 	AutoSizeColumns();
 	m_List.RedrawWindow();
 	UpdateViewUI();
@@ -315,8 +415,24 @@ LRESULT CEphemerisView::OnNewChart(WORD, WORD, HWND, BOOL&) {
 	return 0;
 }
 
+LRESULT CEphemerisView::OnDestroy(UINT, WPARAM, LPARAM, BOOL& handled) {
+	KillTimer(NowTimerId);
+	handled = FALSE;
+	return 0;
+}
+
+LRESULT CEphemerisView::OnTimer(UINT, WPARAM id, LPARAM, BOOL& handled) {
+	if (id != NowTimerId) {
+		handled = FALSE;
+		return 0;
+	}
+	UpdateNowStrip();
+	return 0;
+}
+
 LRESULT CEphemerisView::OnThemeChanged(UINT, WPARAM, LPARAM, BOOL&) {
 	m_ColorOptions = WTLHelper::IsDarkMode() ? DarkColors : ColorOptions();
+	m_NowStrip.Invalidate();
 	m_List.RedrawWindow();
 	return 0;
 }
