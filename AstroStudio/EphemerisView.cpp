@@ -1,6 +1,7 @@
 #include "pch.h"
 #include "EphemerisView.h"
 #include "ChartData.h"
+#include "TimeZones.h"
 #include <ToolbarHelper.h>
 
 #include "ColorHelper.h"
@@ -298,19 +299,18 @@ LRESULT CEphemerisView::OnEditCopy(WORD, WORD, HWND, BOOL&) {
 }
 
 LRESULT CEphemerisView::OnNewChart(WORD, WORD, HWND, BOOL&) {
-	auto const& item = m_Items[m_List.GetSelectionMark()];
-	ChartData data;
-	auto& info = data.Info();
-	info.Time = item.Date;
-	info.Latitude = 47;
-	info.Longitude = 32;
-	for (auto& p : item.Planets)
-		data.AddPlanets({ p.Position });
+	int selected = m_List.GetSelectionMark();
+	if (selected < 0 || selected >= (int)m_Items.size()) {
+		Frame()->NewChartWithDialog();	// now, in this machine's time zone
+		return 0;
+	}
 
-	data.Info().Latitude = 34;
-	data.Info().Longitude = 47;
-	m_Calc.Calculate(data);
-	Frame()->AddChartView(std::move(data), L"Chart 1");
+	// For now a chart from an ephemeris row is for noon UT of that date (the row itself is a UT midnight).
+	// The dialog shows it, like any time, as local time in this machine's zone; UT is calculated from that.
+	auto info = Frame()->DefaultChartInfo();
+	info.Time = m_Items[selected].Date.AddDays(0.5);
+	info.TimeZone = TimeZones::Machine();
+	Frame()->NewChartWithDialog(&info);
 
 	return 0;
 }

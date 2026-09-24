@@ -1,5 +1,6 @@
 #include "pch.h"
 #include "ChartView.h"
+#include "TimeZones.h"
 #include "Helpers.h"
 #include "Aspects.h"
 #include "DefaultFont.h"
@@ -33,19 +34,15 @@ void CChartView::Chart(ChartData data) {
 }
 
 void CChartView::ChartForNow() {
-	ChartData data;
-	auto& info = data.Info();
-	info = Frame()->DefaultChartInfo();
+	auto info = Frame()->DefaultChartInfo();
 	info.Time = DateTime::Now();
-	auto planets = Helpers::GetStandardPlanets();
-	data.AddPlanets(planets);
-	data.AddPlanets({ Planet::Chiron, Planet::TrueNode, Planet::Lilith });
+	info.TimeZone = TimeZones::Machine();
 
 	// The chart opens straight away; if the location hasn't arrived yet it is a
 	// placeholder and the details view says so until WM_LOCATION_UPDATED.
 	m_AwaitingLocation = Frame()->IsLocationPending();
 
-	Chart(std::move(data));
+	Chart(Helpers::CreateChartData(std::move(info)));
 	m_DetailsView.SetLocationPending(m_AwaitingLocation);
 }
 
@@ -69,7 +66,6 @@ LRESULT CChartView::OnLocationUpdated(UINT, WPARAM wParam, LPARAM, BOOL&) {
 	info.City = source.City;
 	info.State = source.State;
 	info.Country = source.Country;
-	info.TimeZone = source.TimeZone;
 
 	// The time is deliberately left alone - it was captured when the chart was
 	// created, and shifting it now would silently change the chart.

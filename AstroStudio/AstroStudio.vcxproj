@@ -220,6 +220,10 @@
     <ClCompile Include="ChartDetailsView.cpp" />
     <ClCompile Include="D2DChartDrawing.cpp" />
     <ClCompile Include="D2DResources.cpp" />
+    <ClCompile Include="LocationControls.cpp" />
+    <ClCompile Include="TimeControls.cpp" />
+    <ClCompile Include="TimeZones.cpp" />
+    <ClCompile Include="NewChartDlg.cpp" />
     <ClCompile Include="ChartView.cpp" />
     <ClCompile Include="DefaultFont.cpp" />
     <ClCompile Include="EphemerisView.cpp" />
@@ -247,6 +251,10 @@
     <ClInclude Include="ChartDetailsView.h" />
     <ClInclude Include="D2DChartDrawing.h" />
     <ClInclude Include="D2DResources.h" />
+    <ClInclude Include="LocationControls.h" />
+    <ClInclude Include="TimeControls.h" />
+    <ClInclude Include="TimeZones.h" />
+    <ClInclude Include="NewChartDlg.h" />
     <ClInclude Include="ChartView.h" />
     <ClInclude Include="DefaultFont.h" />
     <ClInclude Include="EphemerisView.h" />

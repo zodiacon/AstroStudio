@@ -3,6 +3,7 @@
 #include "ChartData.h"
 #include "WinHttp.h"
 #include "Json.h"
+#include "StringHelper.h"
 #include <atlcomcli.h>
 #include <LocationApi.h>
 
@@ -72,13 +73,11 @@ bool NetworkHelper::FillInfoFromLocal(ChartInfo& info) {
 		auto geo = json::parse(response.text.begin(), response.text.end());
 		info.Latitude = (double)geo["latitude"];
 		info.Longitude = (double)geo["longitude"];
-		auto country = (std::string)geo["country"];
-		info.Country.assign(country.begin(), country.end());
+		info.Country = StringHelper::Utf8ToWide(geo["country"].get<std::string>());
 		auto state = (std::string)geo["region"];
 		if (!state.empty())
-			info.State.assign(state.begin(), state.end());
-		auto city = (std::string)geo["city"];
-		info.City.assign(city.begin(), city.end());
+			info.State = StringHelper::Utf8ToWide(state);
+		info.City = StringHelper::Utf8ToWide(geo["city"].get<std::string>());
 		return true;
 	}
 	return false;
@@ -130,4 +129,67 @@ bool NetworkHelper::FillInfoFromCurrentLocation(ChartInfo& info, HWND hParent, D
 		return true;
 	}
 	return FillInfoFromLocal(info);
+}
+
+bool NetworkHelper::SearchPlaces(std::wstring const& query, std::vector<PlaceResult>& results) {
+	results.clear();
+
+	auto search = [&](std::wstring const& text) {
+		HttpRequest req(L"geocoding-api.open-meteo.com", 443, true, L"AstroStudio");
+		HttpResponse response;
+		auto path = L"/v1/search?count=10&language=en&format=json&name=" + StringHelper::UrlEncode(text);
+		if (!req.Get(path, L"", response) || response.statusCode != 200)
+			return false;
+
+		try {
+			using namespace nlohmann;
+			auto doc = json::parse(response.text);
+			auto found = doc.find("results");
+			if (found == doc.end())
+				return true;	// the service answered: nothing matches
+
+			auto str = [](json const& item, char const* key) {
+				auto it = item.find(key);
+				return it != item.end() && it->is_string() ? StringHelper::Utf8ToWide(it->get<std::string>()) : std::wstring();
+			};
+			auto number = [](json const& item, char const* key) {
+				auto it = item.find(key);
+				return it != item.end() && it->is_number() ? it->get<double>() : 0.0;
+			};
+			for (auto const& item : *found) {
+				PlaceResult place;
+				place.Name = str(item, "name");
+				place.State = str(item, "admin1");
+				place.Country = str(item, "country");
+				place.TimeZone = str(item, "timezone");
+				place.Latitude = number(item, "latitude");
+				place.Longitude = number(item, "longitude");
+				place.Elevation = number(item, "elevation");
+				place.Population = (long long)number(item, "population");
+				results.push_back(std::move(place));
+			}
+		}
+		catch (...) {
+			results.clear();
+			return false;
+		}
+		return true;
+	};
+
+	CString text(query.c_str());
+	text.Trim();
+	if (text.IsEmpty())
+		return true;
+	if (!search((PCWSTR)text))
+		return false;
+
+	// "Town, Region, Country" isn't always understood as a whole; fall back to the town alone
+	int comma = text.Find(L',');
+	if (results.empty() && comma > 0) {
+		CString first(text.Left(comma));
+		first.Trim();
+		if (!first.IsEmpty())
+			search((PCWSTR)first);
+	}
+	return true;
 }

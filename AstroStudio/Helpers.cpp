@@ -1,5 +1,6 @@
 #include "pch.h"
 #include "Helpers.h"
+#include "StringHelper.h"
 #include "DateTime.h"
 #include "Aspects.h"
 #include <cmath>
@@ -93,10 +94,12 @@ CString Helpers::FormatLatitude(double lat) {
 }
 
 std::tuple<int, int, int> Helpers::GetDegMinSec(double angle, bool sign) {
-	if (!sign)
-		angle = abs(angle);
-	int deg = (int)angle;
-	int min = int((angle - deg) * 60);
+	// Whole minutes, truncated. The tolerance keeps a value that was built from degrees and minutes
+	// (40 + 53/60) from coming back as 52 because it lands a hair below 53 in floating point.
+	int totalMinutes = (int)std::floor(std::abs(angle) * 60 + 1e-6);
+	int deg = totalMinutes / 60, min = totalMinutes % 60;
+	if (sign && angle < 0)
+		return { -deg, -min, 0 };
 	return { deg, min, 0 };
 }
 
@@ -146,6 +149,42 @@ std::vector<Planet> Helpers::GetStandardPlanets() {
 			planets.push_back(type);
 	}
 	return planets;
+}
+
+void Helpers::FillHouseSystems(CComboBox combo) {
+	HouseSystem systems[] = {
+		HouseSystem::Placidus,
+		HouseSystem::Koch,
+		HouseSystem::Porphyrius,
+		HouseSystem::Regiomontanus,
+		HouseSystem::Campanus,
+		HouseSystem::Equal,
+		HouseSystem::Morinus,
+		HouseSystem::Topocentric,
+		HouseSystem::Alcabitus,
+		HouseSystem::Horizontal,
+		HouseSystem::Krusinski,
+		HouseSystem::EqualWholeSign,
+		HouseSystem::CarterPoliEqu,
+		HouseSystem::EqualMC,
+		HouseSystem::Sunshine,
+		HouseSystem::SunshineAlt,
+		HouseSystem::APCHouses,
+	};
+
+	for (auto system : systems) {
+		int n = combo.AddString(StringHelper::HouseSystemToString(system));
+		combo.SetItemData(n, (int)system);
+	}
+}
+
+ChartData Helpers::CreateChartData(ChartInfo info, HouseSystem houseSystem) {
+	ChartData data;
+	data.Info() = std::move(info);
+	data.SetHouseSystem(houseSystem);
+	data.AddPlanets(GetStandardPlanets());
+	data.AddPlanets({ Planet::Chiron, Planet::TrueNode, Planet::Lilith });
+	return data;
 }
 
 COLORREF Helpers::Darken(COLORREF color, int offset) {

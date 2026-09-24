@@ -53,6 +53,7 @@ private:
 	CUpdateUIBase& GetUI() override;
 	IView* AddChartView(ChartData data, PCWSTR title = nullptr);
 	ChartInfo& DefaultChartInfo() override;
+	IView* NewChartWithDialog(ChartInfo const* initial = nullptr) override;
 	bool IsLocationPending() const override;
 
 	// Handler prototypes (uncomment arguments if needed):

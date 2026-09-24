@@ -4,11 +4,11 @@
 #include <VirtualListView.h>
 #include "Interfaces.h"
 #include <DialogHelper.h>
+#include "LocationControls.h"
+#include "TimeControls.h"
 
 class ChartData;
 struct PlanetPosition;
-
-const UINT WM_HERE_RESULT = WM_APP + 100;
 
 class CChartDetailsView : 
 	public CDialogImpl<CChartDetailsView>,
@@ -43,10 +43,16 @@ public:
 	BEGIN_MSG_MAP(CChartDetailsView)
 		COMMAND_HANDLER(IDC_HOUSESYSTEM, CBN_SELCHANGE, OnHouseSystemChanged)
 		COMMAND_HANDLER(IDC_HARMONIC, EN_CHANGE, OnHarmonicChanged)
-		NOTIFY_HANDLER(IDC_DATE, DTN_DATETIMECHANGE, OnDateChanged)
-		NOTIFY_HANDLER(IDC_TIME, DTN_DATETIMECHANGE, OnTimeChanged)
+		COMMAND_HANDLER(IDC_DAY, CBN_SELCHANGE, OnTimeChanged)
+		COMMAND_HANDLER(IDC_MONTH, CBN_SELCHANGE, OnMonthOrYearChanged)
+		COMMAND_HANDLER(IDC_YEAR, EN_KILLFOCUS, OnMonthOrYearChanged)
+		NOTIFY_HANDLER(IDC_TIME, DTN_DATETIMECHANGE, OnTimeNotify)
+		COMMAND_HANDLER(IDC_TIMEZONE, CBN_SELCHANGE, OnTimeChanged)
+		COMMAND_HANDLER(IDC_MANUALTZ, BN_CLICKED, OnManualToggled)
+		COMMAND_HANDLER(IDC_TZOFFSET, EN_KILLFOCUS, OnTimeChanged)
 		COMMAND_ID_HANDLER(IDC_NOW, OnNow)
 		COMMAND_ID_HANDLER(IDC_HERE, OnHere)
+		COMMAND_ID_HANDLER(IDC_LOOKUP, OnLookup)
 		COMMAND_ID_HANDLER(IDC_APPLY, OnApply)
 		COMMAND_HANDLER(IDC_LATDEG, EN_CHANGE, OnLocationChanged)
 		COMMAND_HANDLER(IDC_LATMIN, EN_CHANGE, OnLocationChanged)
@@ -58,6 +64,7 @@ public:
 		COMMAND_HANDLER(IDC_WEST, BN_CLICKED, OnLocationChanged)
 		MESSAGE_HANDLER(WM_INITDIALOG, OnInitView)
 		MESSAGE_HANDLER(WM_HERE_RESULT, OnHereResult)
+		MESSAGE_HANDLER(WM_LOOKUP_RESULT, OnLookupResult)
 		CHAIN_MSG_MAP(CCustomDraw)
 		CHAIN_MSG_MAP(CVirtualListView)
 	END_MSG_MAP()
@@ -73,28 +80,33 @@ private:
 	};
 
 	void UpdateLocationControls();
-	void ApplyLocationFromControls();
+	// reads the date, time and zone controls into the chart and recalculates
+	void ApplyTimeFromControls();
 
 	LRESULT OnInitView(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, BOOL& /*bHandled*/);
 	LRESULT OnHouseSystemChanged(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/);
-	LRESULT OnDateChanged(int /*idCtrl*/, LPNMHDR /*pnmh*/, BOOL& /*bHandled*/);
-	LRESULT OnTimeChanged(int /*idCtrl*/, LPNMHDR /*pnmh*/, BOOL& /*bHandled*/);
+	LRESULT OnTimeChanged(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/);
+	LRESULT OnMonthOrYearChanged(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/);
+	LRESULT OnManualToggled(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/);
+	LRESULT OnTimeNotify(int /*idCtrl*/, LPNMHDR /*pnmh*/, BOOL& /*bHandled*/);
 	LRESULT OnHarmonicChanged(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/);
 	LRESULT OnNow(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/);
 	LRESULT OnHere(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/);
 	LRESULT OnHereResult(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, BOOL& /*bHandled*/);
+	LRESULT OnLookup(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/);
+	LRESULT OnLookupResult(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, BOOL& /*bHandled*/);
 	LRESULT OnApply(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/);
 	LRESULT OnLocationChanged(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/);
 
 	CComboBox m_ctlHouseSystem;
-	CDateTimePickerCtrl m_ctlDate, m_ctlTime;
 	CListViewCtrl m_ctlPlanets, m_ctlHouses;
 	CUpDownCtrl m_ctlHarmonicSpin;
 	ChartData* m_Data{ nullptr };
 	std::vector<PlanetPosition> m_Planets;
 	CFont m_Font;
 	CWindow m_NotifyWnd;
-	bool m_UpdatingLocationControls{ false };
+	CLocationControls m_Location;
+	CTimeControls m_Time;
 	bool m_LocationPending{ false };
 	bool m_LocationEdited{ false };
 };

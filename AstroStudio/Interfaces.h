@@ -11,6 +11,10 @@ struct IMainFrame abstract {
 	virtual CUpdateUIBase& GetUI() = 0;
 	virtual IView* AddChartView(ChartData data, PCWSTR title = nullptr) = 0;
 	virtual ChartInfo& DefaultChartInfo() = 0;
+
+	// Asks for the details of a new chart (the dialog opens with `initial`, or with the current time and
+	// the default location if null) and opens it. Returns null if the dialog was cancelled.
+	virtual IView* NewChartWithDialog(ChartInfo const* initial = nullptr) = 0;
 	virtual BOOL AddToolBarToUI(HWND) = 0;
 
 	// True while the startup geolocation lookup is still running, so a new

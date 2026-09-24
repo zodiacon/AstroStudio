@@ -10,6 +10,8 @@
 #include "Helpers.h"
 #include "ToolbarHelper.h"
 #include "ChartView.h"
+#include "NewChartDlg.h"
+#include "TimeZones.h"
 #include "NetworkHelper.h"
 #include <WTLHelper.h>
 
@@ -124,10 +126,7 @@ LRESULT CMainFrame::OnToolEphemeris(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*h
 }
 
 LRESULT CMainFrame::OnNewChart(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/) {
-	auto pView = new CChartView(this);
-	pView->Create(m_view, rcDefault, nullptr, WS_CHILD | WS_VISIBLE | WS_CLIPCHILDREN, 0);
-	m_view.AddPage(pView->m_hWnd, L"Chart", 1, pView);
-
+	NewChartWithDialog();
 	return 0;
 }
 
@@ -177,6 +176,26 @@ IView* CMainFrame::AddChartView(ChartData data, PCWSTR title) {
 	pView->Chart(std::move(data));
 
 	return pView;
+}
+
+IView* CMainFrame::NewChartWithDialog(ChartInfo const* initial) {
+	ChartInfo info;
+	if (initial) {
+		info = *initial;
+	}
+	else {
+		info = m_DefaultChartInfo;
+		info.Time = DateTime::Now();
+		info.TimeZone = TimeZones::Machine();
+	}
+
+	CNewChartDlg dlg;
+	dlg.SetChartInfo(info);
+	if (dlg.DoModal(m_hWnd) != IDOK)
+		return nullptr;
+
+	auto title = dlg.GetTitle();
+	return AddChartView(Helpers::CreateChartData(dlg.GetChartInfo(), dlg.GetHouseSystem()), title.IsEmpty() ? L"Chart" : (PCWSTR)title);
 }
 
 ChartInfo& CMainFrame::DefaultChartInfo() {

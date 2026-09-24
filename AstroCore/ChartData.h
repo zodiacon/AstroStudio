@@ -9,9 +9,10 @@ enum class InfoType {
 	Event,
 };
 
+// How the wall-clock time of a chart relates to UT (ChartInfo::Time is always UT).
 struct TimeZoneInfo {
-	std::wstring Name;
-	int OffsetUT;	// minutes
+	std::wstring Name;		// Windows time zone key, e.g. "Eastern Standard Time"; empty for a manual offset
+	int OffsetUT{ 0 };		// minutes east of UT in effect at the chart's time (DST included); the offset itself when Name is empty
 };
 
 struct ChartInfo {

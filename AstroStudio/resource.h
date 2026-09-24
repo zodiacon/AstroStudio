@@ -5,6 +5,7 @@
 #define IDD_ABOUTBOX                    100
 #define ID_VIEW_RETRO                   101
 #define IDD_CHARTDETAILS                101
+#define IDD_NEWCHART                    107
 #define ID_VIEW_SECONDS                 102
 #define ID_FONT_BIGGER                  103
 #define ID_FONT_SMALLER                 104
@@ -61,6 +62,13 @@
 #define IDC_LONMIN                      1025
 #define IDC_LONMINUD                    1026
 #define IDC_NOW                         1027
+#define IDC_DAY                         1028
+#define IDC_MONTH                       1029
+#define IDC_YEAR                        1030
+#define IDC_TIMEZONE                    1031
+#define IDC_MANUALTZ                    1032
+#define IDC_TZOFFSET                    1033
+#define IDC_CHARTTYPE                   1034
 #define ID_WINDOW_CLOSE                 32772
 #define ID_WINDOW_CLOSE_ALL             32773
 #define ID_OPTIONS_ALWAYSONTOP          32775
@@ -83,7 +91,7 @@
 #ifndef APSTUDIO_READONLY_SYMBOLS
 #define _APS_NEXT_RESOURCE_VALUE        226
 #define _APS_NEXT_COMMAND_VALUE         32788
-#define _APS_NEXT_CONTROL_VALUE         1019
-#define _APS_NEXT_SYMED_VALUE           107
+#define _APS_NEXT_CONTROL_VALUE         1035
+#define _APS_NEXT_SYMED_VALUE           108
 #endif
 #endif

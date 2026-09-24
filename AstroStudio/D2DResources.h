@@ -1,6 +1,6 @@
 #pragma once
 
-// pch.h targets Windows 7, which hides the DirectWrite in-memory font loader (Windows 10 1709+) that
+// pch.h targets Windows 8.1, which hides the DirectWrite in-memory font loader (Windows 10 1709+) that
 // the embedded glyph font needs; raise the target for these headers only (d2d1.h pulls in dcommon.h,
 // which dwrite_3.h needs at the same level)
 #pragma push_macro("NTDDI_VERSION")

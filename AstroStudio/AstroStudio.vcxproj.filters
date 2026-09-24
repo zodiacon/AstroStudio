@@ -22,6 +22,9 @@
     <Filter Include="Resource Files\Icons">
       <UniqueIdentifier>{65232cc8-0f66-43f3-9983-b843bb5f15b5}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Dialogs">
+      <UniqueIdentifier>{c4a5597d-e04b-4ac6-bc82-6d7a11c1dc2e}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="pch.cpp">
@@ -36,9 +39,6 @@
     <ClCompile Include="View.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="AboutDlg.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
     <ClCompile Include="EphemerisView.cpp">
       <Filter>Views</Filter>
     </ClCompile>
@@ -50,6 +50,15 @@
     </ClCompile>
     <ClCompile Include="D2DChartDrawing.cpp">
       <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="TimeZones.cpp">
+      <Filter>Views</Filter>
+    </ClCompile>
+    <ClCompile Include="TimeControls.cpp">
+      <Filter>Views</Filter>
+    </ClCompile>
+    <ClCompile Include="LocationControls.cpp">
+      <Filter>Views</Filter>
     </ClCompile>
     <ClCompile Include="D2DResources.cpp">
       <Filter>Source Files</Filter>
@@ -87,6 +96,12 @@
     <ClCompile Include="AspectListView.cpp">
       <Filter>Views</Filter>
     </ClCompile>
+    <ClCompile Include="NewChartDlg.cpp">
+      <Filter>Dialogs</Filter>
+    </ClCompile>
+    <ClCompile Include="AboutDlg.cpp">
+      <Filter>Dialogs</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="pch.h">
@@ -96,9 +111,6 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="View.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="AboutDlg.h">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="EphemerisView.h">
@@ -121,6 +133,15 @@
     </ClInclude>
     <ClInclude Include="D2DChartDrawing.h">
       <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="TimeZones.h">
+      <Filter>Views</Filter>
+    </ClInclude>
+    <ClInclude Include="TimeControls.h">
+      <Filter>Views</Filter>
+    </ClInclude>
+    <ClInclude Include="LocationControls.h">
+      <Filter>Views</Filter>
     </ClInclude>
     <ClInclude Include="D2DResources.h">
       <Filter>Header Files</Filter>
@@ -160,6 +181,12 @@
     </ClInclude>
     <ClInclude Include="AspectListView.h">
       <Filter>Views</Filter>
+    </ClInclude>
+    <ClInclude Include="NewChartDlg.h">
+      <Filter>Dialogs</Filter>
+    </ClInclude>
+    <ClInclude Include="AboutDlg.h">
+      <Filter>Dialogs</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

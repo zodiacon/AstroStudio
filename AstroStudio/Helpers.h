@@ -2,6 +2,7 @@
 
 #include "AstroPoint.h"
 #include "DefaultFont.h"
+#include "ChartData.h"
 class DateTime;
 enum class AspectType;
 
@@ -32,6 +33,10 @@ struct Helpers abstract final {
 	static PCWSTR GetAspectName(AspectType type);
 	static CString GetZodiacSignName(ZodiacSign sign);
 	static std::vector<Planet> GetStandardPlanets();
+	// a chart for the info with the usual planet set (the standard planets plus Chiron, True Node and Lilith)
+	// fills a house system drop-down list; the item data of each entry is the HouseSystem
+	static void FillHouseSystems(CComboBox combo);
+	static ChartData CreateChartData(ChartInfo info, HouseSystem houseSystem = HouseSystem::Koch);
 	static COLORREF Darken(COLORREF color, int offset);
 	static COLORREF Lighten(COLORREF color, int offset);
 };

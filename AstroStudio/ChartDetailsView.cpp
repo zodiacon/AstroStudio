@@ -8,6 +8,7 @@
 #include "SortHelper.h"
 #include <WTLHelper.h>
 #include "NetworkHelper.h"
+#include "TimeZones.h"
 
 #include "ColorHelper.h"
 
@@ -29,48 +30,7 @@ void CChartDetailsView::SetChartData(ChartData* data) {
 
 void CChartDetailsView::UpdateLocationControls() {
 	ATLASSERT(m_Data);
-	auto& info = m_Data->Info();
-
-	m_UpdatingLocationControls = true;
-	{
-		auto [deg, min, _] = Helpers::GetDegMinSec(info.Latitude);
-		SetDlgItemInt(IDC_LATDEG, deg);
-		SetDlgItemInt(IDC_LATMIN, min);
-		//
-		// CheckRadioButton, not CheckDlgButton: the latter only sets the state
-		// of the button named, leaving the other one checked too. Auto-radio
-		// buttons clear their siblings when the *user* clicks, not on a
-		// programmatic BM_SETCHECK - so switching to a southern or western
-		// location used to light up both halves of the pair.
-		//
-		CheckRadioButton(IDC_NORTH, IDC_SOUTH, info.Latitude >= 0 ? IDC_NORTH : IDC_SOUTH);
-	}
-	{
-		auto [deg, min, _] = Helpers::GetDegMinSec(info.Longitude);
-		SetDlgItemInt(IDC_LONDEG, deg);
-		SetDlgItemInt(IDC_LONMIN, min);
-		CheckRadioButton(IDC_EAST, IDC_WEST, info.Longitude >= 0 ? IDC_EAST : IDC_WEST);
-	}
-	m_UpdatingLocationControls = false;
-
-	if (m_LocationPending) {
-		SetDlgItemText(IDC_LOCATION, L"Locating...");
-	}
-	else {
-		// Join only the parts we actually have. Concatenating unconditionally
-		// rendered an unknown location as a bare ", ", which is now visible
-		// whenever the lookup fails.
-		std::wstring const* parts[] = { &info.City, &info.State, &info.Country };
-		CString location;
-		for (auto part : parts) {
-			if (part->empty())
-				continue;
-			if (!location.IsEmpty())
-				location += L", ";
-			location += part->c_str();
-		}
-		SetDlgItemText(IDC_LOCATION, location);
-	}
+	m_Location.Set(m_Data->Info(), m_LocationPending);
 }
 
 void CChartDetailsView::SetLocationPending(bool pending) {
@@ -193,10 +153,7 @@ void CChartDetailsView::UpdateControls(Recalc type) {
 		m_ctlHouses.RedrawItems(0, m_ctlHouses.GetItemCount() - 1);
 		m_ctlHouses.UpdateWindow();
 	}
-	auto st = m_Data->Info().Time.AsSystemTime();
-	SystemTimeToTzSpecificLocalTime(nullptr, &st, &st);
-	m_ctlDate.SetSystemTime(GDT_VALID, &st);
-	m_ctlTime.SetSystemTime(GDT_VALID, &st);
+	m_Time.Set(m_Data->Info().Time, m_Data->Info().TimeZone);
 	if (type == Recalc::All || type == Recalc::Planets) {
 		m_Planets = m_Data->AllPlanets();
 		Sort(GetSortInfo(m_ctlPlanets));
@@ -206,8 +163,6 @@ void CChartDetailsView::UpdateControls(Recalc type) {
 
 LRESULT CChartDetailsView::OnInitView(UINT, WPARAM, LPARAM, BOOL&) {
 	m_ctlHouseSystem.Attach(GetDlgItem(IDC_HOUSESYSTEM));
-	m_ctlDate.Attach(GetDlgItem(IDC_DATE));
-	m_ctlTime.Attach(GetDlgItem(IDC_TIME));
 	m_ctlPlanets.Attach(GetDlgItem(IDC_PLANETS));
 	m_ctlPlanets.SetExtendedListViewStyle(LVS_EX_FULLROWSELECT | LVS_EX_DOUBLEBUFFER);
 	m_ctlPlanets.GetHeader().ModifyStyle(0, HDS_NOSIZING);
@@ -219,21 +174,9 @@ LRESULT CChartDetailsView::OnInitView(UINT, WPARAM, LPARAM, BOOL&) {
 	AddIconToButton(IDC_NOW, IDI_CLOCK);
 	AddIconToButton(IDC_HERE, IDI_PIN);
 	AddIconToButton(IDC_LOOKUP, IDI_GLOBE);
+	m_Location.Init(m_hWnd);
+	m_Time.Init(m_hWnd);
 
-	{
-		CUpDownCtrl ud(GetDlgItem(IDC_LATDEGUD));
-		ud.SetRange(0, 89);
-		ud.Detach();
-		ud.Attach(GetDlgItem(IDC_LATMINUD));
-		ud.SetRange(0, 59);
-	}
-	{
-		CUpDownCtrl ud(GetDlgItem(IDC_LONDEGUD));
-		ud.SetRange(0, 179);
-		ud.Detach();
-		ud.Attach(GetDlgItem(IDC_LONMINUD));
-		ud.SetRange(0, 59);
-	}
 	LOGFONT lf;
 	CFontHandle(m_ctlPlanets.GetFont()).GetLogFont(lf);
 	lf.lfHeight = lf.lfHeight * 120 / 100;
@@ -244,30 +187,7 @@ LRESULT CChartDetailsView::OnInitView(UINT, WPARAM, LPARAM, BOOL&) {
 	wcscpy_s(lf.lfFaceName, L"HamburgSymbols");
 	m_Font.CreateFontIndirect(&lf);
 
-	HouseSystem systems[] = {
-		HouseSystem::Placidus,
-		HouseSystem::Koch,
-		HouseSystem::Porphyrius,
-		HouseSystem::Regiomontanus,
-		HouseSystem::Campanus,
-		HouseSystem::Equal,
-		HouseSystem::Morinus,
-		HouseSystem::Topocentric,
-		HouseSystem::Alcabitus,
-		HouseSystem::Horizontal,
-		HouseSystem::Krusinski,
-		HouseSystem::EqualWholeSign,
-		HouseSystem::CarterPoliEqu,
-		HouseSystem::EqualMC,
-		HouseSystem::Sunshine,
-		HouseSystem::SunshineAlt,
-		HouseSystem::APCHouses,
-	};
-
-	for (int i = 0; i < _countof(systems); i++) {
-		int n = m_ctlHouseSystem.AddString(StringHelper::HouseSystemToString(systems[i]));
-		m_ctlHouseSystem.SetItemData(n, (int)systems[i]);
-	}
+	Helpers::FillHouseSystems(m_ctlHouseSystem);
 
 	auto cm = GetColumnManager(m_ctlPlanets);
 	cm->AddColumn(L"P", 0, 30, ColumnType::Planet);
@@ -296,29 +216,47 @@ LRESULT CChartDetailsView::OnHouseSystemChanged(WORD, WORD, HWND, BOOL&) {
 	return 0;
 }
 
-LRESULT CChartDetailsView::OnDateChanged(int, LPNMHDR, BOOL&) {
-	SYSTEMTIME st;
-	m_ctlDate.GetSystemTime(&st);
-	TzSpecificLocalTimeToSystemTime(nullptr, &st, &st);
+void CChartDetailsView::ApplyTimeFromControls() {
+	if (m_Data == nullptr)
+		return;
+
 	auto& info = m_Data->Info();
-	info.Time.SetDate(st.wYear, st.wMonth, st.wDay);
-	if (m_NotifyWnd) {
-		m_NotifyWnd.SendMessageW(WM_RECALC);
+	DateTime ut;
+	TimeZoneInfo tz;
+	if (m_Time.Get(ut, tz) != CTimeControls::Error::None) {
+		// half-typed or impossible: put back what the chart has rather than calculate from it
+		::MessageBeep(MB_ICONWARNING);
 		UpdateControls();
+		return;
 	}
+
+	bool changed = ut.Julian() != info.Time.Julian() || tz.Name != info.TimeZone.Name || tz.OffsetUT != info.TimeZone.OffsetUT;
+	info.Time = ut;
+	info.TimeZone = tz;
+	if (changed && m_NotifyWnd)
+		m_NotifyWnd.SendMessageW(WM_RECALC);
+	UpdateControls();
+}
+
+LRESULT CChartDetailsView::OnTimeChanged(WORD, WORD, HWND, BOOL&) {
+	ApplyTimeFromControls();
 	return 0;
 }
 
-LRESULT CChartDetailsView::OnTimeChanged(int, LPNMHDR, BOOL&) {
-	SYSTEMTIME st;
-	m_ctlTime.GetSystemTime(&st);
-	TzSpecificLocalTimeToSystemTime(nullptr, &st, &st);
-	auto& info = m_Data->Info();
-	info.Time.SetTime(st.wHour, st.wMinute, st.wSecond);
-	if (m_NotifyWnd) {
-		m_NotifyWnd.SendMessageW(WM_RECALC);
-		UpdateControls();
-	}
+LRESULT CChartDetailsView::OnTimeNotify(int, LPNMHDR, BOOL&) {
+	ApplyTimeFromControls();
+	return 0;
+}
+
+LRESULT CChartDetailsView::OnMonthOrYearChanged(WORD, WORD, HWND, BOOL&) {
+	m_Time.UpdateDays();
+	ApplyTimeFromControls();
+	return 0;
+}
+
+LRESULT CChartDetailsView::OnManualToggled(WORD, WORD, HWND, BOOL&) {
+	m_Time.ManualToggled();
+	ApplyTimeFromControls();
 	return 0;
 }
 
@@ -349,46 +287,24 @@ LRESULT CChartDetailsView::OnNow(WORD, WORD, HWND, BOOL&) {
 	return 0;
 }
 
-namespace {
-	struct HereRequest {
-		HWND Wnd;
-		ChartInfo Info;
-	};
-}
-
 LRESULT CChartDetailsView::OnHere(WORD, WORD, HWND, BOOL&) {
 	ATLASSERT(m_Data);
-	GetDlgItem(IDC_HERE).EnableWindow(FALSE);
-
-	auto req = new HereRequest{ m_hWnd, m_Data->Info() };
-	::TrySubmitThreadpoolCallback([](auto, auto ctx) {
-		auto req = static_cast<HereRequest*>(ctx);
-		auto success = NetworkHelper::FillInfoFromCurrentLocation(req->Info, req->Wnd);
-		if (!::PostMessage(req->Wnd, WM_HERE_RESULT, (WPARAM)success, (LPARAM)req))
-			delete req;
-		}, req, nullptr);
-
+	m_Location.BeginHere(m_Data->Info());
 	return 0;
 }
 
 LRESULT CChartDetailsView::OnHereResult(UINT, WPARAM wParam, LPARAM lParam, BOOL&) {
-	std::unique_ptr<HereRequest> req(reinterpret_cast<HereRequest*>(lParam));
-	GetDlgItem(IDC_HERE).EnableWindow(TRUE);
-
-	if (!wParam) {
-		AtlMessageBox(m_hWnd, L"Failed to determine current location.", L"Astro Studio", MB_ICONWARNING);
-		return 0;
-	}
-	if (!m_Data)
+	ChartInfo found;
+	if (!m_Location.EndHere(wParam, lParam, found) || !m_Data)
 		return 0;
 
 	auto& info = m_Data->Info();
-	info.Latitude = req->Info.Latitude;
-	info.Longitude = req->Info.Longitude;
-	info.Elevation = req->Info.Elevation;
-	info.City = req->Info.City;
-	info.State = req->Info.State;
-	info.Country = req->Info.Country;
+	info.Latitude = found.Latitude;
+	info.Longitude = found.Longitude;
+	info.Elevation = found.Elevation;
+	info.City = found.City;
+	info.State = found.State;
+	info.Country = found.Country;
 
 	m_LocationEdited = true;
 	m_LocationPending = false;
@@ -402,21 +318,33 @@ LRESULT CChartDetailsView::OnHereResult(UINT, WPARAM wParam, LPARAM lParam, BOOL
 	return 0;
 }
 
-void CChartDetailsView::ApplyLocationFromControls() {
-	ATLASSERT(m_Data);
-	auto& info = m_Data->Info();
+LRESULT CChartDetailsView::OnLookup(WORD, WORD, HWND, BOOL&) {
+	CString text;
+	GetDlgItemText(IDC_LOCATION, text);
+	m_Location.BeginLookup(text);
+	return 0;
+}
 
-	auto latDeg = GetDlgItemInt(IDC_LATDEG);
-	auto latMin = GetDlgItemInt(IDC_LATMIN);
-	info.Latitude = (latDeg + latMin / 60.0) * (IsDlgButtonChecked(IDC_SOUTH) ? -1 : 1);
+LRESULT CChartDetailsView::OnLookupResult(UINT, WPARAM wParam, LPARAM lParam, BOOL&) {
+	PlaceResult place;
+	if (!m_Location.EndLookup(wParam, lParam, place) || !m_Data)
+		return 0;
 
-	auto lonDeg = GetDlgItemInt(IDC_LONDEG);
-	auto lonMin = GetDlgItemInt(IDC_LONMIN);
-	info.Longitude = (lonDeg + lonMin / 60.0) * (IsDlgButtonChecked(IDC_WEST) ? -1 : 1);
+	// The location only: the chart's time zone stays as it is, since changing it would change the chart's UT.
+	CLocationControls::ApplyPlace(place, m_Data->Info());
+	m_LocationEdited = true;
+	m_LocationPending = false;
+	UpdateLocationControls();
+	if (m_NotifyWnd) {
+		m_NotifyWnd.SendMessageW(WM_RECALC, static_cast<WPARAM>(Recalc::Houses));
+		m_ctlHouses.RedrawItems(0, m_ctlHouses.GetItemCount() - 1);
+		m_ctlHouses.UpdateWindow();
+	}
+	return 0;
 }
 
 LRESULT CChartDetailsView::OnLocationChanged(WORD, WORD, HWND, BOOL&) {
-	if (m_Data == nullptr || m_UpdatingLocationControls)
+	if (m_Data == nullptr || m_Location.IsUpdating())
 		return 0;
 
 	// The user has taken control of the location; a late geolocation result
@@ -424,7 +352,7 @@ LRESULT CChartDetailsView::OnLocationChanged(WORD, WORD, HWND, BOOL&) {
 	m_LocationEdited = true;
 	m_LocationPending = false;
 
-	ApplyLocationFromControls();
+	m_Location.GetCoordinates(m_Data->Info());
 	if (m_NotifyWnd) {
 		m_NotifyWnd.SendMessageW(WM_RECALC, static_cast<WPARAM>(Recalc::Houses));
 		m_ctlHouses.RedrawItems(0, m_ctlHouses.GetItemCount() - 1);
@@ -438,15 +366,18 @@ LRESULT CChartDetailsView::OnApply(WORD, WORD, HWND, BOOL&) {
 	ATLASSERT(m_Data);
 	auto& info = m_Data->Info();
 
-	ApplyLocationFromControls();
+	DateTime ut;
+	TimeZoneInfo tz;
+	auto error = m_Time.Get(ut, tz);
+	if (error != CTimeControls::Error::None) {
+		AtlMessageBox(m_hWnd, CTimeControls::Message(error), L"Astro Studio", MB_ICONWARNING);
+		GetDlgItem(CTimeControls::ControlFor(error)).SetFocus();
+		return 0;
+	}
+	info.Time = ut;
+	info.TimeZone = tz;
 
-	SYSTEMTIME sdate, stime;
-	m_ctlDate.GetSystemTime(&sdate);
-	m_ctlTime.GetSystemTime(&stime);
-	TzSpecificLocalTimeToSystemTime(nullptr, &sdate, &sdate);
-	TzSpecificLocalTimeToSystemTime(nullptr, &stime, &stime);
-	info.Time.SetDate(sdate.wYear, sdate.wMonth, sdate.wDay);
-	info.Time.SetTime(stime.wHour, stime.wMinute, stime.wSecond);
+	m_Location.GetCoordinates(info);
 
 	m_Data->SetHouseSystem((HouseSystem)m_ctlHouseSystem.GetItemData(m_ctlHouseSystem.GetCurSel()));
 
