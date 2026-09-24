@@ -66,7 +66,10 @@ BEGIN
         MENUITEM "Print Pre&view",              ID_FILE_PRINT_PREVIEW
         MENUITEM "P&rint Setup...",             ID_FILE_PRINT_SETUP
         MENUITEM SEPARATOR
-        MENUITEM "(empty)",                     ID_FILE_MRU_FIRST
+        POPUP "&Recent Files"
+        BEGIN
+            MENUITEM "(empty)",                     ID_FILE_MRU_FIRST
+        END
         MENUITEM SEPARATOR
         MENUITEM "E&xit",                       ID_APP_EXIT
     END
@@ -171,6 +174,14 @@ IDI_GLOBE               ICON                    "res\\Globe.ico"
 IDI_BACK                ICON                    "res\\back.ico"
 
 IDI_FORWARD             ICON                    "res\\Forward.ico"
+
+IDI_OPEN                ICON                    "res\\Open.ico"
+
+IDI_PRINT               ICON                    "res\\Print.ico"
+
+IDI_SAVE                ICON                    "res\\Save.ico"
+
+IDI_SAVEAS              ICON                    "res\\Saveas.ico"
 
 
 /////////////////////////////////////////////////////////////////////////////

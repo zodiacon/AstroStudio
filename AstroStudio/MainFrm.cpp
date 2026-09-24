@@ -69,9 +69,12 @@ LRESULT CMainFrame::OnCreate(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/
 	UIAddMenu(GetMenu());
 
 	ToolBarButtonInfo buttons[] = {
+		{ ID_FILE_OPEN, IDI_OPEN },
+		{ ID_FILE_SAVE, IDI_SAVE },
+		{ 0 },
 		{ ID_TOOL_EPHEMERIS, IDI_EPHEMERIS },
 		{ 0 },
-		{ ID_NEW_CHART, IDI_CHART },
+		{ ID_NEW_CHART, IDI_CHART, 0, L"New Chart" },
 		{ ID_NEW_CHARTFORNOW, IDI_CHARTNOW },
 	};
 	CreateSimpleReBar(ATL_SIMPLE_REBAR_NOBORDER_STYLE);
@@ -110,10 +113,17 @@ LRESULT CMainFrame::OnCreate(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/
 	CMenuHandle menuMain = GetMenu();
 	m_view.SetWindowMenu(menuMain.GetSubMenu(WINDOW_MENU_POSITION));
 
-	// the recent files list fills in at the "(empty)" item of the File menu (the first menu)
+	// the recent files list fills in at the "(empty)" item of the File menu's Recent Files submenu
 	m_Recent.SetMaxEntries(MaxRecentFiles);
 	m_Recent.SetMaxItemLength(60);
-	m_Recent.SetMenuHandle(menuMain.GetSubMenu(0));
+	CMenuHandle menuFile = menuMain.GetSubMenu(0);
+	for (int i = 0; i < menuFile.GetMenuItemCount(); i++) {
+		CMenuHandle sub = menuFile.GetSubMenu(i);
+		if (sub.m_hMenu && sub.GetMenuState(ID_FILE_MRU_FIRST, MF_BYCOMMAND) != (UINT)-1) {
+			m_Recent.SetMenuHandle(sub);
+			break;
+		}
+	}
 	m_Recent.ReadFromRegistry(RecentFilesKey);
 	UIEnable(ID_FILE_MRU_FIRST, m_Recent.m_arrDocs.GetSize() > 0);
 
@@ -396,6 +406,10 @@ void CMainFrame::InitMenu(HMENU menu) {
 		{ ID_TOOL_EPHEMERIS, IDI_EPHEMERIS },
 		{ ID_NEW_CHART, IDI_CHART },
 		{ ID_NEW_CHARTFORNOW, IDI_CHARTNOW },
+		{ ID_FILE_OPEN, IDI_OPEN },
+		{ ID_FILE_SAVE, IDI_SAVE },
+		{ ID_FILE_SAVE_AS, IDI_SAVEAS },
+		{ ID_FILE_PRINT, IDI_PRINT },
 	};
 	WTLHelper::InitMenu(menu, commands, _countof(commands));
 }

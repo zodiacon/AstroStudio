@@ -37,6 +37,11 @@
 #define IDI_GLOBE                       225
 #define IDI_BACK                        226
 #define IDI_FORWARD                     227
+#define IDI_OPEN                        228
+#define IDI_PRINT                       229
+#define IDI_ICON4                       230
+#define IDI_SAVE                        230
+#define IDI_SAVEAS                      231
 #define IDC_HOUSESYSTEM                 1000
 #define IDC_PLANETS                     1001
 #define IDC_DATE                        1002
@@ -99,7 +104,7 @@
 // 
 #ifdef APSTUDIO_INVOKED
 #ifndef APSTUDIO_READONLY_SYMBOLS
-#define _APS_NEXT_RESOURCE_VALUE        228
+#define _APS_NEXT_RESOURCE_VALUE        232
 #define _APS_NEXT_COMMAND_VALUE         32791
 #define _APS_NEXT_CONTROL_VALUE         1039
 #define _APS_NEXT_SYMED_VALUE           108

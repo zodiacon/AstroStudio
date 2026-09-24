@@ -174,8 +174,10 @@ bool CChartView::Save(bool saveAs) {
 			if (wcschr(invalid, suggestion[i]))
 				suggestion.SetAt(i, L'_');
 
-		CFileDialog dlg(FALSE, ChartFile::Extension, suggestion, OFN_OVERWRITEPROMPT | OFN_PATHMUSTEXIST | OFN_HIDEREADONLY | OFN_EXPLORER, ChartFile::Filter, m_hWnd);
+		CSimpleFileDialog dlg(FALSE, ChartFile::Extension, suggestion, OFN_OVERWRITEPROMPT | OFN_PATHMUSTEXIST | OFN_HIDEREADONLY | OFN_EXPLORER | OFN_ENABLESIZING, ChartFile::Filter, m_hWnd);
+		WTLHelper::SuspendHook();
 		auto ok = dlg.DoModal(m_hWnd) == IDOK;
+		WTLHelper::ResumeHook();
 		if (!ok)
 			return false;
 		path = dlg.m_szFileName;

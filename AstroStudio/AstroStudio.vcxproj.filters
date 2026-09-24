@@ -274,6 +274,18 @@
     <Image Include="res\Forward.ico">
       <Filter>Resource Files\Icons</Filter>
     </Image>
+    <Image Include="res\Save.ico">
+      <Filter>Resource Files\Icons</Filter>
+    </Image>
+    <Image Include="res\Saveas.ico">
+      <Filter>Resource Files\Icons</Filter>
+    </Image>
+    <Image Include="res\Print.ico">
+      <Filter>Resource Files\Icons</Filter>
+    </Image>
+    <Image Include="res\Open.ico">
+      <Filter>Resource Files\Icons</Filter>
+    </Image>
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="AstroStudio.rc">

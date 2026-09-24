@@ -299,9 +299,13 @@
     <Image Include="res\Globe.ico" />
     <Image Include="res\glyph.ico" />
     <Image Include="res\grid.ico" />
+    <Image Include="res\Open.ico" />
     <Image Include="res\pin.ico" />
     <Image Include="res\play.ico" />
+    <Image Include="res\Print.ico" />
     <Image Include="res\retro.ico" />
+    <Image Include="res\Save.ico" />
+    <Image Include="res\Saveas.ico" />
     <Image Include="res\stop.ico" />
   </ItemGroup>
   <ItemGroup>
