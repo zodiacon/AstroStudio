@@ -12,6 +12,7 @@
 #define ID_VIEW_GRIDLINES               106
 #define IDD_NEWCHART                    107
 #define IDR_MAINFRAME                   128
+#define IDS_TITLE                       129
 #define IDR_FONT                        201
 #define IDI_COLORWHEEL                  203
 #define IDI_FONT                        204
@@ -101,13 +102,14 @@
 #define ID_CHART_AUTOSTEP               32790
 #define ID_FILE_EXPORT                  32791
 #define ID_CHART_LIVE                   32792
+#define ID_CHART_TRANSITS               32793
 
 // Next default values for new objects
 // 
 #ifdef APSTUDIO_INVOKED
 #ifndef APSTUDIO_READONLY_SYMBOLS
 #define _APS_NEXT_RESOURCE_VALUE        232
-#define _APS_NEXT_COMMAND_VALUE         32793
+#define _APS_NEXT_COMMAND_VALUE         32794
 #define _APS_NEXT_CONTROL_VALUE         1039
 #define _APS_NEXT_SYMED_VALUE           108
 #endif

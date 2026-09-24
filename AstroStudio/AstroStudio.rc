@@ -93,6 +93,8 @@ BEGIN
         MENUITEM SEPARATOR
         MENUITEM "&Auto Step",                  ID_CHART_AUTOSTEP
         MENUITEM "&Live",                       ID_CHART_LIVE
+        MENUITEM SEPARATOR
+        MENUITEM "Show &Transits",              ID_CHART_TRANSITS
     END
     POPUP "&Tools"
     BEGIN
@@ -357,8 +359,8 @@ END
 //
 
 VS_VERSION_INFO VERSIONINFO
- FILEVERSION 0,3,0,0
- PRODUCTVERSION 0,3,0,0
+ FILEVERSION 0,4,0,0
+ PRODUCTVERSION 0,4,0,0
  FILEFLAGSMASK 0x3fL
 #ifdef _DEBUG
  FILEFLAGS 0x1L
@@ -375,12 +377,12 @@ BEGIN
         BEGIN
             VALUE "CompanyName", "Scorpio Software LLC"
             VALUE "FileDescription", "Astrology Studio"
-            VALUE "FileVersion", "0.3.0.0"
+            VALUE "FileVersion", "0.4.0.0"
             VALUE "InternalName", "AstroStudio"
             VALUE "LegalCopyright", "©2022-2026 Pavel Yosifovich"
             VALUE "OriginalFilename", "AstroStudio.exe"
             VALUE "ProductName", "Astro Studio - Astrology Studio"
-            VALUE "ProductVersion", "0.3.0.0"
+            VALUE "ProductVersion", "0.4.0.0"
         END
     END
     BLOCK "VarFileInfo"
@@ -422,6 +424,7 @@ END
 STRINGTABLE
 BEGIN
     IDR_MAINFRAME           "Astro Studio"
+    IDS_TITLE               "Astro Studio"
 END
 
 STRINGTABLE
@@ -431,12 +434,17 @@ BEGIN
     ID_FILE_CLOSE           "Close the active document\nClose"
     ID_FILE_SAVE            "Save the active document\nSave"
     ID_FILE_SAVE_AS         "Save the active document with a new name\nSave As"
-    ID_FILE_EXPORT          "Export the chart as a picture, or the ephemeris as a CSV file\nExport"
-    ID_CHART_LIVE           "Keep the chart at the current time\nLive"
     ID_FILE_PAGE_SETUP      "Change the printing options\nPage Setup"
     ID_FILE_PRINT_SETUP     "Change the printer and printing options\nPrint Setup"
     ID_FILE_PRINT           "Print the active document\nPrint"
     ID_FILE_PRINT_PREVIEW   "Display full pages\nPrint Preview"
+END
+
+STRINGTABLE
+BEGIN
+    ID_FILE_EXPORT          "Export the chart as a picture, or the ephemeris as a CSV file\nExport"
+    ID_CHART_LIVE           "Keep the chart at the current time\nLive"
+    ID_CHART_TRANSITS       "Show the planets of another moment around the chart\nTransits"
 END
 
 STRINGTABLE
