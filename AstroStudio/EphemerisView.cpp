@@ -453,7 +453,7 @@ LRESULT CEphemerisView::OnCreate(UINT, WPARAM, LPARAM, BOOL&) {
 		{ ID_FONT_SIZE_DEFAULT, IDI_FONT_SIZE_DEFAULT },
 		{ ID_VIEW_GRIDLINES, IDI_GRID, BTNS_CHECK },
 		{ 0 },
-		{ ID_EPHEMERIS_OPTIONS, IDI_EVENT, 0, L"Options" },
+		{ ID_EPHEMERIS_OPTIONS, IDI_OPTIONS, 0, L"Options" },
 	};
 
 	CreateSimpleReBar(ATL_SIMPLE_REBAR_NOBORDER_STYLE);
@@ -786,29 +786,7 @@ LRESULT CEphemerisView::OnExport(WORD, WORD, HWND, BOOL&) {
 		rows[i] = i;
 	CString table = BuildTable(rows, true);
 
-	// UTF-8 with a byte order mark, which is how Excel knows it is UTF-8 (the degree signs need it)
-	int length = ::WideCharToMultiByte(CP_UTF8, 0, table, table.GetLength(), nullptr, 0, nullptr, nullptr);
-	std::string bytes("\xEF\xBB\xBF");
-	bytes.resize(3 + length);
-	::WideCharToMultiByte(CP_UTF8, 0, table, table.GetLength(), bytes.data() + 3, length, nullptr, nullptr);
-
-	DWORD error = ERROR_SUCCESS;
-	HANDLE file = ::CreateFileW(dlg.m_szFileName, GENERIC_WRITE, 0, nullptr, CREATE_ALWAYS, FILE_ATTRIBUTE_NORMAL, nullptr);
-	if (file == INVALID_HANDLE_VALUE)
-		error = ::GetLastError();
-	else {
-		DWORD written = 0;
-		if (!::WriteFile(file, bytes.data(), (DWORD)bytes.size(), &written, nullptr))
-			error = ::GetLastError();
-		::CloseHandle(file);
-	}
-	if (error != ERROR_SUCCESS) {
-		WCHAR reason[256]{};
-		::FormatMessageW(FORMAT_MESSAGE_FROM_SYSTEM | FORMAT_MESSAGE_IGNORE_INSERTS, nullptr, error, 0, reason, _countof(reason), nullptr);
-		CString message;
-		message.Format(L"The ephemeris could not be saved to %s:\n\n%s", dlg.m_szFileName, reason);
-		AtlMessageBox(m_hWnd, (PCWSTR)message, L"Astro Studio", MB_ICONWARNING);
-	}
+	Helpers::SaveTextFileUtf8(m_hWnd, dlg.m_szFileName, table, L"The ephemeris");
 	return 0;
 }
 

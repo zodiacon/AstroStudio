@@ -228,6 +228,9 @@
     <ClCompile Include="NewChartDlg.cpp" />
     <ClCompile Include="ChartView.cpp" />
     <ClCompile Include="WheelOptions.cpp" />
+    <ClCompile Include="AnalysisDlg.cpp" />
+    <ClCompile Include="AnalysisView.cpp" />
+    <ClCompile Include="DirectionsDlg.cpp" />
     <ClCompile Include="ChartColors.cpp" />
     <ClCompile Include="ChartColorsDlg.cpp" />
     <ClCompile Include="WheelOptionsDlg.cpp" />
@@ -277,6 +280,11 @@
     <ClInclude Include="ChartImage.h" />
     <ClInclude Include="ChartOverlay.h" />
     <ClInclude Include="WheelOptions.h" />
+    <ClInclude Include="DateBoxes.h" />
+    <ClInclude Include="AnalysisNames.h" />
+    <ClInclude Include="AnalysisDlg.h" />
+    <ClInclude Include="AnalysisView.h" />
+    <ClInclude Include="DirectionsDlg.h" />
     <ClInclude Include="ChartColors.h" />
     <ClInclude Include="ChartColorsDlg.h" />
     <ClInclude Include="WheelOptionsDlg.h" />
@@ -319,6 +327,7 @@
     <Image Include="res\grid.ico" />
     <Image Include="res\Hourglass.ico" />
     <Image Include="res\Open.ico" />
+    <Image Include="res\Options.ico" />
     <Image Include="res\pin.ico" />
     <Image Include="res\play.ico" />
     <Image Include="res\Print.ico" />

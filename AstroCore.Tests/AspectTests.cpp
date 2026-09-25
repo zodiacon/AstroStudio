@@ -307,3 +307,28 @@ TEST_CASE("An aspect knows the widest orb that was allowed for it", "[Aspects]")
 	REQUIRE(square.Type == AspectType::Square);
 	CHECK(square.MaxOrb == Approx(4.5));
 }
+
+TEST_CASE("The widest orb for a pair, or none if the aspect can't be made", "[Aspects]") {
+	AspectSettings settings;
+	AspectCalculator calc(settings);
+	CHECK(calc.MaxOrbFor(AspectType::Trine, Planet::Mars, Planet::Jupiter) == Approx(settings.OrbFor(AspectType::Trine)));
+	// an angle takes only the planet's extra
+	settings.PlanetOrbAdd[static_cast<int>(Planet::Mars)] = 2;
+	AspectCalculator extra(settings);
+	CHECK(extra.MaxOrbFor(AspectType::Trine, Planet::Mars, std::nullopt) == Approx(settings.OrbFor(AspectType::Trine) + 2));
+	CHECK(extra.MaxOrbFor(AspectType::Trine, Planet::Mars, Planet::Jupiter) == Approx(settings.OrbFor(AspectType::Trine) + 2));
+	// switched off: an aspect, a planet, or the minor aspects
+	settings.AspectEnabled[static_cast<int>(AspectType::Square)] = false;
+	settings.PlanetEnabled[static_cast<int>(Planet::Venus)] = false;
+	AspectCalculator off(settings);
+	CHECK(off.MaxOrbFor(AspectType::Square, Planet::Mars, Planet::Jupiter) < 0);
+	CHECK(off.MaxOrbFor(AspectType::Trine, Planet::Venus, Planet::Jupiter) < 0);
+	CHECK(off.MaxOrbFor(AspectType::Trine, Planet::Mars, Planet::Venus) < 0);
+	settings.MajorOnly = true;
+	CHECK(AspectCalculator(settings).MaxOrbFor(AspectType::Quintile, Planet::Mars, Planet::Jupiter) < 0);
+	// and it agrees with what CalcAspect reports
+	AspectCalculator plain;
+	PlanetPosition a{ AstroPoint(0), 0, 0, 0, Planet::Sun }, b{ AstroPoint(121), 0, 0, 0, Planet::Moon };
+	auto aspect = plain.CalcAspect(a, b);
+	CHECK(aspect.MaxOrb == Approx(plain.MaxOrbFor(aspect.Type, Planet::Sun, Planet::Moon)));
+}

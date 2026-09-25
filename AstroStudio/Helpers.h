@@ -41,6 +41,9 @@ struct Helpers abstract final {
 	static ChartData CreateChartData(ChartInfo info, HouseSystem houseSystem = HouseSystem::Koch);
 	// puts text on the clipboard; false if the clipboard could not be opened
 	static bool CopyTextToClipboard(HWND owner, PCWSTR text);
+	// Writes text as UTF-8 with a byte order mark (which is how Excel knows it is UTF-8: the degree signs need it). On failure says
+	// so in a message box - "<what> could not be saved to <path>: <reason>" - and returns false.
+	static bool SaveTextFileUtf8(HWND owner, PCWSTR path, CString const& text, PCWSTR what);
 	static COLORREF Darken(COLORREF color, int offset);
 	static COLORREF Lighten(COLORREF color, int offset);
 };

@@ -209,6 +209,32 @@ COLORREF Helpers::Lighten(COLORREF color, int offset) {
 	return RGB(r, g, b);
 }
 
+bool Helpers::SaveTextFileUtf8(HWND owner, PCWSTR path, CString const& text, PCWSTR what) {
+	int length = ::WideCharToMultiByte(CP_UTF8, 0, text, text.GetLength(), nullptr, 0, nullptr, nullptr);
+	std::string bytes("\xEF\xBB\xBF");
+	bytes.resize(3 + length);
+	::WideCharToMultiByte(CP_UTF8, 0, text, text.GetLength(), bytes.data() + 3, length, nullptr, nullptr);
+
+	DWORD error = ERROR_SUCCESS;
+	HANDLE file = ::CreateFileW(path, GENERIC_WRITE, 0, nullptr, CREATE_ALWAYS, FILE_ATTRIBUTE_NORMAL, nullptr);
+	if (file == INVALID_HANDLE_VALUE)
+		error = ::GetLastError();
+	else {
+		DWORD written = 0;
+		if (!::WriteFile(file, bytes.data(), (DWORD)bytes.size(), &written, nullptr))
+			error = ::GetLastError();
+		::CloseHandle(file);
+	}
+	if (error == ERROR_SUCCESS)
+		return true;
+	WCHAR reason[256]{};
+	::FormatMessageW(FORMAT_MESSAGE_FROM_SYSTEM | FORMAT_MESSAGE_IGNORE_INSERTS, nullptr, error, 0, reason, _countof(reason), nullptr);
+	CString message;
+	message.Format(L"%s could not be saved to %s:\n\n%s", what, path, reason);
+	AtlMessageBox(owner, (PCWSTR)message, L"Astro Studio", MB_ICONWARNING);
+	return false;
+}
+
 bool Helpers::CopyTextToClipboard(HWND owner, PCWSTR text) {
 	auto bytes = (wcslen(text) + 1) * sizeof(wchar_t);
 	HGLOBAL mem = ::GlobalAlloc(GMEM_MOVEABLE, bytes);

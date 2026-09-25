@@ -59,6 +59,7 @@ public:
 		NOTIFY_CODE_HANDLER(TBN_DROPDOWN, OnOverlayDropDown)
 		COMMAND_ID_HANDLER(ID_CHART_DERIVED_SOLARRETURN, OnDerived)
 		COMMAND_ID_HANDLER(ID_CHART_DERIVED_LUNARRETURN, OnDerived)
+		COMMAND_ID_HANDLER(ID_CHART_DERIVED_SOLARARC, OnDerived)
 		COMMAND_ID_HANDLER(ID_CHART_DERIVED_COMPOSITE, OnDerived)
 		COMMAND_ID_HANDLER(ID_CHART_DERIVED_DAVISON, OnDerived)
 		COMMAND_HANDLER(IDC_STEPCOUNT, CBN_SELCHANGE, OnStepSettingChanged)
@@ -79,6 +80,7 @@ public:
 		COMMAND_ID_HANDLER(ID_CHART_OVERLAY_SYNASTRY, OnOverlay)
 		COMMAND_ID_HANDLER(ID_CHART_DERIVED_SOLARRETURN, OnDerived)
 		COMMAND_ID_HANDLER(ID_CHART_DERIVED_LUNARRETURN, OnDerived)
+		COMMAND_ID_HANDLER(ID_CHART_DERIVED_SOLARARC, OnDerived)
 		COMMAND_ID_HANDLER(ID_CHART_DERIVED_COMPOSITE, OnDerived)
 		COMMAND_ID_HANDLER(ID_CHART_DERIVED_DAVISON, OnDerived)
 		COMMAND_ID_HANDLER(ID_FILE_SAVE, OnSave)
@@ -131,6 +133,8 @@ private:
 	bool PickOtherChart(OpenChart& chart, PCWSTR what);
 	// New Derived Chart: the chart of the return of the Sun or the Moon to its natal place, opened by the New Chart dialog
 	void NewReturnChart(Planet planet);
+	// ...a chart with every point moved by the solar arc to a date asked for...
+	void NewSolarArcChart();
 	// ...and a composite or Davison chart of this and another open chart
 	void NewPairChart(bool davison);
 	LRESULT OnDerived(WORD /*wNotifyCode*/, WORD wID, HWND /*hWndCtl*/, BOOL& /*bHandled*/);

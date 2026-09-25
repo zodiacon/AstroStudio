@@ -9,6 +9,8 @@ struct ChartInfo;
 struct OpenChart {
 	CString Name;
 	ChartData Data;
+	IView* View{ nullptr };		// the tab it was copied from (to tell whether it is still open), if it came from one
+	bool Active{ false };		// that tab is the one showing
 };
 
 struct IMainFrame abstract {

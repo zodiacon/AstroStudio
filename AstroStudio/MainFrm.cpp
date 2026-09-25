@@ -19,6 +19,8 @@
 #include "AspectOptionsDlg.h"
 #include "WheelOptionsDlg.h"
 #include "ChartColorsDlg.h"
+#include "AnalysisDlg.h"
+#include "AnalysisView.h"
 #include <WTLHelper.h>
 
 #define WINDOW_MENU_POSITION	6
@@ -106,7 +108,7 @@ LRESULT CMainFrame::OnCreate(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/
 	UIEnable(ID_CHART_LIVE, FALSE);
 	UIEnable(ID_CHART_TRANSITS, FALSE);
 	UIEnable(ID_CHART_OVERLAY, FALSE);
-	for (UINT id : { ID_CHART_DERIVED_SOLARRETURN, ID_CHART_DERIVED_LUNARRETURN, ID_CHART_DERIVED_COMPOSITE, ID_CHART_DERIVED_DAVISON })
+	for (UINT id : { ID_CHART_DERIVED_SOLARRETURN, ID_CHART_DERIVED_LUNARRETURN, ID_CHART_DERIVED_SOLARARC, ID_CHART_DERIVED_COMPOSITE, ID_CHART_DERIVED_DAVISON })
 		UIEnable(id, FALSE);
 	UIEnable(ID_CHART_OVERLAY_NONE, FALSE);
 	UIEnable(ID_CHART_OVERLAY_PROGRESSED, FALSE);
@@ -120,7 +122,7 @@ LRESULT CMainFrame::OnCreate(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/
 	CImageList images;
 	images.Create(16, 16, ILC_COLOR32 | ILC_MASK, 8, 4);
 	UINT icons[] = {
-		IDI_EPHEMERIS, IDI_CHART,
+		IDI_EPHEMERIS, IDI_CHART, IDI_EVENT,
 	};
 	for(auto icon : icons)
 		images.AddIcon(AtlLoadIconImage(icon, 0, 16, 16));
@@ -178,6 +180,30 @@ LRESULT CMainFrame::OnToolEphemeris(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*h
 	pView->Create(m_view, rcDefault, nullptr, WS_CHILD | WS_VISIBLE | WS_CLIPCHILDREN | WS_CLIPSIBLINGS, 0);
 	m_view.AddPage(pView->m_hWnd, L"Ephemeris", 0, pView);
 
+	return 0;
+}
+
+LRESULT CMainFrame::OnToolAnalysis(WORD, WORD, HWND, BOOL&) {
+	auto charts = OpenCharts();
+	if (charts.empty()) {
+		AtlMessageBox(m_hWnd, L"Open a chart first: an analysis compares the sky with a chart.", L"Analysis", MB_ICONINFORMATION);
+		return 0;
+	}
+	// starts on the chart that is showing, if one is
+	int index = 0;
+	for (int i = 0; i < static_cast<int>(charts.size()); i++)
+		if (charts[i].Active)
+			index = i;
+
+	CAnalysisDlg dlg;
+	dlg.Init(&charts, index, CAnalysisDlg::Defaults());
+	if (dlg.DoModal(m_hWnd) != IDOK)
+		return 0;
+
+	auto pView = new CAnalysisView(this);
+	pView->Create(m_view, rcDefault, nullptr, WS_CHILD | WS_VISIBLE | WS_CLIPCHILDREN | WS_CLIPSIBLINGS, 0);
+	m_view.AddPage(pView->m_hWnd, L"Analysis", 2, pView);
+	pView->Analyse(charts[dlg.Chart()], dlg.Settings());
 	return 0;
 }
 
@@ -506,8 +532,11 @@ std::vector<OpenChart> CMainFrame::OpenCharts(IView* except) {
 	std::vector<OpenChart> charts;
 	for (int i = 0; i < m_view.GetPageCount(); i++)
 		if (auto view = ViewOfPage(i); view && view != except)
-			if (OpenChart chart; view->GetChart(chart))
+			if (OpenChart chart; view->GetChart(chart)) {
+				chart.View = view;
+				chart.Active = i == m_view.GetActivePage();
 				charts.push_back(std::move(chart));
+			}
 	return charts;
 }
 

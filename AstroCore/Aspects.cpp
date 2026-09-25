@@ -104,6 +104,25 @@ AspectType AspectCalculator::GetAspectType(Planet p1, Planet p2, float diff, flo
     return AspectType::None;
 }
 
+float AspectCalculator::MaxOrbFor(AspectType type, Planet p1, std::optional<Planet> p2) const {
+    int i = static_cast<int>(type);
+    if (i < 0 || i >= AspectSettings::AspectTypeCount || (m_settings.MajorOnly && i >= 5) || !m_settings.AspectEnabled[i])
+        return -1;
+    if (!m_settings.IsEnabled(p1) || (p2 && !m_settings.IsEnabled(*p2)))
+        return -1;
+    float extra = m_settings.OrbAdd(p1);
+    if (p2) {
+        extra = std::max(extra, m_settings.OrbAdd(*p2));
+        if (p1 == Planet::Sun && *p2 == Planet::Moon)
+            extra += m_settings.SunMoonOrbAdd;
+        else if (p1 == Planet::Sun)
+            extra += m_settings.SunPlanetOrbAdd;
+        else if (p1 == Planet::Moon)
+            extra += m_settings.MoonPlanetOrbAdd;
+    }
+    return m_settings.OrbFor(type) + extra;
+}
+
 AspectData AspectCalculator::CalcAspect(PlanetPosition p1, PlanetPosition p2) const {
     auto diff = fabs(p1.Longitude - p2.Longitude);
     if (diff > 180)

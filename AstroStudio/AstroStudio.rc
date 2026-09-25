@@ -106,6 +106,7 @@ BEGIN
         BEGIN
             MENUITEM "&Solar Return",               ID_CHART_DERIVED_SOLARRETURN
             MENUITEM "&Lunar Return",               ID_CHART_DERIVED_LUNARRETURN
+            MENUITEM "Solar &Arc Chart...",         ID_CHART_DERIVED_SOLARARC
             MENUITEM SEPARATOR
             MENUITEM "&Composite...",               ID_CHART_DERIVED_COMPOSITE
             MENUITEM "&Davison...",                 ID_CHART_DERIVED_DAVISON
@@ -114,6 +115,7 @@ BEGIN
     POPUP "&Tools"
     BEGIN
         MENUITEM "&Ephemeris",                  ID_TOOL_EPHEMERIS
+        MENUITEM "&Analysis...",                ID_TOOL_ANALYSIS
     END
     POPUP "&Options"
     BEGIN
@@ -211,6 +213,8 @@ IDI_SAVEAS              ICON                    "res\\Saveas.ico"
 IDI_HOURGLASS           ICON                    "res\\Hourglass.ico"
 
 IDI_CLOCK_REFRESH       ICON                    "res\\time-update.ico"
+
+IDI_OPTIONS             ICON                    "res\\Options.ico"
 
 
 /////////////////////////////////////////////////////////////////////////////
@@ -412,6 +416,72 @@ BEGIN
     PUSHBUTTON      "Cancel",IDCANCEL,290,206,53,14
 END
 
+IDD_DIRECTIONS DIALOGEX 0, 0, 320, 124
+STYLE DS_SETFONT | DS_MODALFRAME | DS_FIXEDSYS | DS_CENTER | WS_POPUP | WS_CAPTION | WS_SYSMENU
+CAPTION "Directions"
+FONT 9, "Segoe UI", 400, 0, 0x0
+BEGIN
+    LTEXT           "Date:",IDC_STATIC,7,9,18,8
+    COMBOBOX        IDC_DAY,42,7,30,120,CBS_DROPDOWNLIST | WS_VSCROLL | WS_TABSTOP
+    COMBOBOX        IDC_MONTH,75,7,66,150,CBS_DROPDOWNLIST | WS_VSCROLL | WS_TABSTOP
+    EDITTEXT        IDC_YEAR,144,7,36,14,ES_AUTOHSCROLL
+    LTEXT           "Time:",IDC_STATIC,192,9,19,8
+    EDITTEXT        IDC_TIME,216,7,56,14,ES_AUTOHSCROLL
+    PUSHBUTTON      "Now",IDC_NOW,276,7,37,14
+    LTEXT           "Time zone:",IDC_STATIC,7,31,38,8
+    COMBOBOX        IDC_TIMEZONE,48,28,265,150,CBS_DROPDOWNLIST | WS_VSCROLL | WS_TABSTOP
+    CONTROL         "Manual UT offset:",IDC_MANUALTZ,"Button",BS_AUTOCHECKBOX | WS_TABSTOP,48,48,70,10
+    EDITTEXT        IDC_TZOFFSET,122,46,40,14,ES_AUTOHSCROLL
+    LTEXT           "Arc:",IDC_STATIC,7,73,18,8
+    COMBOBOX        IDC_DIR_ARC,48,70,200,60,CBS_DROPDOWNLIST | WS_VSCROLL | WS_TABSTOP
+    DEFPUSHBUTTON   "OK",IDOK,207,100,50,14
+    PUSHBUTTON      "Cancel",IDCANCEL,263,100,50,14
+END
+
+IDD_ANALYSIS DIALOGEX 0, 0, 396, 292
+STYLE DS_SETFONT | DS_MODALFRAME | DS_FIXEDSYS | DS_CENTER | WS_POPUP | WS_CAPTION | WS_SYSMENU
+CAPTION "Analysis"
+FONT 9, "Segoe UI", 400, 0, 0x0
+BEGIN
+    LTEXT           "Chart:",IDC_STATIC,7,9,24,8
+    COMBOBOX        IDC_AN_CHART,38,7,150,120,CBS_DROPDOWNLIST | WS_VSCROLL | WS_TABSTOP
+    LTEXT           "From:",IDC_STATIC,7,31,22,8
+    COMBOBOX        IDC_AN_FROM_DAY,38,28,30,120,CBS_DROPDOWNLIST | WS_VSCROLL | WS_TABSTOP
+    COMBOBOX        IDC_AN_FROM_MONTH,71,28,66,150,CBS_DROPDOWNLIST | WS_VSCROLL | WS_TABSTOP
+    EDITTEXT        IDC_AN_FROM_YEAR,140,28,36,14,ES_AUTOHSCROLL
+    LTEXT           "Through:",IDC_STATIC,7,52,30,8
+    COMBOBOX        IDC_AN_TO_DAY,38,49,30,120,CBS_DROPDOWNLIST | WS_VSCROLL | WS_TABSTOP
+    COMBOBOX        IDC_AN_TO_MONTH,71,49,66,150,CBS_DROPDOWNLIST | WS_VSCROLL | WS_TABSTOP
+    EDITTEXT        IDC_AN_TO_YEAR,140,49,36,14,ES_AUTOHSCROLL
+    LTEXT           "Range:",IDC_STATIC,7,74,24,8
+    COMBOBOX        IDC_AN_PRESET,38,71,100,120,CBS_DROPDOWNLIST | WS_VSCROLL | WS_TABSTOP
+    LTEXT           "(dates are UT)",IDC_STATIC,143,74,50,8
+    LTEXT           "Analyses:",IDC_STATIC,204,9,60,8
+    CONTROL         "",IDC_AN_TYPE,"SysListView32",LVS_REPORT | LVS_SINGLESEL | LVS_SHOWSELALWAYS | LVS_NOCOLUMNHEADER | WS_BORDER | WS_TABSTOP,204,20,185,64
+    LTEXT           "",IDC_AN_NOTE,7,92,382,9
+    LTEXT           "Planets that move:",IDC_STATIC,7,106,100,8
+    CONTROL         "",IDC_AN_MOVERS,"SysListView32",LVS_REPORT | LVS_SINGLESEL | LVS_SHOWSELALWAYS | LVS_NOCOLUMNHEADER | WS_BORDER | WS_TABSTOP,7,117,120,94
+    PUSHBUTTON      "All",IDC_AN_MOVERS_ALL,7,214,58,14
+    PUSHBUTTON      "Standard",IDC_AN_MOVERS_STD,69,214,58,14
+    LTEXT           "Aimed at:",IDC_STATIC,138,106,100,8
+    CONTROL         "",IDC_AN_TARGETS,"SysListView32",LVS_REPORT | LVS_SINGLESEL | LVS_SHOWSELALWAYS | LVS_NOCOLUMNHEADER | WS_BORDER | WS_TABSTOP,138,117,120,94
+    PUSHBUTTON      "All",IDC_AN_TARGETS_ALL,138,214,58,14
+    PUSHBUTTON      "Standard",IDC_AN_TARGETS_STD,200,214,58,14
+    CONTROL         "The natal Ascendant and Midheaven",IDC_AN_ANGLES,"Button",BS_AUTOCHECKBOX | WS_TABSTOP,138,232,130,10
+    LTEXT           "Aspects to find:",IDC_STATIC,269,106,100,8
+    CONTROL         "",IDC_AN_ASPECTLIST,"SysListView32",LVS_REPORT | LVS_SINGLESEL | LVS_SHOWSELALWAYS | LVS_NOCOLUMNHEADER | WS_BORDER | WS_TABSTOP,269,117,120,94
+    PUSHBUTTON      "All",IDC_AN_ASPECTS_ALL,269,214,58,14
+    PUSHBUTTON      "Major",IDC_AN_ASPECTS_MAJOR,331,214,58,14
+    LTEXT           "List:",IDC_STATIC,7,251,16,8
+    CONTROL         "Aspects (orbs from Options > Aspects)",IDC_AN_ASPECTS,
+                    "Button",BS_AUTOCHECKBOX | WS_TABSTOP,28,250,140,10
+    CONTROL         "House ingresses",IDC_AN_HOUSES,"Button",BS_AUTOCHECKBOX | WS_TABSTOP,176,250,70,10
+    CONTROL         "Sign ingresses",IDC_AN_SIGNS,"Button",BS_AUTOCHECKBOX | WS_TABSTOP,250,250,64,10
+    CONTROL         "Stations",IDC_AN_STATIONS,"Button",BS_AUTOCHECKBOX | WS_TABSTOP,318,250,50,10
+    DEFPUSHBUTTON   "OK",IDOK,283,271,50,14
+    PUSHBUTTON      "Cancel",IDCANCEL,339,271,50,14
+END
+
 
 /////////////////////////////////////////////////////////////////////////////
 //
@@ -610,6 +680,11 @@ BEGIN
                             "Open the chart for the midpoint in time and place of this chart and another open chart \nDavison"
     ID_OPTIONS_WHEEL        "Choose the planets and the aspect lines the chart wheel draws\nChart Wheel"
     ID_OPTIONS_COLORS       "Choose the colours of the chart wheel\nChart Colors"
+    ID_CHART_DERIVED_SOLARARC 
+                            "Open this chart with every point moved by the solar arc to a date you choose \nSolar Arc Chart"
+    ID_TOOL_ANALYSIS        "Find when things happen between a chart and the sky, over a range of dates \nAnalysis"
+    ID_ANALYSIS_OPTIONS     "Change what is analysed and for which dates \nOptions"
+    ID_ANALYSIS_REFRESH     "Run the analysis again \nRefresh"
 END
 
 STRINGTABLE

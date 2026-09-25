@@ -1,6 +1,7 @@
 #include "pch.h"
 #include "ChartView.h"
 #include "TimeZones.h"
+#include "DirectionsDlg.h"
 #include "Helpers.h"
 #include "Aspects.h"
 #include "DefaultFont.h"
@@ -160,7 +161,7 @@ void CChartView::PageActivated(bool active) {
 	// (charts worked out from others have nothing to progress, return to or combine)
 	ui.UIEnable(ID_CHART_OVERLAY_PROGRESSED, active && !m_ReadOnly);
 	ui.UIEnable(ID_CHART_OVERLAY_SOLARARC, active && !m_ReadOnly);
-	for (UINT id : { ID_CHART_DERIVED_SOLARRETURN, ID_CHART_DERIVED_LUNARRETURN, ID_CHART_DERIVED_COMPOSITE, ID_CHART_DERIVED_DAVISON })
+	for (UINT id : { ID_CHART_DERIVED_SOLARRETURN, ID_CHART_DERIVED_LUNARRETURN, ID_CHART_DERIVED_SOLARARC, ID_CHART_DERIVED_COMPOSITE, ID_CHART_DERIVED_DAVISON })
 		ui.UIEnable(id, active && !m_ReadOnly);
 	for (UINT id : { ID_CHART_OVERLAY, ID_CHART_TRANSITS, ID_CHART_OVERLAY_NONE, ID_CHART_OVERLAY_SYNASTRY })
 		ui.UIEnable(id, active);
@@ -274,7 +275,7 @@ void CChartView::CreateStepToolBar() {
 		{ 0 },
 	};
 	CreateSimpleReBar(ATL_SIMPLE_REBAR_NOBORDER_STYLE);
-	CToolBarCtrl tb(ToolbarHelper::CreateAndInitToolBar(m_hWndToolBar, buttons, _countof(buttons)));
+	CToolBarCtrl tb(ToolbarHelper::CreateAndInitToolBar(m_hWndToolBar, buttons, _countof(buttons), 16));
 
 	// The label and the two combo boxes live inside the toolbar, on separators made as wide as they are.
 	// These have to be there before the toolbar joins the rebar, which sizes the band from its buttons.
@@ -501,6 +502,31 @@ void CChartView::NewReturnChart(Planet planet) {
 	Frame()->NewChartWithDialog(&info, &houses);
 }
 
+void CChartView::NewSolarArcChart() {
+	// the date to start from: the overlay's moment if one shows (so Step and Live can pick it), otherwise now, in this chart's zone
+	DateTime target = OverlayHasTime() ? m_Overlay->When : DateTime::Now();
+	TimeZoneInfo zone = OverlayHasTime() ? m_Overlay->Zone : m_Data.Info().TimeZone;
+	int offset = zone.OffsetUT;
+	TimeZones::UtToLocal(target, zone, &offset);
+	zone.OffsetUT = offset;
+
+	CDirectionsDlg dlg;
+	dlg.Init(target, zone, ArcKey::Actual, L"Solar Arc Chart");
+	if (dlg.DoModal(m_hWnd) != IDOK)
+		return;
+
+	ProgressionOptions options;
+	options.Method = ProgressionMethod::SolarArc;
+	options.Key = dlg.Key();
+	auto chart = DerivedCharts::Progress(m_Calc, m_Data, dlg.Target(), options);
+
+	int shown = dlg.Zone().OffsetUT;
+	auto local = TimeZones::UtToLocal(dlg.Target(), dlg.Zone(), &shown);
+	CString title;
+	title.Format(L"Solar Arc %04ld/%02ld/%02ld: %s", local.Year, local.Month, local.Day, (PCWSTR)m_Title);
+	Frame()->AddDerivedChartView(std::move(chart), title);
+}
+
 void CChartView::NewPairChart(bool davison) {
 	OpenChart other;
 	if (!PickOtherChart(other, davison ? L"a Davison chart is made from two charts" : L"a composite is made from two charts"))
@@ -517,6 +543,7 @@ LRESULT CChartView::OnDerived(WORD, WORD id, HWND, BOOL&) {
 	switch (id) {
 		case ID_CHART_DERIVED_SOLARRETURN: NewReturnChart(Planet::Sun); break;
 		case ID_CHART_DERIVED_LUNARRETURN: NewReturnChart(Planet::Moon); break;
+		case ID_CHART_DERIVED_SOLARARC: NewSolarArcChart(); break;
 		case ID_CHART_DERIVED_COMPOSITE: NewPairChart(false); break;
 		case ID_CHART_DERIVED_DAVISON: NewPairChart(true); break;
 	}

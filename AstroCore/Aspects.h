@@ -2,6 +2,7 @@
 
 #include "AstroCalculator.h"
 #include <array>
+#include <optional>
 
 // all aspect angles are multiplied by 100 to keep them as simple integers
 
@@ -86,6 +87,9 @@ public:
 	AspectSettings const& Settings() const;
 
 	AspectType GetAspectType(Planet p1, Planet p2, float diff, float& dist, float* maxOrb = nullptr) const;
+	// The widest orb for an aspect of this type between p1 and p2 (only p1 when the other point is not a planet, like an
+	// angle of a chart); negative if the aspect can't be made: it is switched off, or a planet is, or only major aspects count.
+	float MaxOrbFor(AspectType type, Planet p1, std::optional<Planet> p2) const;
 	static bool IsApplying(PlanetPosition p1, PlanetPosition p2, double angle, double exact) noexcept;
 
 private:

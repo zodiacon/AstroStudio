@@ -120,6 +120,12 @@
     <ClCompile Include="AboutDlg.cpp">
       <Filter>Dialogs</Filter>
     </ClCompile>
+    <ClCompile Include="AnalysisView.cpp">
+      <Filter>Views</Filter>
+    </ClCompile>
+    <ClCompile Include="AnalysisDlg.cpp">
+      <Filter>Dialogs</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="pch.h">
@@ -161,6 +167,18 @@
     <ClInclude Include="WheelOptions.h">
       <Filter>Helpers</Filter>
     </ClInclude>
+    <ClInclude Include="DateBoxes.h">
+      <Filter>Helpers</Filter>
+    </ClInclude>
+    <ClInclude Include="AnalysisNames.h">
+      <Filter>Helpers</Filter>
+    </ClInclude>
+    <ClInclude Include="DirectionsDlg.h">
+      <Filter>Helpers</Filter>
+    </ClInclude>
+    <ClCompile Include="DirectionsDlg.cpp">
+      <Filter>Helpers</Filter>
+    </ClCompile>
     <ClInclude Include="ChartColors.h">
       <Filter>Helpers</Filter>
     </ClInclude>
@@ -254,6 +272,12 @@
     <ClInclude Include="AboutDlg.h">
       <Filter>Dialogs</Filter>
     </ClInclude>
+    <ClInclude Include="AnalysisView.h">
+      <Filter>Views</Filter>
+    </ClInclude>
+    <ClInclude Include="AnalysisDlg.h">
+      <Filter>Dialogs</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <Font Include="res\HamburgSymbols.ttf" />
@@ -344,6 +368,9 @@
       <Filter>Resource Files\Icons</Filter>
     </Image>
     <Image Include="res\time-update.ico">
+      <Filter>Resource Files\Icons</Filter>
+    </Image>
+    <Image Include="res\Options.ico">
       <Filter>Resource Files\Icons</Filter>
     </Image>
   </ItemGroup>
