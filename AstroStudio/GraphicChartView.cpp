@@ -1,6 +1,7 @@
 #include "pch.h"
 #include "GraphicChartView.h"
 #include "Helpers.h"
+#include "DerivedCharts.h"
 #include <DarkMode/DarkModeSubclass.h>
 #include <numbers>
 #include <cmath>
@@ -54,13 +55,13 @@ void CGraphicChartView::Refresh() {
 	Invalidate();
 	// A planet's tip stays and shows the new values (the chart may be moving with the clock). Aspects come and go
 	// with a recalculation and their numbers with them, so what was under the mouse is looked up again on the next move.
-	bool transit = m_Hover.Type == ChartHit::Kind::TransitPlanet;
-	if (m_TipShown && (m_Hover.Type == ChartHit::Kind::Planet || transit) && m_ChartData &&
-		m_Hover.Index < (transit ? (m_Transit ? m_Transit->PlanetCount() : 0) : m_ChartData->PlanetCount())) {
+	bool overlay = m_Hover.Type == ChartHit::Kind::OverlayPlanet;
+	if (m_TipShown && (m_Hover.Type == ChartHit::Kind::Planet || overlay) && m_ChartData &&
+		m_Hover.Index < (overlay ? (m_Overlay ? m_Overlay->Data.PlanetCount() : 0) : m_ChartData->PlanetCount())) {
 		CPoint pt;
 		::GetCursorPos(&pt);
 		ScreenToClient(&pt);
-		m_TipText = transit ? TransitPlanetTip(m_Hover.Index) : PlanetTip(m_Hover.Index);
+		m_TipText = overlay ? OverlayPlanetTip(m_Hover.Index) : PlanetTip(m_Hover.Index);
 		ShowTip(pt, m_TipText);
 		return;
 	}
@@ -78,21 +79,17 @@ void CGraphicChartView::ApplyState() {
 	// the pictures (Export, Copy) follow the mode as well: they are what is on the screen
 	m_Drawing.DrawingParameters(WTLHelper::IsDarkMode() ? ChartDrawingParameters::Dark() : ChartDrawingParameters());
 	m_Drawing.Rotation(m_Rotation).Highlight(m_Selected);
-	m_Drawing.Transits(m_Transit).TransitAspects(&m_TransitAspects).TransitCaption(m_TransitCaption);
+	m_Drawing.Overlay(m_Overlay);
 }
 
-void CGraphicChartView::SetTransits(ChartData* data, std::vector<AspectData> aspects, std::wstring caption) {
-	m_Transit = data;
-	m_TransitAspects = std::move(aspects);
-	m_TransitCaption = std::move(caption);
+void CGraphicChartView::SetOverlay(ChartOverlay const* overlay) {
+	m_Overlay = overlay;
 	// (the caller refreshes the view)
 }
 
-void CGraphicChartView::ClearTransits() {
-	m_Transit = nullptr;
-	m_TransitAspects.clear();
-	m_TransitCaption.clear();
-	if (m_Selected && m_Selected->Transit)
+void CGraphicChartView::ClearOverlay() {
+	m_Overlay = nullptr;
+	if (m_Selected && m_Selected->Overlay)
 		m_Selected.reset();
 	m_Hover = {};
 	HideTip();
@@ -132,11 +129,7 @@ double CGraphicChartView::AngleOf(D2D1_POINT_2F const& pt) {
 }
 
 int CGraphicChartView::HouseOf(AstroPoint const& longitude) const {
-	auto const& cusps = m_ChartData->Houses().Cusps;
-	for (int i = 0; i < 12; i++)
-		if (longitude.IsBetween(cusps[i], cusps[(i + 1) % 12]))
-			return i + 1;
-	return 0;
+	return DerivedCharts::HouseOf(m_ChartData->Houses(), longitude);
 }
 
 static CString FormatOrb(double orb) {
@@ -178,12 +171,12 @@ CString CGraphicChartView::PlanetTip(int index) const {
 		text += line;
 	}
 
-	// and the transits to it
-	if (m_Transit) {
-		for (auto const& aspect : m_TransitAspects) {
+	// and the overlay's to it
+	if (m_Overlay) {
+		for (auto const& aspect : m_Overlay->Aspects) {
 			if (aspect.Planet2.Planet != pp.Planet)
 				continue;
-			line.Format(L"\r\nTransit %s %s   %s%s", Helpers::GetPlanetName(aspect.Planet1.Planet), Helpers::GetAspectName(aspect.Type),
+			line.Format(L"\r\n%s %s %s   %s%s", m_Overlay->Label.c_str(), Helpers::GetPlanetName(aspect.Planet1.Planet), Helpers::GetAspectName(aspect.Type),
 				(PCWSTR)FormatOrb(aspect.Orb), aspect.Applying ? L" applying" : L"");
 			text += line;
 		}
@@ -191,30 +184,30 @@ CString CGraphicChartView::PlanetTip(int index) const {
 	return text;
 }
 
-CString CGraphicChartView::TransitPlanetTip(int index) const {
-	auto const& pp = m_Transit->AllPlanets()[index];
+CString CGraphicChartView::OverlayPlanetTip(int index) const {
+	auto const& pp = m_Overlay->Data.AllPlanets()[index];
 	CString text;
-	text.Format(L"Transit %s   %s\r\n", Helpers::GetPlanetName(pp.Planet),
+	text.Format(L"%s %s   %s\r\n", m_Overlay->Label.c_str(), Helpers::GetPlanetName(pp.Planet),
 		(PCWSTR)Helpers::FormatLongitude(pp.Longitude, FormatOptions::ShowSeconds | FormatOptions::ShowDegreeGlyph));
 	CString line;
 	line.Format(L"in house %d of the chart    speed %+.4f\u00b0/day", HouseOf(pp.Longitude), pp.Speed);
 	text += line;
 
-	for (auto const& aspect : m_TransitAspects) {
+	for (auto const& aspect : m_Overlay->Aspects) {
 		if (aspect.Planet1.Planet != pp.Planet)
 			continue;
-		line.Format(L"\r\n%s natal %s   %s%s", Helpers::GetAspectName(aspect.Type), Helpers::GetPlanetName(aspect.Planet2.Planet),
+		line.Format(L"\r\n%s %s %s   %s%s", Helpers::GetAspectName(aspect.Type), m_Overlay->BaseLabel.c_str(), Helpers::GetPlanetName(aspect.Planet2.Planet),
 			(PCWSTR)FormatOrb(aspect.Orb), aspect.Applying ? L" applying" : L"");
 		text += line;
 	}
 	return text;
 }
 
-CString CGraphicChartView::TransitAspectTip(int index) const {
-	auto const& aspect = m_TransitAspects[index];
+CString CGraphicChartView::OverlayAspectTip(int index) const {
+	auto const& aspect = m_Overlay->Aspects[index];
 	CString text;
-	text.Format(L"Transit %s %s natal %s\r\nOrb %s, %s", Helpers::GetPlanetName(aspect.Planet1.Planet), Helpers::GetAspectName(aspect.Type),
-		Helpers::GetPlanetName(aspect.Planet2.Planet), (PCWSTR)FormatOrb(aspect.Orb), aspect.Applying ? L"applying" : L"separating");
+	text.Format(L"%s %s %s %s %s\r\nOrb %s, %s", m_Overlay->Label.c_str(), Helpers::GetPlanetName(aspect.Planet1.Planet), Helpers::GetAspectName(aspect.Type),
+		m_Overlay->BaseLabel.c_str(), Helpers::GetPlanetName(aspect.Planet2.Planet), (PCWSTR)FormatOrb(aspect.Orb), aspect.Applying ? L"applying" : L"separating");
 	return text;
 }
 
@@ -280,8 +273,8 @@ void CGraphicChartView::UpdateHover(POINT pt) {
 		switch (hit.Type) {
 			case ChartHit::Kind::Planet: m_TipText = PlanetTip(hit.Index); break;
 			case ChartHit::Kind::Aspect: m_TipText = AspectTip(hit.Index); break;
-			case ChartHit::Kind::TransitPlanet: m_TipText = TransitPlanetTip(hit.Index); break;
-			default: m_TipText = TransitAspectTip(hit.Index); break;
+			case ChartHit::Kind::OverlayPlanet: m_TipText = OverlayPlanetTip(hit.Index); break;
+			default: m_TipText = OverlayAspectTip(hit.Index); break;
 		}
 	ShowTip(pt, m_TipText);		// also follows the mouse while it stays on the same thing
 }
@@ -341,9 +334,9 @@ LRESULT CGraphicChartView::OnLButtonUp(UINT, WPARAM, LPARAM lp, BOOL&) {
 	// a click: pick the planet under the mouse (again to let go of it), or let go of the planet on an empty spot
 	CPoint pt(GET_X_LPARAM(lp), GET_Y_LPARAM(lp));
 	auto hit = m_Drawing.HitTest(ToLogical(pt));
-	if (hit.Type == ChartHit::Kind::Planet || hit.Type == ChartHit::Kind::TransitPlanet) {
-		bool transit = hit.Type == ChartHit::Kind::TransitPlanet;
-		ChartSelection picked{ (transit ? m_Transit : m_ChartData)->AllPlanets()[hit.Index].Planet, transit };
+	if (hit.Type == ChartHit::Kind::Planet || hit.Type == ChartHit::Kind::OverlayPlanet) {
+		bool overlay = hit.Type == ChartHit::Kind::OverlayPlanet;
+		ChartSelection picked{ (overlay ? m_Overlay->Data : *m_ChartData).AllPlanets()[hit.Index].Planet, overlay };
 		m_Selected = m_Selected == picked ? std::nullopt : std::optional<ChartSelection>(picked);
 	}
 	else if (hit.Type == ChartHit::Kind::None) {

@@ -75,6 +75,9 @@ public:
 	AspectCalculator() = default;
 	explicit AspectCalculator(AspectSettings const& settings);
 	std::vector<AspectData> Calculate(std::vector<PlanetPosition> const& planets) const;
+	// The aspects between two sets of planets (two charts, or a chart and its transits): each of a with each of b, with a's
+	// planet as Planet1 and b's as Planet2. The same planet in both is a pair like any other.
+	std::vector<AspectData> CalcBetween(std::vector<PlanetPosition> const& a, std::vector<PlanetPosition> const& b) const;
 	AspectData CalcAspect(PlanetPosition p1, PlanetPosition p2) const;
 
 	AspectCalculator& Settings(AspectSettings const& settings);

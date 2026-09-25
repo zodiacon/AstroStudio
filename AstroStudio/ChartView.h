@@ -1,6 +1,8 @@
 #pragma once
 
 #include "ChartData.h"
+#include "ChartOverlay.h"
+#include <optional>
 #include <FrameView.h>
 #include "Interfaces.h"
 #include <VirtualListView.h>
@@ -87,11 +89,11 @@ private:
 	void UpdateStepUI();
 	LRESULT OnLive(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/);
 
-	// Transits: the wheel shows the planets of a second moment (m_TransitData, at first the current time) around the
-	// chart, with their aspects to it. The chart keeps its own time; what moves the time - Step, Auto, Live - moves the
-	// transits' while they are shown.
+	// Overlay: the wheel shows a second set of planets around the chart, with their aspects to it. For now only transits: the
+	// planets of a second moment (m_Overlay->Data, at first the current time). The chart keeps its own time; what moves the
+	// time - Step, Auto, Live - moves the overlay's while it is shown.
 	void SetTransits(bool on);
-	void UpdateTransits();
+	void UpdateOverlay();
 	LRESULT OnTransits(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/);
 	LRESULT OnStep(WORD /*wNotifyCode*/, WORD wID, HWND /*hWndCtl*/, BOOL& /*bHandled*/);
 	LRESULT OnAutoStep(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/);
@@ -132,8 +134,7 @@ private:
 	CComboBox m_StepCount, m_StepUnit, m_StepInterval;
 	bool m_AutoStep{ false };
 	bool m_Live{ false };
-	bool m_Transits{ false };
-	ChartData m_TransitData;
+	std::optional<ChartOverlay> m_Overlay;
 	CString m_FilePath, m_Title;
 	bool m_Modified{ false };
 	int m_NotModifying{ 0 };		// while above 0, changes (system updates, auto step ticks) don't count as edits

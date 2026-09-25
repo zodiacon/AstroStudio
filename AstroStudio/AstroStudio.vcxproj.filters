@@ -155,6 +155,9 @@
     <ClInclude Include="ChartImage.h">
       <Filter>Helpers</Filter>
     </ClInclude>
+    <ClInclude Include="ChartOverlay.h">
+      <Filter>Helpers</Filter>
+    </ClInclude>
     <ClInclude Include="Helpers.h">
       <Filter>Helpers</Filter>
     </ClInclude>

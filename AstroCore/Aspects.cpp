@@ -59,6 +59,15 @@ std::vector<AspectData> AspectCalculator::Calculate(std::vector<PlanetPosition> 
     return aspects;
 }
 
+std::vector<AspectData> AspectCalculator::CalcBetween(std::vector<PlanetPosition> const& a, std::vector<PlanetPosition> const& b) const {
+    std::vector<AspectData> aspects;
+    for (auto const& first : a)
+        for (auto const& second : b)
+            if (auto data = CalcAspect(first, second); data.Type != AspectType::None)
+                aspects.push_back(std::move(data));
+    return aspects;
+}
+
 float AspectCalculator::GetAspectAngle(AspectType type) {
     return aspectAngles[(int)type];
 }

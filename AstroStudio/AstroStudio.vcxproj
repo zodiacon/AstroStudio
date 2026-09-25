@@ -271,6 +271,7 @@
     <ClInclude Include="AspectOptions.h" />
     <ClInclude Include="AspectOptionsDlg.h" />
     <ClInclude Include="ChartImage.h" />
+    <ClInclude Include="ChartOverlay.h" />
     <ClInclude Include="EphemerisOptionsDlg.h" />
     <ClInclude Include="Helpers.h" />
     <ClInclude Include="Interfaces.h" />

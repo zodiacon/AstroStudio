@@ -45,10 +45,10 @@ HRESULT D2DChartDrawing::Draw(ID2D1RenderTarget* rt, float size) {
 }
 
 namespace {
-	// how much the chart shrinks to make room for the transit band around it, and the band's edges
+	// how much the chart shrinks to make room for the overlay's band around it, and the band's edges
 	constexpr float BiWheelScale = 0.87f;
-	constexpr float TransitInnerRadius = 434, TransitOuterRadius = 496;
-	constexpr float TransitDotRadius = 441, TransitGlyphRadius = 468;
+	constexpr float OverlayInnerRadius = 434, OverlayOuterRadius = 496;
+	constexpr float OverlayDotRadius = 441, OverlayGlyphRadius = 468;
 }
 
 D2D1_POINT_2F D2DChartDrawing::Map(D2D1_POINT_2F const& pt) const {
@@ -59,26 +59,26 @@ D2D1_POINT_2F D2DChartDrawing::Map(D2D1_POINT_2F const& pt) const {
 HRESULT D2DChartDrawing::DrawChart(ID2D1RenderTarget* rt) {
 	m_planetSpots.clear();
 	m_aspectLines.clear();
-	m_transitSpots.clear();
-	m_transitLines.clear();
-	bool withTransits = m_transits != nullptr;
-	m_scale = withTransits ? BiWheelScale : 1.0f;
+	m_overlaySpots.clear();
+	m_overlayLines.clear();
+	bool withOverlay = m_overlay != nullptr;
+	m_scale = withOverlay ? BiWheelScale : 1.0f;
 
-	if (withTransits) {
-		if (auto hr = DrawTransitBand(rt); FAILED(hr))
+	if (withOverlay) {
+		if (auto hr = DrawOverlayBand(rt); FAILED(hr))
 			return hr;
 	}
 
 	// the chart itself, smaller when there is a band to make room for
 	D2D1_MATRIX_3X2_F transform;
 	rt->GetTransform(&transform);
-	if (withTransits)
+	if (withOverlay)
 		rt->SetTransform(D2D1::Matrix3x2F::Scale(m_scale, m_scale, D2DChartDrawing::Center) * transform);
 	auto hr = DrawNatal(rt);
 	rt->SetTransform(transform);
-	if (FAILED(hr) || !withTransits)
+	if (FAILED(hr) || !withOverlay)
 		return hr;
-	return DrawTransits(rt);
+	return DrawOverlay(rt);
 }
 
 HRESULT D2DChartDrawing::DrawNatal(ID2D1RenderTarget* rt) {
@@ -176,21 +176,21 @@ HRESULT D2DChartDrawing::DrawNatal(ID2D1RenderTarget* rt) {
 		drawGlyph(DefaultFont::Get().GetPlanetGlyph(pp.Planet), resources.PlanetFormat(), pt);
 		if (auto it = std::find_if(planets.begin(), planets.end(), [&](auto& p) { return p.Planet == pp.Planet; }); it != planets.end())
 			m_planetSpots.push_back({ Map(pt), int(it - planets.begin()) });
-		if (m_highlight && !m_highlight->Transit && m_highlight->Planet == pp.Planet)
+		if (m_highlight && !m_highlight->Overlay && m_highlight->Planet == pp.Planet)
 			rt->DrawEllipse(D2D1::Ellipse(pt, 22, 22), use(D2D1::ColorF(D2D1::ColorF::DarkOrange)), 3);
 	}
 
 	r = 395;
 	for (auto& pp : planets) {
 		auto pt = PointByAngle(center, r, pp.Longitude);
-		bool highlighted = m_highlight && !m_highlight->Transit && m_highlight->Planet == pp.Planet;
+		bool highlighted = m_highlight && !m_highlight->Overlay && m_highlight->Planet == pp.Planet;
 		rt->FillEllipse(D2D1::Ellipse(pt, highlighted ? 6.f : 3.f, highlighted ? 6.f : 3.f), use(highlighted ? D2D1::ColorF(D2D1::ColorF::DarkOrange) : m_params.DotColor));
 	}
 
 	//
 	// draw aspects
 	//
-	if (m_params.DrawAspects && m_aspects && !m_transits) {
+	if (m_params.DrawAspects && m_aspects && !m_overlay) {
 		for (int index = 0; index < (int)m_aspects->size(); index++) {
 			auto const& aspect = (*m_aspects)[index];
 			if (aspect.Type == AspectType::Conjunction)
@@ -227,7 +227,7 @@ HRESULT D2DChartDrawing::DrawNatal(ID2D1RenderTarget* rt) {
 			m_aspectLines.push_back({ Map(pt1), Map(pt2), Map(middle), index });
 
 			if (m_highlight) {
-				bool involved = !m_highlight->Transit && (aspect.Planet1.Planet == m_highlight->Planet || aspect.Planet2.Planet == m_highlight->Planet);
+				bool involved = !m_highlight->Overlay && (aspect.Planet1.Planet == m_highlight->Planet || aspect.Planet2.Planet == m_highlight->Planet);
 				if (!involved) {
 					// not the highlighted planet's: a faint line, no glyph
 					color.a = 0.12f;
@@ -289,37 +289,27 @@ std::optional<ChartSelection> D2DChartDrawing::Highlight() const {
 	return m_highlight;
 }
 
-D2DChartDrawing& D2DChartDrawing::Transits(ChartData* data) {
-	m_transits = data;
+D2DChartDrawing& D2DChartDrawing::Overlay(ChartOverlay const* overlay) {
+	m_overlay = overlay;
 	return *this;
 }
 
-D2DChartDrawing& D2DChartDrawing::TransitAspects(std::vector<AspectData>* aspects) {
-	m_transitAspects = aspects;
-	return *this;
-}
-
-D2DChartDrawing& D2DChartDrawing::TransitCaption(std::wstring caption) {
-	m_transitCaption = std::move(caption);
-	return *this;
-}
-
-HRESULT D2DChartDrawing::DrawTransitBand(ID2D1RenderTarget* rt) {
+HRESULT D2DChartDrawing::DrawOverlayBand(ID2D1RenderTarget* rt) {
 	CComPtr<ID2D1SolidColorBrush> brush;
 	if (auto hr = rt->CreateSolidColorBrush(Black, &brush); FAILED(hr))
 		return hr;
 	auto center = D2DChartDrawing::Center;
-	brush->SetColor(m_params.TransitBandColor);
-	rt->FillEllipse(D2D1::Ellipse(center, TransitOuterRadius, TransitOuterRadius), brush);
+	brush->SetColor(m_params.OverlayBandColor);
+	rt->FillEllipse(D2D1::Ellipse(center, OverlayOuterRadius, OverlayOuterRadius), brush);
 	brush->SetColor(m_params.BackColor);
-	rt->FillEllipse(D2D1::Ellipse(center, TransitInnerRadius, TransitInnerRadius), brush);
+	rt->FillEllipse(D2D1::Ellipse(center, OverlayInnerRadius, OverlayInnerRadius), brush);
 	brush->SetColor(m_params.GridColor);
-	rt->DrawEllipse(D2D1::Ellipse(center, TransitOuterRadius, TransitOuterRadius), brush, 1);
-	rt->DrawEllipse(D2D1::Ellipse(center, TransitInnerRadius, TransitInnerRadius), brush, 1);
+	rt->DrawEllipse(D2D1::Ellipse(center, OverlayOuterRadius, OverlayOuterRadius), brush, 1);
+	rt->DrawEllipse(D2D1::Ellipse(center, OverlayInnerRadius, OverlayInnerRadius), brush, 1);
 	return S_OK;
 }
 
-HRESULT D2DChartDrawing::DrawTransits(ID2D1RenderTarget* rt) {
+HRESULT D2DChartDrawing::DrawOverlay(ID2D1RenderTarget* rt) {
 	CComPtr<ID2D1SolidColorBrush> brush;
 	if (auto hr = rt->CreateSolidColorBrush(Black, &brush); FAILED(hr))
 		return hr;
@@ -329,46 +319,45 @@ HRESULT D2DChartDrawing::DrawTransits(ID2D1RenderTarget* rt) {
 	};
 	auto& resources = D2DResources::Get();
 	auto center = D2DChartDrawing::Center;
-	auto const& planets = m_transits->AllPlanets();
-	auto const& natal = m_data->AllPlanets();
+	auto const& planets = m_overlay->Data.AllPlanets();
 
 	bool fade = m_highlight.has_value();
 
 	//
-	// the transiting planets: a dot at their place on the edge of the chart, and the glyph out in the band
+	// the overlay's planets: a dot at their place on the edge of the chart, and the glyph out in the band
 	//
 	PlanetSpacer spacer(planets);
 	spacer.Space();
 	for (auto& pp : spacer.NewPositions()) {
-		auto pt = PointByAngle(center, TransitGlyphRadius, pp.Longitude);
+		auto pt = PointByAngle(center, OverlayGlyphRadius, pp.Longitude);
 		constexpr float half = 30;
 		WCHAR glyph = DefaultFont::Get().GetPlanetGlyph(pp.Planet);
 		rt->DrawText(&glyph, 1, resources.PlanetFormat(), D2D1::RectF(pt.x - half, pt.y - half, pt.x + half, pt.y + half),
-			use(m_params.TransitColor), D2D1_DRAW_TEXT_OPTIONS_NONE);
+			use(m_params.OverlayColor), D2D1_DRAW_TEXT_OPTIONS_NONE);
 		if (auto it = std::find_if(planets.begin(), planets.end(), [&](auto& p) { return p.Planet == pp.Planet; }); it != planets.end())
-			m_transitSpots.push_back({ pt, int(it - planets.begin()) });
-		if (m_highlight && m_highlight->Transit && m_highlight->Planet == pp.Planet)
+			m_overlaySpots.push_back({ pt, int(it - planets.begin()) });
+		if (m_highlight && m_highlight->Overlay && m_highlight->Planet == pp.Planet)
 			rt->DrawEllipse(D2D1::Ellipse(pt, 22, 22), use(D2D1::ColorF(D2D1::ColorF::DarkOrange)), 3);
 	}
 	for (auto& pp : planets) {
-		bool highlighted = m_highlight && m_highlight->Transit && m_highlight->Planet == pp.Planet;
-		rt->FillEllipse(D2D1::Ellipse(PointByAngle(center, TransitDotRadius, pp.Longitude), highlighted ? 6.f : 3.5f, highlighted ? 6.f : 3.5f),
-			use(highlighted ? D2D1::ColorF(D2D1::ColorF::DarkOrange) : m_params.TransitColor));
+		bool highlighted = m_highlight && m_highlight->Overlay && m_highlight->Planet == pp.Planet;
+		rt->FillEllipse(D2D1::Ellipse(PointByAngle(center, OverlayDotRadius, pp.Longitude), highlighted ? 6.f : 3.5f, highlighted ? 6.f : 3.5f),
+			use(highlighted ? D2D1::ColorF(D2D1::ColorF::DarkOrange) : m_params.OverlayColor));
 	}
 
 	//
-	// the aspects from the transiting planets to the chart's planets
+	// the overlay's aspects to the chart's planets
 	//
-	if (m_params.DrawAspects && m_transitAspects) {
+	if (m_params.DrawAspects) {
 		float const natalDotRadius = 395 * m_scale;
-		for (int index = 0; index < (int)m_transitAspects->size(); index++) {
-			auto const& aspect = (*m_transitAspects)[index];
+		for (int index = 0; index < (int)m_overlay->Aspects.size(); index++) {
+			auto const& aspect = m_overlay->Aspects[index];
 			if (aspect.Type == AspectType::Conjunction)
 				continue;
 			if (!m_params.DrawNonStandardPlanetAspects && (aspect.Planet1.Planet > Planet::Pluto || aspect.Planet2.Planet > Planet::Pluto))
 				continue;
 
-			auto pt1 = PointByAngle(center, TransitDotRadius, aspect.Planet1.Longitude);
+			auto pt1 = PointByAngle(center, OverlayDotRadius, aspect.Planet1.Longitude);
 			auto pt2 = PointByAngle(center, natalDotRadius, aspect.Planet2.Longitude);
 			auto color(m_params.AspectColor);
 			if (aspect.IsSoft())
@@ -381,11 +370,11 @@ HRESULT D2DChartDrawing::DrawTransits(ID2D1RenderTarget* rt) {
 			// the tighter the orb, the thicker the line
 			float width = std::clamp(4.0f - aspect.Orb / 2, 0.75f, 3.0f);
 			auto middle = D2D1::Point2F((pt1.x + pt2.x) / 2, (pt1.y + pt2.y) / 2);
-			m_transitLines.push_back({ pt1, pt2, middle, index });
+			m_overlayLines.push_back({ pt1, pt2, middle, index });
 
 			bool involved = !fade;
 			if (m_highlight)
-				involved = m_highlight->Transit ? aspect.Planet1.Planet == m_highlight->Planet : aspect.Planet2.Planet == m_highlight->Planet;
+				involved = m_highlight->Overlay ? aspect.Planet1.Planet == m_highlight->Planet : aspect.Planet2.Planet == m_highlight->Planet;
 			if (!involved) {
 				color.a = 0.12f;
 				rt->DrawLine(pt1, pt2, use(color), width);
@@ -403,14 +392,14 @@ HRESULT D2DChartDrawing::DrawTransits(ID2D1RenderTarget* rt) {
 	}
 
 	//
-	// when the transits are for
+	// what the overlay is, and for when
 	//
-	if (!m_transitCaption.empty()) {
+	if (auto const& caption = m_overlay->Caption; !caption.empty()) {
 		CComPtr<IDWriteTextFormat> format;
 		if (SUCCEEDED(resources.CreateTextFormat(22, &format))) {
 			format->SetTextAlignment(DWRITE_TEXT_ALIGNMENT_LEADING);
 			format->SetParagraphAlignment(DWRITE_PARAGRAPH_ALIGNMENT_FAR);
-			rt->DrawText(m_transitCaption.c_str(), (UINT32)m_transitCaption.size(), format, D2D1::RectF(10, 900, 990, 992), use(m_params.TransitColor));
+			rt->DrawText(caption.c_str(), (UINT32)caption.size(), format, D2D1::RectF(10, 900, 990, 992), use(m_params.OverlayColor));
 		}
 	}
 	return S_OK;
@@ -430,10 +419,10 @@ ChartHit D2DChartDrawing::HitTest(D2D1_POINT_2F const& point) const {
 			best = d;
 			hit = { ChartHit::Kind::Planet, spot.Index };
 		}
-	for (auto const& spot : m_transitSpots)
+	for (auto const& spot : m_overlaySpots)
 		if (auto d = distance(point, spot.Point); d <= best) {
 			best = d;
-			hit = { ChartHit::Kind::TransitPlanet, spot.Index };
+			hit = { ChartHit::Kind::OverlayPlanet, spot.Index };
 		}
 	if (hit.Type != ChartHit::Kind::None)
 		return hit;
@@ -460,7 +449,7 @@ ChartHit D2DChartDrawing::HitTest(D2D1_POINT_2F const& point) const {
 	}
 	};
 	testLines(m_aspectLines, ChartHit::Kind::Aspect);
-	testLines(m_transitLines, ChartHit::Kind::TransitAspect);
+	testLines(m_overlayLines, ChartHit::Kind::OverlayAspect);
 	return hit;
 }
 

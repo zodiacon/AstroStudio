@@ -2,6 +2,7 @@
 
 #include "ChartData.h"
 #include "Aspects.h"
+#include "ChartOverlay.h"
 #include "D2DResources.h"
 #include <array>
 #include <optional>
@@ -48,29 +49,29 @@ struct ChartDrawingParameters {
 		p.TextColor = ColorFromRgb(230, 230, 230);
 		p.GridColor = ColorFromRgb(115, 115, 115);
 		p.DotColor = ColorFromRgb(110, 170, 255);
-		p.TransitBandColor = ColorFromRgb(42, 52, 72);
-		p.TransitColor = ColorFromRgb(255, 115, 135);
+		p.OverlayBandColor = ColorFromRgb(42, 52, 72);
+		p.OverlayColor = ColorFromRgb(255, 115, 135);
 		return p;
 	}
 
-	// with transits: the band the transiting planets stand in, and their color
-	D2D1_COLOR_F TransitBandColor{ D2D1::ColorF(0.90f, 0.93f, 0.98f) };
-	D2D1_COLOR_F TransitColor{ D2D1::ColorF(D2D1::ColorF::Crimson) };
+	// with an overlay: the band its planets stand in, and their color
+	D2D1_COLOR_F OverlayBandColor{ D2D1::ColorF(0.90f, 0.93f, 0.98f) };
+	D2D1_COLOR_F OverlayColor{ D2D1::ColorF(D2D1::ColorF::Crimson) };
 };
 
 // What is under a point of the chart wheel.
 struct ChartHit {
-	enum class Kind { None, Planet, Aspect, TransitPlanet, TransitAspect };
+	enum class Kind { None, Planet, Aspect, OverlayPlanet, OverlayAspect };
 	Kind Type{ Kind::None };
-	// a planet: its index in the chart's (or, for a transit, the transits') planets; an aspect: its index in the
-	// aspects (or transit aspects) the drawing was given
+	// a planet: its index in the chart's (or the overlay's) planets; an aspect: its index in the aspects (or the
+	// overlay's aspects) the drawing was given
 	int Index{ -1 };
 };
 
-// A planet picked to highlight: in the chart, or among the transiting planets (a chart has both when it shows transits).
+// A planet picked to highlight: in the chart, or among the overlay's planets (a chart has both when it shows an overlay).
 struct ChartSelection {
 	Planet Planet;
-	bool Transit{ false };
+	bool Overlay{ false };
 	bool operator==(ChartSelection const&) const = default;
 };
 
@@ -94,12 +95,10 @@ public:
 	D2DChartDrawing& Highlight(std::optional<ChartSelection> planet);
 	std::optional<ChartSelection> Highlight() const;
 
-	// Transits: a bi-wheel with the chart shrunk inside a band holding the planets of another moment. The aspects are
-	// the ones between the transiting planets (Planet1) and the chart's (Planet2); the chart's own aspects are not
-	// drawn then. The caption is written in a corner. Null data: no transits.
-	D2DChartDrawing& Transits(ChartData* data);
-	D2DChartDrawing& TransitAspects(std::vector<AspectData>* aspects);
-	D2DChartDrawing& TransitCaption(std::wstring caption);
+	// An overlay (transits, progressions, another chart): a bi-wheel with the chart shrunk inside a band holding the
+	// overlay's planets. The aspects drawn are the overlay's (its planets are Planet1, the chart's Planet2); the chart's own
+	// aspects are not drawn then. The caption is written in a corner. Null: no overlay. It must outlive the drawing.
+	D2DChartDrawing& Overlay(ChartOverlay const* overlay);
 
 	// The planet or aspect line at a point in the 1000x1000 logical space, as the last Draw drew them.
 	// Planets win over the aspect lines that end at them.
@@ -109,8 +108,8 @@ public:
 private:
 	HRESULT DrawChart(ID2D1RenderTarget* rt);
 	HRESULT DrawNatal(ID2D1RenderTarget* rt);
-	HRESULT DrawTransitBand(ID2D1RenderTarget* rt);
-	HRESULT DrawTransits(ID2D1RenderTarget* rt);
+	HRESULT DrawOverlayBand(ID2D1RenderTarget* rt);
+	HRESULT DrawOverlay(ID2D1RenderTarget* rt);
 	// a point of the chart's own (possibly shrunk) part of the wheel as it is on the wheel
 	D2D1_POINT_2F Map(D2D1_POINT_2F const& pt) const;
 	D2D1_POINT_2F PointByAngle(D2D1_POINT_2F const& center, float radius, double angle) const;
@@ -120,9 +119,7 @@ private:
 	std::vector<AspectData>* m_aspects{ nullptr };
 	double m_rotation{ 0 };
 	std::optional<ChartSelection> m_highlight;
-	ChartData* m_transits{ nullptr };
-	std::vector<AspectData>* m_transitAspects{ nullptr };
-	std::wstring m_transitCaption;
+	ChartOverlay const* m_overlay{ nullptr };
 	float m_scale{ 1 };
 
 	// where the last Draw put things
@@ -134,6 +131,6 @@ private:
 		D2D1_POINT_2F From, To, Middle;
 		int Index;
 	};
-	std::vector<PlanetSpot> m_planetSpots, m_transitSpots;
-	std::vector<AspectLine> m_aspectLines, m_transitLines;
+	std::vector<PlanetSpot> m_planetSpots, m_overlaySpots;
+	std::vector<AspectLine> m_aspectLines, m_overlayLines;
 };

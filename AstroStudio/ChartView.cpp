@@ -38,8 +38,8 @@ void CChartView::UpdateAspects() {
 	UpdateAspectGridScrollSize();
 	m_ChartDrawing.SetAspects(std::move(aspects));
 	m_ChartDrawing.Refresh();
-	if (m_Transits)
-		UpdateTransits();		// their aspects are to this chart
+	if (m_Overlay)
+		UpdateOverlay();		// its aspects are to this chart
 }
 
 void CChartView::AspectSettingsChanged() {
@@ -149,7 +149,7 @@ void CChartView::PageActivated(bool active) {
 		// the menu and toolbars are shared; show this chart's state
 		ui.UISetCheck(ID_CHART_AUTOSTEP, m_AutoStep);
 		ui.UISetCheck(ID_CHART_LIVE, m_Live);
-		ui.UISetCheck(ID_CHART_TRANSITS, m_Transits);
+		ui.UISetCheck(ID_CHART_TRANSITS, m_Overlay.has_value());
 	}
 	UpdateAutoStepTimer();
 }
@@ -383,14 +383,14 @@ void CChartView::SetLive(bool on) {
 void CChartView::TickLive() {
 	if (m_Data.AllPlanets().empty())
 		return;
-	auto& info = m_Transits ? m_TransitData.Info() : m_Data.Info();
+	auto& info = m_Overlay ? m_Overlay->Data.Info() : m_Data.Info();
 	info.Time = DateTime::Now();
 	int offset = info.TimeZone.OffsetUT;
 	TimeZones::UtToLocal(info.Time, info.TimeZone, &offset);
 	info.TimeZone.OffsetUT = offset;
 
-	if (m_Transits) {
-		UpdateTransits();
+	if (m_Overlay) {
+		UpdateOverlay();
 		return;
 	}
 	m_NotModifying++;		// following the clock isn't an edit
@@ -402,55 +402,56 @@ void CChartView::TickLive() {
 void CChartView::SetTransits(bool on) {
 	if (on) {
 		// the same planets as the chart's, at the current time (in the chart's zone), with the chart's place
-		m_TransitData = ChartData();
+		m_Overlay.emplace();
+		m_Overlay->Kind = OverlayKind::Transit;
+		m_Overlay->Label = ChartOverlay::DefaultLabel(OverlayKind::Transit);
 		std::vector<Planet> planets;
 		for (auto const& p : m_Data.AllPlanets())
 			planets.push_back(p.Planet);
-		m_TransitData.AddPlanets(planets);
-		auto& info = m_TransitData.Info();
+		m_Overlay->Data.AddPlanets(planets);
+		auto& info = m_Overlay->Data.Info();
 		info = m_Data.Info();
 		info.Time = DateTime::Now();
 		int offset = info.TimeZone.OffsetUT;
 		TimeZones::UtToLocal(info.Time, info.TimeZone, &offset);
 		info.TimeZone.OffsetUT = offset;
 	}
-	m_Transits = on;
+	if (!on)
+		m_Overlay.reset();
 	if (m_PageActive)
 		Frame()->GetUI().UISetCheck(ID_CHART_TRANSITS, on);
-	UpdateTransits();
+	UpdateOverlay();
 }
 
-void CChartView::UpdateTransits() {
-	if (!m_Transits) {
-		m_ChartDrawing.ClearTransits();
+void CChartView::UpdateOverlay() {
+	if (!m_Overlay) {
+		m_ChartDrawing.ClearOverlay();
 		return;
 	}
 
-	m_TransitData.Harmonic(m_Data.Harmonic());
-	m_TransitData.CalcPlanets(m_Calc);
+	auto& data = m_Overlay->Data;
+	data.Harmonic(m_Data.Harmonic());
+	data.CalcPlanets(m_Calc);
 
-	// (by default with tight orbs and the major aspects only)
+	// (for transits by default with tight orbs and the major aspects only)
 	AspectCalculator calc(AspectOptions::Current().Transit);
-	std::vector<AspectData> aspects;
-	for (auto const& transiting : m_TransitData.AllPlanets())
-		for (auto const& natal : m_Data.AllPlanets())
-			if (auto aspect = calc.CalcAspect(transiting, natal); aspect.Type != AspectType::None)
-				aspects.push_back(aspect);
+	m_Overlay->Aspects = calc.CalcBetween(data.AllPlanets(), m_Data.AllPlanets());
 
 	// when: in the chart's zone, as its own time is shown
-	auto const& info = m_TransitData.Info();
+	auto const& info = data.Info();
 	int offset = info.TimeZone.OffsetUT;
 	auto local = TimeZones::UtToLocal(info.Time, info.TimeZone, &offset);
 	CString caption;
-	caption.Format(L"Transits  %04ld/%02ld/%02ld  %02ld:%02ld:%02ld  (UTC%s)", local.Year, local.Month, local.Day, local.Hour, local.Minute,
+	caption.Format(L"%s  %04ld/%02ld/%02ld  %02ld:%02ld:%02ld  (UTC%s)", L"Transits", local.Year, local.Month, local.Day, local.Hour, local.Minute,
 		local.Second, (PCWSTR)TimeZones::FormatOffset(offset));
+	m_Overlay->Caption = caption;
 
-	m_ChartDrawing.SetTransits(&m_TransitData, std::move(aspects), (PCWSTR)caption);
+	m_ChartDrawing.SetOverlay(&*m_Overlay);
 	m_ChartDrawing.Refresh();
 }
 
 LRESULT CChartView::OnTransits(WORD, WORD, HWND, BOOL&) {
-	SetTransits(!m_Transits);
+	SetTransits(!m_Overlay);
 	return 0;
 }
 
@@ -512,7 +513,7 @@ bool CChartView::StepTime(int direction) {
 	int unitIndex = m_StepUnit.GetCurSel();
 	auto unit = unitIndex < 0 ? StepUnit::Day : (StepUnit)m_StepUnit.GetItemData(unitIndex);
 
-	auto& info = m_Transits ? m_TransitData.Info() : m_Data.Info();
+	auto& info = m_Overlay ? m_Overlay->Data.Info() : m_Data.Info();
 	DateTime ut = info.Time;
 	TimeZoneInfo tz = info.TimeZone;
 	if (!TimeStep::Step(ut, tz, unit, direction * count)) {
@@ -522,8 +523,8 @@ bool CChartView::StepTime(int direction) {
 	info.Time = ut;
 	info.TimeZone = tz;
 
-	if (m_Transits) {
-		UpdateTransits();
+	if (m_Overlay) {
+		UpdateOverlay();
 		return true;
 	}
 	SendMessage(WM_RECALC, static_cast<WPARAM>(Recalc::All));

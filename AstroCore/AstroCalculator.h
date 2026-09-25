@@ -85,6 +85,11 @@ public:
 	AstroCalculator();
 	PlanetPosition CalcPlanet(Planet planet, DateTime const& dt, int harmonic = 1, bool withSpeed = true) const;
 	HouseData CalcHouses(DateTime dt, double latitude, double longitude, HouseSystem system);
+	// Houses for a sidereal time at the Midheaven (armc, degrees), a latitude and the obliquity of the ecliptic - for charts
+	// whose angles aren't those of a moment (directions, composites).
+	HouseData CalcHousesFromArmc(double armc, double latitude, double obliquity, HouseSystem system) const;
+	// the true obliquity of the ecliptic (degrees) at a Julian day
+	double Obliquity(double jd) const;
 
 	IngressData CalcPlanetIngress(Planet planet, DateTime start, bool reverse = false) const;
 	StationData CalcPlanetStation(Planet planet, DateTime start) const;

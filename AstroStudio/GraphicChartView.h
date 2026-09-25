@@ -23,10 +23,11 @@ public:
 		return m_Selected;
 	}
 
-	// Shows the transits (the planets of another moment) around the chart, with their aspects to it, and a caption
-	// saying when. The data must outlive the view's use of it; ClearTransits goes back to the plain chart.
-	void SetTransits(ChartData* data, std::vector<AspectData> aspects, std::wstring caption);
-	void ClearTransits();
+	// Shows an overlay (transits, progressions, another chart) around the chart: its planets, their aspects to the chart and
+	// a caption. The overlay belongs to the caller, who keeps it alive while it is shown and refreshes the view after
+	// changing it; ClearOverlay goes back to the plain chart.
+	void SetOverlay(ChartOverlay const* overlay);
+	void ClearOverlay();
 
 	BEGIN_MSG_MAP(CGraphicChartView)
 		MESSAGE_HANDLER(WM_ERASEBKGND, OnEraseBkgnd)
@@ -64,8 +65,8 @@ private:
 	void HideTip();
 	CString PlanetTip(int index) const;
 	CString AspectTip(int index) const;
-	CString TransitPlanetTip(int index) const;
-	CString TransitAspectTip(int index) const;
+	CString OverlayPlanetTip(int index) const;
+	CString OverlayAspectTip(int index) const;
 	// what the drawing needs to know besides the chart
 	void ApplyState();
 	int HouseOf(AstroPoint const& longitude) const;
@@ -78,9 +79,7 @@ private:
 
 	double m_Rotation{ 0 };
 	std::optional<ChartSelection> m_Selected;
-	ChartData* m_Transit{ nullptr };
-	std::vector<AspectData> m_TransitAspects;
-	std::wstring m_TransitCaption;
+	ChartOverlay const* m_Overlay{ nullptr };
 	ChartHit m_Hover;
 	// the left button: pressed, and moved far enough to count as a drag
 	bool m_MouseDown{ false }, m_Dragging{ false }, m_Tracking{ false };

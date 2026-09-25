@@ -272,6 +272,38 @@ bool AstroCalculator::Calculate(ChartData& data) {
 	return true;
 }
 
+namespace {
+	HouseData FillHouses(double const* cusps, double const* ascmc) {
+		HouseData houses;
+		for (int i = 0; i < 12; i++)
+			houses.Cusps[i] = cusps[i + 1];
+
+		houses.Asc = ascmc[0];
+		houses.MC = ascmc[1];
+		houses.Armc = ascmc[2];
+		houses.Vertex = ascmc[3];
+		houses.EquAsc = ascmc[4];
+		houses.CoAsc1 = ascmc[5];
+		houses.CoAsc2 = ascmc[6];
+		houses.PolarAsc = ascmc[7];
+		return houses;
+	}
+}
+
+HouseData AstroCalculator::CalcHousesFromArmc(double armc, double latitude, double obliquity, HouseSystem system) const {
+	double ascmc[10]{};
+	double cusps[13]{};
+	swe_houses_armc(armc, latitude, obliquity, (int)system, cusps, ascmc);
+	return FillHouses(cusps, ascmc);
+}
+
+double AstroCalculator::Obliquity(double jd) const {
+	double xx[6]{};
+	static char error[256];
+	swe_calc_ut(jd, SE_ECL_NUT, 0, xx, error);
+	return xx[0];
+}
+
 HouseData AstroCalculator::CalcHouses(DateTime dt, double latitude, double longitude, HouseSystem system) {
 	HouseData houses;
 	double ascmc[10];
