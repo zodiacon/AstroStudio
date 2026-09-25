@@ -3,25 +3,25 @@
 #include <algorithm>
 #include <cmath>
 
-std::vector<ChartPoint> Midpoints::Points(std::vector<PlanetPosition> const& planets) {
+std::vector<ChartPoint> Midpoints::Points(std::vector<PlanetPosition> const& planets, int set) {
 	std::vector<ChartPoint> points;
 	points.reserve(planets.size());
 	for (auto const& planet : planets)
 		if (planet.Planet != Planet::PartOfFortune)		// (a midpoint of bodies, not of the Part of Fortune)
-			points.push_back({ PointKind::Planet, planet.Planet, planet.Longitude, planet.Speed });
+			points.push_back({ PointKind::Planet, planet.Planet, planet.Longitude, planet.Speed, set });
 	return points;
 }
 
-std::vector<ChartPoint> Midpoints::Points(ChartData const& chart, MidpointOptions const& options) {
+std::vector<ChartPoint> Midpoints::Points(ChartData const& chart, MidpointOptions const& options, int set) {
 	std::vector<ChartPoint> points;
 	for (auto const& planet : chart.AllPlanets()) {
 		if (planet.Planet == Planet::PartOfFortune || (!options.Only.empty() && std::ranges::find(options.Only, planet.Planet) == options.Only.end()))
 			continue;
-		points.push_back({ PointKind::Planet, planet.Planet, planet.Longitude, planet.Speed });
+		points.push_back({ PointKind::Planet, planet.Planet, planet.Longitude, planet.Speed, set });
 	}
 	if (options.Angles) {
-		points.push_back({ PointKind::Ascendant, Planet::Sun, chart.Houses().Asc, 0 });
-		points.push_back({ PointKind::Midheaven, Planet::Sun, chart.Houses().MC, 0 });
+		points.push_back({ PointKind::Ascendant, Planet::Sun, chart.Houses().Asc, 0, set });
+		points.push_back({ PointKind::Midheaven, Planet::Sun, chart.Houses().MC, 0, set });
 	}
 	return points;
 }

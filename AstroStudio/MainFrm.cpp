@@ -373,7 +373,7 @@ LRESULT CMainFrame::OnPrintSetup(WORD, WORD, HWND, BOOL&) {
 }
 
 LRESULT CMainFrame::OnFileOpen(WORD, WORD, HWND, BOOL&) {
-	CSimpleFileDialog dlg(TRUE, ChartFile::Extension, nullptr, OFN_FILEMUSTEXIST | OFN_PATHMUSTEXIST | OFN_EXPLORER | OFN_ENABLESIZING, ChartFile::Filter, m_hWnd);
+	CSimpleFileDialog dlg(TRUE, ChartFile::Extension, nullptr, OFN_FILEMUSTEXIST | OFN_PATHMUSTEXIST | OFN_EXPLORER | OFN_ENABLESIZING, ChartFile::OpenFilter, m_hWnd);
 	WTLHelper::SuspendHook();
 	auto ok = dlg.DoModal(m_hWnd) == IDOK;
 	WTLHelper::ResumeHook();
@@ -391,6 +391,24 @@ bool CMainFrame::OpenChartFile(PCWSTR path) {
 			AddRecentFile(path);
 			return true;
 		}
+	}
+
+	// an analysis that was saved
+	if (_wcsicmp(std::filesystem::path(path).extension().c_str(), (std::wstring(L".") + ChartFile::AnalysisExtension).c_str()) == 0) {
+		AnalysisDocument document;
+		std::wstring problem;
+		if (!ChartFile::LoadAnalysis(path, document, problem)) {
+			CString message;
+			message.Format(L"%s could not be opened:\n\n%s", path, problem.c_str());
+			AtlMessageBox(m_hWnd, (PCWSTR)message, L"Astro Studio", MB_ICONWARNING);
+			return false;
+		}
+		auto pView = new CAnalysisView(this);
+		pView->Create(m_view, rcDefault, nullptr, WS_CHILD | WS_VISIBLE | WS_CLIPCHILDREN | WS_CLIPSIBLINGS, 0);
+		m_view.AddPage(pView->m_hWnd, L"Analysis", 2, pView);
+		pView->Restore(std::move(document), path);
+		AddRecentFile(path);
+		return true;
 	}
 
 	ChartFile::Loaded loaded;

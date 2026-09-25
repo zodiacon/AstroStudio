@@ -5,7 +5,10 @@
 #include "TimeZones.h"
 #include "TimeControls.h"
 #include <IniDocument.h>
+#include "AspectOptions.h"
 #include <cmath>
+#include <fstream>
+#include <iterator>
 
 namespace {
 	constexpr int CurrentVersion = 1;
@@ -483,5 +486,129 @@ bool ChartFile::Load(PCWSTR path, ChartData& chart, std::wstring& error) {
 		return false;
 	}
 	chart = std::move(loaded.Chart);
+	return true;
+}
+
+//
+// analyses
+//
+
+namespace {
+	// the line that ends the INI part of an analysis file; the events follow it, one to a line
+	constexpr std::string_view EventsMarker = "\n#EVENTS\n";
+
+	// a moment in UT: the same [Date, Time, TimeZone, UtOffset] as a chart's time, in no zone
+	void WriteUt(IniDocument& ini, std::wstring const& section, DateTime const& ut) {
+		WriteWhen(ini, section, ut, TimeZoneInfo{});
+	}
+
+	bool ReadUt(Reader const& r, std::wstring const& section, DateTime& ut) {
+		TimeZoneInfo zone;
+		return ReadWhen(r, section, ut, zone);
+	}
+}
+
+bool ChartFile::SaveAnalysis(AnalysisDocument const& document, PCWSTR path, std::wstring& error) {
+	// the orbs and the aspects that were on are the aspect options' own text: its sections ([Aspects], [Chart], [Chart.Aspects]...)
+	AspectOptions aspects;
+	aspects.Chart = document.Settings.Aspects;
+	IniDocument ini;
+	if (!ini.Parse(aspects.ToText())) {
+		error = ini.Error();
+		return false;
+	}
+	ini.SetHeader(L"Astro Studio analysis\n"
+		L"The events an analysis found between a chart and the sky (or its progressions), so that they can be looked at again without\n"
+		L"working them out. [Analysis] says what was analysed and [Natal.*] is the chart (as in a chart file); the events follow the\n"
+		L"line #EVENTS at the end, one to a line - see Analysis::EventsToText. Refresh in the analysis view runs the analysis again.");
+	ini.SetInt(L"Analysis", L"Version", CurrentVersion);
+	ini.SetString(L"Analysis", L"ChartName", document.ChartName);
+	ini.SetString(L"Analysis", L"Settings", document.Settings.ToText());
+	ini.SetInt(L"Analysis", L"ArcKey", static_cast<int>(document.Settings.Key));
+	ini.SetInt(L"Analysis", L"Events", static_cast<int>(document.Events.size()));
+	WriteUt(ini, L"Analysis.From", document.Settings.From);
+	WriteUt(ini, L"Analysis.To", document.Settings.To);
+	WriteChart(ini, document.Chart, L"Natal.");
+
+	// through a temporary file, so that a failed save can't damage the file that is there
+	auto text = ini.ToString();
+	text += EventsMarker;
+	text += Analysis::EventsToText(document.Events);
+	std::wstring temp = std::wstring(path) + L".tmp";
+	auto fail = [&](std::wstring what) {
+		error = what + L": " + std::to_wstring(::GetLastError());
+		return false;
+	};
+	HANDLE file = ::CreateFileW(temp.c_str(), GENERIC_WRITE, 0, nullptr, CREATE_ALWAYS, FILE_ATTRIBUTE_NORMAL, nullptr);
+	if (file == INVALID_HANDLE_VALUE)
+		return fail(L"could not create " + temp + L" (error)");
+	DWORD written = 0;
+	bool ok = ::WriteFile(file, text.data(), static_cast<DWORD>(text.size()), &written, nullptr) && written == text.size() && ::FlushFileBuffers(file);
+	::CloseHandle(file);
+	if (!ok) {
+		::DeleteFileW(temp.c_str());
+		return fail(L"could not write " + temp + L" (error)");
+	}
+	if (!::MoveFileExW(temp.c_str(), path, MOVEFILE_REPLACE_EXISTING | MOVEFILE_WRITE_THROUGH)) {
+		::DeleteFileW(temp.c_str());
+		return fail(L"could not replace " + std::wstring(path) + L" (error)");
+	}
+	return true;
+}
+
+bool ChartFile::LoadAnalysis(PCWSTR path, AnalysisDocument& document, std::wstring& error) {
+	std::ifstream in(path, std::ios::binary);
+	if (!in) {
+		error = L"the file could not be read";
+		return false;
+	}
+	std::string text((std::istreambuf_iterator<char>(in)), std::istreambuf_iterator<char>());
+	auto marker = text.find(EventsMarker);
+	if (marker == std::string::npos) {
+		error = L"this is not an analysis file (there is no #EVENTS line)";
+		return false;
+	}
+	std::string_view settingsText(text.data(), marker + 1);
+	std::string_view eventsText(text.data() + marker + EventsMarker.size(), text.size() - marker - EventsMarker.size());
+
+	IniDocument ini;
+	if (!ini.Parse(settingsText)) {
+		error = ini.Error();
+		return false;
+	}
+	Reader r{ ini, error };
+	auto version = ini.GetInt(L"Analysis", L"Version");
+	if (!version)
+		return r.Missing(L"Analysis", L"Version");
+	if (*version > CurrentVersion) {
+		error = L"this analysis was saved by a newer version of the program (file version " + std::to_wstring(*version) + L")";
+		return false;
+	}
+
+	AnalysisDocument loaded;
+	loaded.ChartName = ini.GetString(L"Analysis", L"ChartName", L"Chart");
+	if (!ReadChart(r, L"Natal.", loaded.Chart))
+		return false;
+
+	// what was analysed: the text of the settings for the kinds, movers, targets and switches, the dates and orbs on their own
+	AnalysisSettings& settings = loaded.Settings;
+	settings.FromText(ini.GetString(L"Analysis", L"Settings"));
+	if (auto key = ini.GetInt(L"Analysis", L"ArcKey"); key && *key >= 0 && *key <= static_cast<int>(ArcKey::Ptolemy))
+		settings.Key = static_cast<ArcKey>(*key);
+	if (!ReadUt(r, L"Analysis.From", settings.From) || !ReadUt(r, L"Analysis.To", settings.To))
+		return false;
+	if (settings.To.Julian() < settings.From.Julian())
+		return r.Problem(L"Analysis.To", L"Date", L"the analysis ends before it begins");
+	AspectOptions aspects;
+	if (!aspects.FromText(settingsText, error))
+		return false;
+	settings.Aspects = aspects.Chart;
+
+	std::string eventsError;
+	if (!Analysis::EventsFromText(eventsText, loaded.Events, eventsError)) {
+		error = L"the events, " + std::wstring(eventsError.begin(), eventsError.end());
+		return false;
+	}
+	document = std::move(loaded);
 	return true;
 }

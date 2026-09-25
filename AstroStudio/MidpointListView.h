@@ -3,6 +3,7 @@
 #include <FrameView.h>
 #include <VirtualListView.h>
 #include "Midpoints.h"
+#include "ChartOverlay.h"
 #include "Interfaces.h"
 #include "Helpers.h"
 
@@ -16,6 +17,10 @@ public:
 
 	// Works the midpoints out for the chart and puts them on the screen; null (or a chart with no planets): none.
 	void SetChartData(ChartData const* chart);
+	// With an overlay (transits...) the list is the midpoints between its planets and the chart's (the overlay's as the first point of
+	// each, with its label: "Transit Sun"), and the points that stand on them are those of both; null: the chart's own midpoints.
+	// Takes effect at once; the overlay must outlive its use here.
+	void SetOverlay(ChartOverlay const* overlay);
 	// puts the text font the user chose with Options > Font on the list (nothing if they have not chosen one)
 	void ApplyTextFont();
 
@@ -53,6 +58,8 @@ private:
 
 	LRESULT OnCreate(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, BOOL& /*bHandled*/);
 	static CString PointName(ChartPoint const& point);
+	// the name, with the overlay's label or the chart's before it when there is an overlay ("Transit Sun", "natal Moon")
+	CString PointText(ChartPoint const& point) const;
 	// the glyph of a point: a planet's, or Z and X for the Ascendant and Midheaven (as in the analysis view)
 	static CString PointGlyph(ChartPoint const& point);
 	static int PointOrder(ChartPoint const& point) noexcept;
@@ -63,4 +70,6 @@ private:
 	CListViewCtrl m_List;
 	CFont m_Font, m_TextFont;
 	std::vector<Row> m_Rows;
+	ChartData const* m_Chart{ nullptr };
+	ChartOverlay const* m_Overlay{ nullptr };
 };

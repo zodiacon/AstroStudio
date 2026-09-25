@@ -738,6 +738,8 @@ void CChartView::UpdateOverlay() {
 		m_AspectList.ClearOverlayAspects();
 		m_AspectList.Refresh();
 		m_AspectGrid.SetOverlay(nullptr);
+		m_MidpointList.SetOverlay(nullptr);
+		m_MidpointTree.SetOverlay(nullptr);
 		m_AspectGrid.Refresh();
 		UpdateAspectGridScrollSize();
 		return;
@@ -794,6 +796,8 @@ void CChartView::UpdateOverlay() {
 	m_AspectList.SetOverlayAspects(overlay.Aspects, overlay.Label, overlay.BaseLabel);
 	m_AspectList.Refresh();
 	m_AspectGrid.SetOverlay(&overlay);
+	m_MidpointList.SetOverlay(&overlay);
+	m_MidpointTree.SetOverlay(&overlay);
 	m_AspectGrid.Refresh();
 	UpdateAspectGridScrollSize();
 	m_ChartDrawing.SetOverlay(&overlay);

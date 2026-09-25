@@ -5,6 +5,7 @@
 #include "resource.h"
 #include "Interfaces.h"
 #include "Analysis.h"
+#include "ChartFile.h"
 #include "WTLHelper.h"
 #include <atomic>
 #include <memory>
@@ -27,6 +28,13 @@ public:
 
 	// Takes a chart (a copy) and the settings, runs the analysis and shows its events. False if the user cancelled a warning.
 	void Analyse(OpenChart chart, AnalysisSettings const& settings);
+	// Shows an analysis that was saved (File > Open): its events as they were, without working them out again. The chart is the
+	// tab's own copy, "closed" like one whose tab was closed; Options and Refresh work as ever.
+	void Restore(AnalysisDocument document, PCWSTR path);
+	// the file the analysis was saved to or opened from, or null
+	PCWSTR FilePath() const override {
+		return m_FilePath.IsEmpty() ? nullptr : (PCWSTR)m_FilePath;
+	}
 
 	CString GetColumnText(HWND, int row, int col) const;
 	void DoSort(SortInfo const* si);
@@ -61,6 +69,8 @@ public:
 	ALT_MSG_MAP(1)
 		COMMAND_ID_HANDLER(ID_EDIT_COPY, OnEditCopy)
 		COMMAND_ID_HANDLER(ID_FILE_EXPORT, OnExport)
+		COMMAND_ID_HANDLER(ID_FILE_SAVE, OnSave)
+		COMMAND_ID_HANDLER(ID_FILE_SAVE_AS, OnSave)
 		COMMAND_ID_HANDLER(ID_FILE_PRINT, OnPrint)
 		COMMAND_ID_HANDLER(ID_FILE_PRINT_PREVIEW, OnPrint)
 	END_MSG_MAP()
@@ -86,6 +96,12 @@ private:
 	LRESULT OnEditCopy(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/);
 	LRESULT OnExport(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/);
 	LRESULT OnPrint(WORD /*wNotifyCode*/, WORD wID, HWND /*hWndCtl*/, BOOL& /*bHandled*/);
+	// File > Save and Save As: the analysis - the chart, what it was made of and its events - to an .analysis file
+	LRESULT OnSave(WORD /*wNotifyCode*/, WORD wID, HWND /*hWndCtl*/, BOOL& /*bHandled*/);
+	bool Save(bool saveAs);
+	// Save is possible once the tab has results (a first run that is cancelled leaves it with none)
+	bool CanSave() const;
+	void UpdateSaveUI();
 
 	// Starts the analysis of a chart (a copy) by settings on a worker thread, stopping the one that was running if there was one.
 	// The tab takes the chart, the settings and the events when it is done.
@@ -151,6 +167,7 @@ private:
 	std::thread m_Worker;
 	WPARAM m_JobId{ 0 };
 	OpenChart m_Chart;
+	CString m_FilePath;
 	AnalysisSettings m_Settings;
 	std::vector<AnalysisEvent> m_Events;
 };

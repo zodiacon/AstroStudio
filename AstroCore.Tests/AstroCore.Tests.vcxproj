@@ -60,7 +60,7 @@
       <ConformanceMode>true</ConformanceMode>
       <LanguageStandard>stdcpp20</LanguageStandard>
       <PrecompiledHeader>NotUsing</PrecompiledHeader>
-      <AdditionalIncludeDirectories>..\AstroCore;..\sweph;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>..\AstroCore;..\sweph;..\AstroStudio;..\WTLHelper\WTLHelper;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
@@ -105,10 +105,15 @@
     <ClCompile Include="MidpointTests.cpp" />
     <ClCompile Include="ArabicPartsTests.cpp" />
     <ClCompile Include="PhenomenaTests.cpp" />
+    <ClCompile Include="ProjectTests.cpp" />
+    <ClCompile Include="..\AstroStudio\Project.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\AstroCore\AstroCore.vcxproj">
       <Project>{ada16f7e-a264-43bb-a6ed-86203f5972e9}</Project>
+    </ProjectReference>
+    <ProjectReference Include="..\WTLHelper\WTLHelper\WTLHelper.vcxproj">
+      <Project>{ae53419f-a769-4548-8e15-e311904df7df}</Project>
     </ProjectReference>
     <ProjectReference Include="..\sweph\sweph.vcxproj">
       <Project>{0446acae-23c8-4784-966b-12a791088538}</Project>

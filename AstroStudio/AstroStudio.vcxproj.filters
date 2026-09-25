@@ -114,6 +114,9 @@
     <ClCompile Include="Printing.cpp">
       <Filter>Views</Filter>
     </ClCompile>
+    <ClCompile Include="Project.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
     <ClCompile Include="PartListView.cpp">
       <Filter>Views</Filter>
     </ClCompile>
@@ -277,6 +280,9 @@
     </ClInclude>
     <ClInclude Include="Printing.h">
       <Filter>Views</Filter>
+    </ClInclude>
+    <ClInclude Include="Project.h">
+      <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="PartListView.h">
       <Filter>Views</Filter>

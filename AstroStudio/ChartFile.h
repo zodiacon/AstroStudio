@@ -2,6 +2,7 @@
 
 #include "ChartData.h"
 #include "DerivedCharts.h"
+#include "Analysis.h"
 
 // A chart on disk: a UTF-8 INI text file (see IniDocument) that is meant to be readable and editable by hand.
 //
@@ -23,10 +24,25 @@
 //   [Derived.Time]   solar arc: the date it is moved to, like [Time]
 //   [A.Chart] [A.Person] [A.Time] [A.Location]     the first chart (the only one for a solar arc chart)
 //   [B.Chart] [B.Person] [B.Time] [B.Location]     the second chart (composite and Davison)
+
+// An analysis on disk (.analysis): what it was made of - the chart, the kinds of analysis, the range, the movers, targets, aspects
+// and orbs - and the events it found, so that it can be opened and looked at without running it again. The same INI text as a chart
+// file, with the chart under the prefix Natal., and the events after a line #EVENTS (see Analysis::EventsToText).
+struct AnalysisDocument {
+	std::wstring ChartName;
+	ChartData Chart;
+	AnalysisSettings Settings;
+	std::vector<AnalysisEvent> Events;
+};
+
 struct ChartFile abstract final {
 	static constexpr PCWSTR Extension = L"chart";
 	// for the Open and Save dialogs
 	static constexpr wchar_t Filter[] = L"Astro Studio charts (*.chart)\0*.chart\0All files (*.*)\0*.*\0";
+	static constexpr PCWSTR AnalysisExtension = L"analysis";
+	static constexpr wchar_t AnalysisFilter[] = L"Astro Studio analyses (*.analysis)\0*.analysis\0All files (*.*)\0*.*\0";
+	// for the Open dialog: charts and analyses
+	static constexpr wchar_t OpenFilter[] = L"Astro Studio files (*.chart;*.analysis)\0*.chart;*.analysis\0Charts (*.chart)\0*.chart\0Analyses (*.analysis)\0*.analysis\0All files (*.*)\0*.*\0";
 
 	// what a file holds
 	struct Loaded {
@@ -42,4 +58,9 @@ struct ChartFile abstract final {
 	static bool LoadFile(PCWSTR path, Loaded& loaded, std::wstring& error);
 	// a plain chart only: a derived chart's file is an error here
 	static bool Load(PCWSTR path, ChartData& chart, std::wstring& error);
+
+	// an analysis (see AnalysisDocument); false with error if it can't be written or read - a file that is not one, or is wrong
+	// somewhere, is refused with the place
+	static bool SaveAnalysis(AnalysisDocument const& document, PCWSTR path, std::wstring& error);
+	static bool LoadAnalysis(PCWSTR path, AnalysisDocument& document, std::wstring& error);
 };

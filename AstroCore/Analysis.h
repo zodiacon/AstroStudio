@@ -5,6 +5,8 @@
 #include "DerivedCharts.h"
 #include <functional>
 #include <memory>
+#include <string>
+#include <string_view>
 #include <vector>
 
 // What is compared with what.
@@ -120,4 +122,14 @@ struct Analysis abstract final {
 	// analysis that has it, so that two analyses of transits don't list every one of them twice.
 	static AnalysisResult RunAll(AstroCalculator const& calc, ChartData const& natal, AnalysisSettings const& settings,
 		std::function<bool(double)> const& progress = {});
+
+	// The events as text, to keep them in a file: one line for each, numbers only, fields separated by commas -
+	//   type, time, kind, mover, targetKind, target, aspect, orb, pass, retrograde, index, longitude [| window]
+	// (type, kind, mover, targetKind, target and aspect are the values of the enums; time is a Julian day; retrograde is 0 or 1) and,
+	// for the event that ends a stay within an orb, after a bar the stay: hasEnter, enter, hasLeave, leave, the number of exacts and
+	// the exacts. Times keep about a tenth of a millisecond. Meant to be read and written by the program, but plain enough to look at.
+	static std::string EventsToText(std::vector<AnalysisEvent> const& events);
+	// Reads what EventsToText wrote (blank lines and lines starting with ; or # are skipped). On failure nothing is stored and error
+	// says which line was wrong and why.
+	static bool EventsFromText(std::string_view text, std::vector<AnalysisEvent>& events, std::string& error);
 };

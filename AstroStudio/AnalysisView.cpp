@@ -1,5 +1,6 @@
 #include "pch.h"
 #include "AnalysisView.h"
+#include "ChartFile.h"
 #include "Printing.h"
 #include "AnalysisDlg.h"
 #include "AnalysisNames.h"
@@ -143,10 +144,13 @@ void CAnalysisView::PageActivated(bool active) {
 		ui.UIEnable(ID_FILE_EXPORT, TRUE);
 		ui.UIEnable(ID_FILE_PRINT, TRUE);
 		ui.UIEnable(ID_FILE_PRINT_PREVIEW, TRUE);
+		UpdateSaveUI();
 		UpdateViewUI();
 		ShowRunning(m_Job != nullptr);
 	}
 	else {
+		ui.UIEnable(ID_FILE_SAVE, FALSE);		// (the next page enables them again if it can)
+		ui.UIEnable(ID_FILE_SAVE_AS, FALSE);
 		ui.UIEnable(ID_FILE_EXPORT, FALSE);		// the next page enables it again if it can export
 		ui.UIEnable(ID_FILE_PRINT, FALSE);
 		ui.UIEnable(ID_FILE_PRINT_PREVIEW, FALSE);
@@ -204,6 +208,78 @@ void CAnalysisView::UpdateHeaders(bool resetWidths) {
 void CAnalysisView::Analyse(OpenChart chart, AnalysisSettings const& settings) {
 	Frame()->SetViewTitle(this, L"Analysing...");
 	Start(std::move(chart), settings);
+}
+
+void CAnalysisView::Restore(AnalysisDocument document, PCWSTR path) {
+	m_Chart = OpenChart{};
+	m_Chart.Name = document.ChartName.c_str();
+	m_Chart.Data = std::move(document.Chart);
+	AstroCalculator calc;
+	calc.Calculate(m_Chart.Data);		// (the positions aren't in the file)
+	m_Settings = std::move(document.Settings);
+	m_Events = std::move(document.Events);
+	m_Stale = false;
+	m_FilePath = path;
+	ApplyFilter();
+	UpdateHeaders(false);
+	UpdateTitle();
+	UpdateSaveUI();
+}
+
+bool CAnalysisView::CanSave() const {
+	return !m_Chart.Name.IsEmpty() && !m_Chart.Data.AllPlanets().empty();
+}
+
+void CAnalysisView::UpdateSaveUI() {
+	if (!m_PageActive)
+		return;
+	auto& ui = Frame()->GetUI();
+	ui.UIEnable(ID_FILE_SAVE, CanSave());
+	ui.UIEnable(ID_FILE_SAVE_AS, CanSave());
+}
+
+LRESULT CAnalysisView::OnSave(WORD, WORD id, HWND, BOOL&) {
+	Save(id == ID_FILE_SAVE_AS);
+	return 0;
+}
+
+bool CAnalysisView::Save(bool saveAs) {
+	if (!CanSave())
+		return false;
+	CString path = m_FilePath;
+	if (path.IsEmpty() || saveAs) {
+		// a name from the chart's, without what a file name can't have
+		CString suggestion = L"Analysis " + m_Chart.Name;
+		for (int i = 0; i < suggestion.GetLength(); i++)
+			if (wcschr(L"/:*?<>|", suggestion[i]) || suggestion[i] == 0x5c || suggestion[i] == 0x22)
+				suggestion.SetAt(i, L'_');
+		CSimpleFileDialog dlg(FALSE, ChartFile::AnalysisExtension, suggestion, OFN_OVERWRITEPROMPT | OFN_PATHMUSTEXIST | OFN_HIDEREADONLY | OFN_EXPLORER | OFN_ENABLESIZING,
+			ChartFile::AnalysisFilter, m_hWnd);
+		WTLHelper::SuspendHook();
+		auto ok = dlg.DoModal(m_hWnd) == IDOK;
+		WTLHelper::ResumeHook();
+		if (!ok)
+			return false;
+		path = dlg.m_szFileName;
+	}
+
+	AnalysisDocument document;
+	document.ChartName = (PCWSTR)m_Chart.Name;
+	document.Chart = m_Chart.Data;
+	document.Settings = m_Settings;
+	document.Events = m_Events;
+	std::wstring error;
+	CWaitCursor wait;
+	if (!ChartFile::SaveAnalysis(document, path, error)) {
+		CString message;
+		message.Format(L"The analysis could not be saved to %s:\n\n%s", (PCWSTR)path, error.c_str());
+		AtlMessageBox(m_hWnd, (PCWSTR)message, L"Astro Studio", MB_ICONWARNING);
+		return false;
+	}
+	m_FilePath = path;
+	Frame()->AddRecentFile(path);
+	SetStatus(L"Saved");
+	return true;
 }
 
 void CAnalysisView::SetStatus(PCWSTR text) {
@@ -288,6 +364,7 @@ LRESULT CAnalysisView::OnDone(UINT, WPARAM id, LPARAM, BOOL&) {
 	ApplyFilter();
 	UpdateHeaders(false);
 	UpdateTitle();
+	UpdateSaveUI();
 	return 0;
 }
 

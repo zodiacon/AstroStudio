@@ -47,6 +47,26 @@ ContactOptions CMidpointTreeView::Options() const {
 	return options;
 }
 
+CString CMidpointTreeView::PointText(ChartPoint const& point) const {
+	auto name = PointName(point);
+	if (!m_Overlay)
+		return name;
+	return CString(point.Set == 1 ? m_Overlay->Label.c_str() : m_Overlay->BaseLabel.c_str()) + L" " + name;
+}
+
+void CMidpointTreeView::SetOverlay(ChartOverlay const* overlay) {
+	bool changed = (overlay != nullptr) != (m_Overlay != nullptr);
+	m_Overlay = overlay;
+	if (m_Pairs.m_hWnd) {
+		m_Pairs.EnableWindow(overlay != nullptr);
+		m_Pairs.ShowWindow(overlay ? SW_SHOW : SW_HIDE);
+		m_PairsLabel.ShowWindow(overlay ? SW_SHOW : SW_HIDE);
+	}
+	if (changed)
+		Layout();
+	Rebuild();
+}
+
 void CMidpointTreeView::SetChartData(ChartData const* chart) {
 	m_Data = chart;
 	Rebuild();
@@ -62,24 +82,47 @@ void CMidpointTreeView::Rebuild() {
 		MidpointOptions midpointOptions;
 		midpointOptions.Angles = true;
 		auto points = Midpoints::Points(*m_Data, midpointOptions);
-		auto midpoints = Midpoints::Calculate(points);
+		std::vector<MidpointData> midpoints;
+		std::vector<ChartPoint> branches = points;		// the points the branches are of
+		if (m_Overlay) {
+			MidpointOptions around;
+			around.Angles = m_Overlay->Data.Houses().Asc.Value != 0 || m_Overlay->Data.Houses().MC.Value != 0;
+			auto other = Midpoints::Points(m_Overlay->Data, around, 1);
+			switch (m_Pairs.m_hWnd ? m_Pairs.GetCurSel() : 0) {
+				case 1:		// the overlay's own midpoints, with the chart's points on them
+					midpoints = Midpoints::Calculate(other);
+					break;
+				case 2:		// between the two, with the points of both
+					midpoints = Midpoints::CalcBetween(other, points);
+					branches.insert(branches.end(), other.begin(), other.end());
+					break;
+				default:	// the chart's midpoints, with the overlay's points on them: the transits to the natal midpoints
+					midpoints = Midpoints::Calculate(points);
+					branches = other;
+					break;
+			}
+			if (m_Pairs.m_hWnd && m_Pairs.GetCurSel() == 1)
+				branches = points;
+		}
+		else
+			midpoints = Midpoints::Calculate(points);
 		auto options = Options();
-		auto tree = Midpoints::Tree(midpoints, points, options);
+		auto tree = Midpoints::Tree(midpoints, branches, options);
 
 		for (auto const& branch : tree) {
 			CString text;
-			text.Format(L"%s   %s   (on the dial: %s)", (PCWSTR)PointName(branch.Point), (PCWSTR)Position(branch.Point.Longitude), (PCWSTR)Dial(branch.Dial));
+			text.Format(L"%s   %s   (on the dial: %s)", (PCWSTR)PointText(branch.Point), (PCWSTR)Position(branch.Point.Longitude), (PCWSTR)Dial(branch.Dial));
 			auto root = m_Tree.InsertItem(text, TVI_ROOT, TVI_LAST);
 			for (auto const& contact : branch.Contacts) {
 				auto const& midpoint = midpoints[contact.Midpoint];
 				CString line;
-				line.Format(L"%s / %s  =  %s   %s   %.2f%c", (PCWSTR)PointName(midpoint.A), (PCWSTR)PointName(midpoint.B),
+				line.Format(L"%s / %s  =  %s   %s   %.2f%c", (PCWSTR)PointText(midpoint.A), (PCWSTR)PointText(midpoint.B),
 					(PCWSTR)Position(midpoint.Longitude), AngleWords(contact.Angle), contact.Orb, 0xb0);
 				m_Tree.InsertItem(line, root, TVI_LAST);
 				CString orb;
 				orb.Format(L"%.2f%c", contact.Orb, 0xb0);
-				m_Entries.push_back({ PointName(branch.Point), Helpers::FormatLongitude(branch.Point.Longitude, FormatOptions::ShowSeconds | FormatOptions::ShowDegreeGlyph),
-					Dial(branch.Dial), PointName(midpoint.A) + L"/" + PointName(midpoint.B),
+				m_Entries.push_back({ PointText(branch.Point), Helpers::FormatLongitude(branch.Point.Longitude, FormatOptions::ShowSeconds | FormatOptions::ShowDegreeGlyph),
+					Dial(branch.Dial), PointText(midpoint.A) + L"/" + PointText(midpoint.B),
 					Helpers::FormatLongitude(midpoint.Longitude, FormatOptions::ShowSeconds | FormatOptions::ShowDegreeGlyph), AngleWords(contact.Angle), contact.Orb });
 			}
 			m_Tree.Expand(root);
@@ -131,10 +174,12 @@ LRESULT CMidpointTreeView::OnCreate(UINT, WPARAM, LPARAM, BOOL&) {
 	m_Orb.Create(m_hWnd, rcDefault, nullptr, WS_CHILD | WS_VISIBLE | WS_TABSTOP | WS_VSCROLL | CBS_DROPDOWNLIST, 0, IDC_MT_ORB);
 	m_KindLabel.Create(m_hWnd, rcDefault, L"Contacts:", WS_CHILD | WS_VISIBLE | SS_LEFT | SS_CENTERIMAGE);
 	m_Kind.Create(m_hWnd, rcDefault, nullptr, WS_CHILD | WS_VISIBLE | WS_TABSTOP | WS_VSCROLL | CBS_DROPDOWNLIST, 0, IDC_MT_KIND);
+	m_PairsLabel.Create(m_hWnd, rcDefault, L"Midpoints of:", WS_CHILD | SS_LEFT | SS_CENTERIMAGE);
+	m_Pairs.Create(m_hWnd, rcDefault, nullptr, WS_CHILD | WS_TABSTOP | WS_VSCROLL | CBS_DROPDOWNLIST, 0, IDC_MT_PAIRS);
 	m_Tree.Create(m_hWnd, rcDefault, nullptr, WS_CHILD | WS_VISIBLE | WS_TABSTOP | WS_CLIPSIBLINGS | TVS_HASLINES | TVS_HASBUTTONS |
 		TVS_LINESATROOT | TVS_SHOWSELALWAYS | TVS_DISABLEDRAGDROP, 0, IDC_MT_TREE);
 	if (!m_UiFont.IsNull())
-		for (CWindow* control : { (CWindow*)&m_OrbLabel, (CWindow*)&m_Orb, (CWindow*)&m_KindLabel, (CWindow*)&m_Kind, (CWindow*)&m_Tree })
+		for (CWindow* control : { (CWindow*)&m_OrbLabel, (CWindow*)&m_Orb, (CWindow*)&m_KindLabel, (CWindow*)&m_Kind, (CWindow*)&m_PairsLabel, (CWindow*)&m_Pairs, (CWindow*)&m_Tree })
 			control->SetFont(m_UiFont);
 
 	auto& settings = AppSettings::Get();
@@ -153,6 +198,11 @@ LRESULT CMidpointTreeView::OnCreate(UINT, WPARAM, LPARAM, BOOL&) {
 	m_Kind.AddString(dialChoice);
 	m_Kind.AddString(L"Axis (on and opposite)");
 	m_Kind.SetCurSel(settings.MidpointTreeAxis() ? 1 : 0);
+	m_Pairs.AddString(L"the chart (with the overlay's points on them)");
+	m_Pairs.AddString(L"the overlay (with the chart's points on them)");
+	m_Pairs.AddString(L"the chart and the overlay (with both)");
+	m_Pairs.SetCurSel(0);
+	SetOverlay(m_Overlay);		// (shows or hides the choice)
 	ApplyTextFont();
 	Layout();
 	Rebuild();
@@ -169,7 +219,10 @@ void CMidpointTreeView::Layout() {
 	m_Orb.MoveWindow(x + 34, y, 64, 200);
 	m_KindLabel.MoveWindow(x + 112, y, 62, h);
 	m_Kind.MoveWindow(x + 176, y, 210, 200);
-	m_Tree.MoveWindow(0, StripHeight, rc.Width(), std::max<int>(0, rc.Height() - StripHeight));
+	// (with an overlay a second row: whose midpoints)
+	m_PairsLabel.MoveWindow(x, y + 28, 80, h);
+	m_Pairs.MoveWindow(x + 84, y + 28, 302, 200);
+	m_Tree.MoveWindow(0, StripHeight(), rc.Width(), std::max<int>(0, rc.Height() - StripHeight()));
 }
 
 LRESULT CMidpointTreeView::OnEraseBkgnd(UINT, WPARAM wParam, LPARAM, BOOL&) {

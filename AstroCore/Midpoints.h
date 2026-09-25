@@ -18,9 +18,12 @@ struct ChartPoint {
 	Planet Body{ Planet::Sun };		// (only for a planet)
 	AstroPoint Longitude;
 	double Speed{ 0 };				// degrees per day; angles have none
+	// Which chart the point is of, when there are more than one (a chart and the planets around it: 0 and 1). The Sun of one is not
+	// the Sun of the other, so the ends of a midpoint between two charts are not mistaken for points standing on it.
+	int Set{ 0 };
 
 	bool SameAs(ChartPoint const& other) const noexcept {
-		return Kind == other.Kind && (Kind != PointKind::Planet || Body == other.Body);
+		return Set == other.Set && Kind == other.Kind && (Kind != PointKind::Planet || Body == other.Body);
 	}
 };
 
@@ -79,8 +82,9 @@ class Midpoints final {
 public:
 	// The points of a chart that the options let take part: its planets in the order they are kept in, then the Ascendant and
 	// the Midheaven if wanted.
-	static std::vector<ChartPoint> Points(ChartData const& chart, MidpointOptions const& options = {});
-	static std::vector<ChartPoint> Points(std::vector<PlanetPosition> const& planets);
+	// (`set` is the number the points get for ChartPoint::Set)
+	static std::vector<ChartPoint> Points(ChartData const& chart, MidpointOptions const& options = {}, int set = 0);
+	static std::vector<ChartPoint> Points(std::vector<PlanetPosition> const& planets, int set = 0);
 
 	// The midpoint of every pair of the points (none with itself), in the order of their longitudes (the order of the points
 	// for equal ones).

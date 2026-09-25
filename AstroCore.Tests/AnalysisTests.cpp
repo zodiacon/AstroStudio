@@ -613,3 +613,109 @@ TEST_CASE("Analysis settings text that is damaged or empty leaves the rest alone
 	CHECK(settings.TypeList() == std::vector<AnalysisType>{ AnalysisType::TransitsToNatal });		// (an empty list falls back to Type, which is what it was)
 	CHECK(settings.Movers == std::vector<Planet>{ Planet::Moon, Planet::Mercury });
 }
+
+TEST_CASE("Analysis events as text and back", "[Analysis][File]") {
+	// a real analysis: transits and progressions over a year, with everything on that leaves a trace
+	AstroCalculator calc;
+	ChartData natal;
+	natal.AddPlanets(std::vector<Planet>{ Planet::Sun, Planet::Moon, Planet::Mercury, Planet::Venus, Planet::Mars, Planet::Jupiter, Planet::Saturn });
+	natal.Info().Time = DateTime(1980, 5, 17, 9, 40, 0);
+	natal.Info().Latitude = 40.7;
+	natal.Info().Longitude = -74;
+	natal.SetHouseSystem(HouseSystem::Placidus);
+	calc.Calculate(natal);
+
+	AnalysisSettings settings;
+	settings.Types = { AnalysisType::TransitsToNatal, AnalysisType::ProgressedToNatal };
+	settings.Type = AnalysisType::TransitsToNatal;
+	settings.From = DateTime(2024, 1, 1, 0, 0, 0);
+	settings.To = DateTime(2025, 1, 1, 0, 0, 0);
+	settings.Movers = { Planet::Sun, Planet::Mars, Planet::Jupiter, Planet::Saturn };
+	settings.Targets = { Planet::Sun, Planet::Moon, Planet::Venus, Planet::Saturn };
+	settings.HouseIngresses = true;
+	settings.SignIngresses = true;
+	settings.Stations = true;
+	auto result = Analysis::RunAll(calc, natal, settings);
+	REQUIRE(result.Events.size() > 50);
+
+	auto text = Analysis::EventsToText(result.Events);
+	std::vector<AnalysisEvent> back;
+	std::string error;
+	REQUIRE(Analysis::EventsFromText(text, back, error));
+	INFO(error);
+	REQUIRE(back.size() == result.Events.size());
+
+	int windows = 0, exacts = 0;
+	for (size_t i = 0; i < back.size(); i++) {
+		auto const& a = result.Events[i];
+		auto const& b = back[i];
+		CAPTURE(i);
+		CHECK(b.Type == a.Type);
+		CHECK(std::fabs(b.Time.Julian() - a.Time.Julian()) < 1e-8);
+		CHECK(b.Kind == a.Kind);
+		CHECK(b.Mover == a.Mover);
+		CHECK(b.TargetKind == a.TargetKind);
+		CHECK(b.Target == a.Target);
+		CHECK(b.Aspect == a.Aspect);
+		CHECK(b.Orb == a.Orb);
+		CHECK(b.Pass == a.Pass);
+		CHECK(b.Retrograde == a.Retrograde);
+		CHECK(b.Index == a.Index);
+		CHECK(std::fabs(b.Longitude - a.Longitude) < 1e-8);
+		REQUIRE((b.Window != nullptr) == (a.Window != nullptr));
+		if (a.Window) {
+			windows++;
+			CHECK(b.Window->HasEnter == a.Window->HasEnter);
+			CHECK(b.Window->HasLeave == a.Window->HasLeave);
+			CHECK(std::fabs(b.Window->Enter.Julian() - a.Window->Enter.Julian()) < 1e-8);
+			CHECK(std::fabs(b.Window->Leave.Julian() - a.Window->Leave.Julian()) < 1e-8);
+			REQUIRE(b.Window->Exacts.size() == a.Window->Exacts.size());
+			for (size_t j = 0; j < a.Window->Exacts.size(); j++) {
+				exacts++;
+				CHECK(std::fabs(b.Window->Exacts[j].Julian() - a.Window->Exacts[j].Julian()) < 1e-8);
+			}
+		}
+	}
+	CHECK(windows > 0);
+	CHECK(exacts > 0);
+	// and the text is the same when written again
+	CHECK(Analysis::EventsToText(back) == text);
+}
+
+TEST_CASE("Analysis events text: empty, comments, and what is wrong", "[Analysis][File]") {
+	std::vector<AnalysisEvent> events{ AnalysisEvent{} };
+	std::string error;
+	REQUIRE(Analysis::EventsFromText("", events, error));
+	CHECK(events.empty());
+	REQUIRE(Analysis::EventsFromText("; a comment\n\n# another\r\n", events, error));
+	CHECK(events.empty());
+	CHECK(Analysis::EventsToText({}).empty());
+
+	auto good = std::string("0,2460000.500000000,1,0,0,1,1,8,1,0,0,123.450000000\n");
+	REQUIRE(Analysis::EventsFromText(good, events, error));
+	REQUIRE(events.size() == 1);
+	CHECK(events[0].Kind == AnalysisEventKind::Exact);
+	CHECK(events[0].Aspect == AspectType::Sextile);
+	CHECK(events[0].Longitude == Approx(123.45));
+	CHECK(events[0].Window == nullptr);
+
+	// a bad line changes nothing and is named
+	events.clear();
+	auto bad = [&](std::string const& text, std::string const& mentions) {
+		std::vector<AnalysisEvent> kept{ AnalysisEvent{} };
+		std::string message;
+		CHECK_FALSE(Analysis::EventsFromText(text, kept, message));
+		CHECK(kept.size() == 1);
+		CHECK(message.find(mentions) != std::string::npos);
+	};
+	bad(good + "0,2460000.5,1,0,0,1,1,8,1,0,0\n", "line 2");					// too few fields
+	bad("9,2460000.5,1,0,0,1,1,8,1,0,0,1\n", "type");
+	bad("0,soon,1,0,0,1,1,8,1,0,0,1\n", "time");
+	bad("0,2460000.5,99,0,0,1,1,8,1,0,0,1\n", "kind");
+	bad("0,2460000.5,1,99,0,1,1,8,1,0,0,1\n", "mover");
+	bad("0,2460000.5,1,0,7,1,1,8,1,0,0,1\n", "target");
+	bad("0,2460000.5,1,0,0,1,40,8,1,0,0,1\n", "aspect");
+	bad("0,2460000.5,1,0,0,1,1,x,1,0,0,1\n", "number");
+	bad("0,2460000.5,1,0,0,1,1,8,1,0,0,1|1,2,3\n", "stay");
+	bad("0,2460000.5,1,0,0,1,1,8,1,0,0,1|1,2460000.5,1,2460001.5,2,2460000.7\n", "stay");		// says two exacts, has one
+}

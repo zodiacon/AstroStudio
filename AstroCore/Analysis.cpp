@@ -1,7 +1,9 @@
 #include "pch.h"
 #include "Analysis.h"
 #include <algorithm>
+#include <charconv>
 #include <cmath>
+#include <format>
 #include <map>
 #include <memory>
 #include <tuple>
@@ -783,4 +785,143 @@ void AnalysisSettings::FromText(std::wstring const& text) {
 				To = From.AddDays(static_cast<double>(days));
 		}
 	}
+}
+
+namespace {
+	void AppendTime(std::string& text, DateTime const& time) {
+		text += std::format("{:.9f}", time.Julian());
+	}
+
+	DateTime TimeFromJulian(double jd) {
+		return DateTime(jd, DateTime::AfterPapalReform(jd));
+	}
+
+	std::vector<std::string_view> Split(std::string_view text, char separator) {
+		std::vector<std::string_view> parts;
+		size_t start = 0;
+		while (true) {
+			auto end = text.find(separator, start);
+			parts.push_back(text.substr(start, end == std::string_view::npos ? std::string_view::npos : end - start));
+			if (end == std::string_view::npos)
+				break;
+			start = end + 1;
+		}
+		return parts;
+	}
+
+	bool ToInt(std::string_view text, int& value) {
+		auto [end, error] = std::from_chars(text.data(), text.data() + text.size(), value);
+		return error == std::errc() && end == text.data() + text.size();
+	}
+
+	bool ToDouble(std::string_view text, double& value) {
+		auto [end, error] = std::from_chars(text.data(), text.data() + text.size(), value);
+		return error == std::errc() && end == text.data() + text.size() && std::isfinite(value);
+	}
+}
+
+std::string Analysis::EventsToText(std::vector<AnalysisEvent> const& events) {
+	std::string text;
+	text.reserve(events.size() * 80);
+	for (auto const& e : events) {
+		text += std::format("{},", static_cast<int>(e.Type));
+		AppendTime(text, e.Time);
+		text += std::format(",{},{},{},{},{},{},{},{},{},{:.9f}", static_cast<int>(e.Kind), static_cast<int>(e.Mover), static_cast<int>(e.TargetKind),
+			static_cast<int>(e.Target), static_cast<int>(e.Aspect), e.Orb, e.Pass, e.Retrograde ? 1 : 0, e.Index, e.Longitude);
+		if (e.Window) {
+			auto const& w = *e.Window;
+			text += std::format("|{},", w.HasEnter ? 1 : 0);
+			AppendTime(text, w.Enter);
+			text += std::format(",{},", w.HasLeave ? 1 : 0);
+			AppendTime(text, w.Leave);
+			text += std::format(",{}", w.Exacts.size());
+			for (auto const& exact : w.Exacts) {
+				text += ',';
+				AppendTime(text, exact);
+			}
+		}
+		text += '\n';
+	}
+	return text;
+}
+
+bool Analysis::EventsFromText(std::string_view text, std::vector<AnalysisEvent>& events, std::string& error) {
+	std::vector<AnalysisEvent> result;
+	int lineNumber = 0;
+	size_t position = 0;
+	auto fail = [&](std::string what) {
+		error = "line " + std::to_string(lineNumber) + ": " + what;
+		return false;
+	};
+	while (position < text.size()) {
+		auto end = text.find('\n', position);
+		auto line = text.substr(position, end == std::string_view::npos ? std::string_view::npos : end - position);
+		position = end == std::string_view::npos ? text.size() : end + 1;
+		lineNumber++;
+		while (!line.empty() && (line.back() == '\r' || line.back() == ' '))
+			line.remove_suffix(1);
+		if (line.empty() || line.front() == ';' || line.front() == '#')
+			continue;
+
+		auto halves = Split(line, '|');
+		auto f = Split(halves[0], ',');
+		if (halves.size() > 2 || f.size() != 12)
+			return fail("an event has 12 fields separated by commas (and perhaps a stay after a bar)");
+		int type, kind, mover, targetKind, target, aspect, pass, retro, index;
+		double time, orb, longitude;
+		if (!ToInt(f[0], type) || type < 0 || type > static_cast<int>(AnalysisType::ProgressedToProgressed))
+			return fail("the type is not one of the analyses");
+		if (!ToDouble(f[1], time))
+			return fail("the time is not a number");
+		if (!ToInt(f[2], kind) || kind < 0 || kind > static_cast<int>(AnalysisEventKind::StationDirect))
+			return fail("the kind of event is not one this program knows");
+		if (!ToInt(f[3], mover) || mover < 0 || mover >= static_cast<int>(Planet::NumPlanets))
+			return fail("the mover is not a planet");
+		if (!ToInt(f[4], targetKind) || targetKind < 0 || targetKind > static_cast<int>(AnalysisTarget::Midheaven))
+			return fail("the kind of target is not a planet or an angle");
+		if (!ToInt(f[5], target) || target < 0 || target >= static_cast<int>(Planet::NumPlanets))
+			return fail("the target is not a planet");
+		if (!ToInt(f[6], aspect) || aspect < -1 || aspect >= AspectSettings::AspectTypeCount)
+			return fail("the aspect is not one this program knows");
+		if (!ToDouble(f[7], orb) || !ToInt(f[8], pass) || !ToInt(f[9], retro) || !ToInt(f[10], index) || !ToDouble(f[11], longitude))
+			return fail("the orb, pass, retrograde, index or longitude is not a number");
+
+		AnalysisEvent e;
+		e.Type = static_cast<AnalysisType>(type);
+		e.Time = TimeFromJulian(time);
+		e.Kind = static_cast<AnalysisEventKind>(kind);
+		e.Mover = static_cast<Planet>(mover);
+		e.TargetKind = static_cast<AnalysisTarget>(targetKind);
+		e.Target = static_cast<Planet>(target);
+		e.Aspect = static_cast<AspectType>(aspect);
+		e.Orb = orb;
+		e.Pass = pass;
+		e.Retrograde = retro != 0;
+		e.Index = index;
+		e.Longitude = longitude;
+
+		if (halves.size() == 2) {
+			auto w = Split(halves[1], ',');
+			int hasEnter, hasLeave, exacts;
+			double enter, leave;
+			if (w.size() < 5 || !ToInt(w[0], hasEnter) || !ToDouble(w[1], enter) || !ToInt(w[2], hasLeave) || !ToDouble(w[3], leave) || !ToInt(w[4], exacts) ||
+				exacts < 0 || w.size() != static_cast<size_t>(5 + exacts))
+				return fail("the stay after the bar is wrong: hasEnter, enter, hasLeave, leave, the number of exacts and then the exacts");
+			auto window = std::make_shared<AnalysisWindow>();
+			window->HasEnter = hasEnter != 0;
+			window->Enter = TimeFromJulian(enter);
+			window->HasLeave = hasLeave != 0;
+			window->Leave = TimeFromJulian(leave);
+			for (int i = 0; i < exacts; i++) {
+				double exact;
+				if (!ToDouble(w[5 + i], exact))
+					return fail("an exact time in the stay is not a number");
+				window->Exacts.push_back(TimeFromJulian(exact));
+			}
+			e.Window = std::move(window);
+		}
+		result.push_back(std::move(e));
+	}
+	events = std::move(result);
+	return true;
 }

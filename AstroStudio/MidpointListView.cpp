@@ -11,19 +11,42 @@
 CMidpointListView::CMidpointListView(IMainFrame* frame) : CFrameView(frame) {
 }
 
+CString CMidpointListView::PointText(ChartPoint const& point) const {
+	auto name = PointName(point);
+	if (!m_Overlay)
+		return name;
+	return CString(point.Set == 1 ? m_Overlay->Label.c_str() : m_Overlay->BaseLabel.c_str()) + L" " + name;
+}
+
+void CMidpointListView::SetOverlay(ChartOverlay const* overlay) {
+	m_Overlay = overlay;
+	SetChartData(m_Chart);
+}
+
 void CMidpointListView::SetChartData(ChartData const* chart) {
+	m_Chart = chart;
 	m_Rows.clear();
 	if (chart && !chart->AllPlanets().empty()) {
 		MidpointOptions options;
 		options.Angles = true;
 		auto points = Midpoints::Points(*chart, options);
-		auto midpoints = Midpoints::Calculate(points);
+		std::vector<MidpointData> midpoints;
+		if (m_Overlay) {
+			// the planets around the chart with the chart's: the overlay's are the first of each pair (a transit's sky has no angles)
+			MidpointOptions around;
+			around.Angles = m_Overlay->Data.Houses().Asc.Value != 0 || m_Overlay->Data.Houses().MC.Value != 0;
+			auto other = Midpoints::Points(m_Overlay->Data, around, 1);
+			midpoints = Midpoints::CalcBetween(other, points);
+			points.insert(points.end(), other.begin(), other.end());		// (both sets can stand on a midpoint)
+		}
+		else
+			midpoints = Midpoints::Calculate(points);
 		// the points on the axis of each midpoint, listed with it
 		auto contacts = Midpoints::Contacts(midpoints, points);
 		std::vector<CString> on(midpoints.size());
 		for (auto const& contact : contacts) {
 			CString text;
-			text.Format(L"%s%s %.2f%c", (PCWSTR)PointName(contact.Point), contact.Angle == 180 ? L" (opp)" : L"", contact.Orb, 0xb0);
+			text.Format(L"%s%s %.2f%c", (PCWSTR)PointText(contact.Point), contact.Angle == 180 ? L" (opp)" : L"", contact.Orb, 0xb0);
 			auto& cell = on[contact.Midpoint];
 			cell += (cell.IsEmpty() ? L"" : L", ") + text;
 		}
@@ -52,7 +75,7 @@ void CMidpointListView::ApplyTextFont() {
 	// the columns grow with the text (they were made for 9 points)
 	int size = -MulDiv(lf.lfHeight, 72 * 10, ::GetDeviceCaps(CClientDC(m_hWnd), LOGPIXELSY));
 	double ratio = std::max(1.0, size / 90.0);
-	const int widths[] = { 110, 110, 100, 100, 60, 40, 200 };
+	const int widths[] = { 150, 150, 100, 100, 60, 40, 200 };
 	for (int i = 0; i < _countof(widths); i++)
 		Helpers::SetColumnWidth(m_List, i, static_cast<int>(std::lround(widths[i] * ratio)));
 	m_List.Invalidate();
@@ -81,8 +104,8 @@ int CMidpointListView::PointOrder(ChartPoint const& point) noexcept {
 CString CMidpointListView::GetColumnText(HWND h, int row, int col) const {
 	auto& data = m_Rows[row].Data;
 	switch (GetColumnManager(h)->GetColumnTag<ColumnType>(col)) {
-		case ColumnType::PointA: return PointName(data.A);
-		case ColumnType::PointB: return PointName(data.B);
+		case ColumnType::PointA: return PointText(data.A);
+		case ColumnType::PointB: return PointText(data.B);
 		case ColumnType::Midpoint: return Helpers::FormatLongitude(data.Longitude, FormatOptions::ShowSeconds | FormatOptions::UseGlyphs | FormatOptions::ShowDegreeGlyph);
 		case ColumnType::Opposite: return Helpers::FormatLongitude(data.Opposite(), FormatOptions::ShowSeconds | FormatOptions::UseGlyphs | FormatOptions::ShowDegreeGlyph);
 		case ColumnType::Arc: {
@@ -112,8 +135,8 @@ Helpers::TableSource CMidpointListView::Table() const {
 		};
 		CString text;
 		switch (column) {
-			case 0: return PointName(r.Data.A);
-			case 1: return PointName(r.Data.B);
+			case 0: return PointText(r.Data.A);
+			case 1: return PointText(r.Data.B);
 			case 2: return position(r.Data.Longitude);
 			case 3: return position(r.Data.Opposite());
 			case 4: text.Format(L"%.2f%c", r.Data.Arc, 0xb0); return text;
@@ -157,10 +180,10 @@ DWORD CMidpointListView::OnSubItemPrePaint(int, LPNMCUSTOMDRAW cd) const noexcep
 	// every column is custom-painted, like the aspect list's, so that hovering looks the same in all of them
 	switch (col) {
 		case ColumnType::PointA:
-			DrawGlyphAndName(cd, PointGlyph(data.A), PointName(data.A));
+			DrawGlyphAndName(cd, PointGlyph(data.A), PointText(data.A));
 			break;
 		case ColumnType::PointB:
-			DrawGlyphAndName(cd, PointGlyph(data.B), PointName(data.B));
+			DrawGlyphAndName(cd, PointGlyph(data.B), PointText(data.B));
 			break;
 		case ColumnType::Midpoint:
 			DrawCell(cd, GetColumnText(m_List, (int)cd->dwItemSpec, lv->iSubItem), m_Font.m_hFont, CAspectListView::GetElementColor(data.Longitude.Sign()));
@@ -248,8 +271,8 @@ LRESULT CMidpointListView::OnCreate(UINT, WPARAM, LPARAM, BOOL&) {
 	m_Font.CreateFontIndirect(&lf);
 
 	auto cm = GetColumnManager(m_List);
-	cm->AddColumn(L"Point 1", LVCFMT_LEFT, 110, ColumnType::PointA);
-	cm->AddColumn(L"Point 2", LVCFMT_LEFT, 110, ColumnType::PointB);
+	cm->AddColumn(L"Point 1", LVCFMT_LEFT, 150, ColumnType::PointA);
+	cm->AddColumn(L"Point 2", LVCFMT_LEFT, 150, ColumnType::PointB);
 	cm->AddColumn(L"Midpoint", LVCFMT_LEFT, 100, ColumnType::Midpoint);
 	cm->AddColumn(L"Opposite", LVCFMT_LEFT, 100, ColumnType::Opposite);
 	cm->AddColumn(L"Arc", LVCFMT_CENTER | LVCFMT_FIXED_WIDTH, 60, ColumnType::Arc);

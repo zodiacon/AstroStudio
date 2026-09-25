@@ -4,6 +4,10 @@
 #include <cmath>
 
 namespace {
+	PlanetPosition At(Planet planet, double longitude) {
+		return PlanetPosition{ .Longitude = AstroPoint(longitude), .Speed = 0, .Latitude = 0, .LatitudeSpeed = 0, .Planet = planet };
+	}
+
 	ChartPoint Body(Planet planet, double longitude, double speed = 0) {
 		return ChartPoint{ PointKind::Planet, planet, AstroPoint(longitude), speed };
 	}
@@ -348,4 +352,45 @@ TEST_CASE("A midpoint tree", "[Midpoints]") {
 		CHECK(Midpoints::Tree({}, points, options).empty());
 		CHECK(Midpoints::Tree(midpoints, {}, options).empty());
 	}
+}
+
+TEST_CASE("Midpoints between a chart and the planets around it", "[Midpoints]") {
+	// the chart: Sun 100, Moon 50; the overlay: Sun 10, Mars 200
+	ChartData chart, overlay;
+	chart.AddPlanets({ At(Planet::Sun, 100), At(Planet::Moon, 50) });
+	overlay.AddPlanets({ At(Planet::Sun, 10), At(Planet::Mars, 200) });
+	auto own = Midpoints::Points(chart, {}, 0);
+	auto around = Midpoints::Points(overlay, {}, 1);
+	for (auto const& p : own)
+		CHECK(p.Set == 0);
+	for (auto const& p : around)
+		CHECK(p.Set == 1);
+	CHECK_FALSE(own[0].SameAs(around[0]));		// (the two Suns are not the same point)
+	CHECK(own[0].SameAs(own[0]));
+
+	// the overlay's Sun with the chart's Moon: 10 and 50, midpoint 30
+	auto between = Midpoints::CalcBetween(around, own);
+	REQUIRE(between.size() == 4);
+	auto it = std::ranges::find_if(between, [](auto const& m) { return m.A.Body == Planet::Sun && m.B.Body == Planet::Moon; });
+	REQUIRE(it != between.end());
+	CHECK(it->Longitude.Value == Approx(30));
+	CHECK(it->A.Set == 1);
+	CHECK(it->B.Set == 0);
+
+	// the points of both on it: the chart's Sun at 30 stands on it - its ends (the overlay's Sun and the chart's Moon) do not, though
+	// the chart's Sun is a Sun and the overlay's Moon-less pair has a Sun as one end
+	std::vector<ChartPoint> all = own;
+	all.insert(all.end(), around.begin(), around.end());
+	all[0].Longitude = AstroPoint(30);		// the chart's Sun on the midpoint
+	auto contacts = Midpoints::Contacts(between, all);
+	bool sunOnIt = false;
+	for (auto const& c : contacts) {
+		if (c.Midpoint != static_cast<size_t>(it - between.begin()))
+			continue;
+		CHECK_FALSE(c.Point.SameAs(it->A));
+		CHECK_FALSE(c.Point.SameAs(it->B));
+		if (c.Point.Set == 0 && c.Point.Body == Planet::Sun && c.Orb < 1e-9)
+			sunOnIt = true;
+	}
+	CHECK(sunOnIt);		// (not excluded as an end: the end is the overlay's Sun)
 }
