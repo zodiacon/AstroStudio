@@ -14,6 +14,7 @@
 #include "MidpointListView.h"
 #include "Printing.h"
 #include "PartListView.h"
+#include "MidpointTreeView.h"
 #include "TimeStep.h"
 #include "ChartFile.h"
 #include <CustomSplitterWindow.h>
@@ -211,6 +212,7 @@ private:
 	CAspectGridWnd m_AspectGrid;
 	CAspectListView m_AspectList;
 	CMidpointListView m_MidpointList;
+	CMidpointTreeView m_MidpointTree;
 	CPartListView m_PartList;
 	CGraphicChartView m_ChartDrawing;
 	// the "Step: [count] [unit]" controls, which sit inside the toolbar

@@ -85,6 +85,7 @@ void CChartView::UpdateAspects() {
 	AspectCalculator ac(AspectOptions::Current().Chart);
 	auto aspects = ac.Calculate(m_Data.AllPlanets());
 	m_MidpointList.SetChartData(&m_Data);
+	m_MidpointTree.SetChartData(&m_Data);
 	m_PartList.SetChartData(&m_Data, AspectOptions::Current().Chart);
 	m_AspectList.SetAspects(aspects);
 	m_AspectList.Refresh();
@@ -112,6 +113,7 @@ void CChartView::TextFontChanged() {
 	m_DetailsView.ApplyTextFont();
 	m_AspectList.ApplyTextFont();
 	m_MidpointList.ApplyTextFont();
+	m_MidpointTree.ApplyTextFont();
 	m_PartList.ApplyTextFont();
 	m_AspectGrid.Refresh();		// (its text is in the same family)
 	m_ChartDrawing.Refresh();
@@ -993,6 +995,8 @@ LRESULT CChartView::OnCreate(UINT, WPARAM, LPARAM, BOOL&) {
 	m_MidpointList.Create(m_DetailsTabs, rcDefault, nullptr, WS_CHILD | WS_CLIPCHILDREN | WS_CLIPSIBLINGS);
 	m_MidpointList.SetStatic();
 
+	m_MidpointTree.Create(m_DetailsTabs, rcDefault, nullptr, WS_CHILD | WS_CLIPCHILDREN | WS_CLIPSIBLINGS);
+
 	m_PartList.Create(m_DetailsTabs, rcDefault, nullptr, WS_CHILD | WS_CLIPCHILDREN | WS_CLIPSIBLINGS);
 	m_PartList.SetStatic();
 
@@ -1000,6 +1004,7 @@ LRESULT CChartView::OnCreate(UINT, WPARAM, LPARAM, BOOL&) {
 	m_DetailsTabs.AddPage(m_AspectGridScroll.m_hWnd, L"Aspect Grid");
 	m_DetailsTabs.AddPage(m_AspectList.m_hWnd, L"Aspect List");
 	m_DetailsTabs.AddPage(m_MidpointList.m_hWnd, L"Midpoints");
+	m_DetailsTabs.AddPage(m_MidpointTree.m_hWnd, L"Midpoint Tree");
 	m_DetailsTabs.AddPage(m_PartList.m_hWnd, L"Arabic Parts");
 	m_DetailsTabs.SetActivePage(0);
 
@@ -1026,7 +1031,7 @@ LRESULT CChartView::OnEditCopy(WORD, WORD, HWND, BOOL&) {
 	}
 
 	// on a tab with a list, the selected rows as text
-	if (auto tab = ActiveListTab(); tab && Helpers::CopyListRows(m_hWnd, tab->List, tab->Table))
+	if (auto tab = ActiveListTab(); tab && tab->List && Helpers::CopyListRows(m_hWnd, tab->List, tab->Table))
 		return 0;
 
 	// anywhere else (or with no row selected) it is the chart wheel, as a picture
@@ -1120,6 +1125,8 @@ std::optional<CChartView::ListTab> CChartView::ActiveListTab() {
 		return ListTab{ m_AspectList.ListWindow(), m_AspectList.Table(), L"Aspects" };
 	if (page == m_MidpointList.m_hWnd)
 		return ListTab{ m_MidpointList.ListWindow(), m_MidpointList.Table(), L"Midpoints" };
+	if (page == m_MidpointTree.m_hWnd)
+		return ListTab{ nullptr, m_MidpointTree.Table(), L"Midpoint Tree" };		// (a tree: it has no rows to select, so Copy stays with the wheel)
 	if (page == m_PartList.m_hWnd)
 		return ListTab{ m_PartList.ListWindow(), m_PartList.Table(), L"Arabic Parts" };
 	return std::nullopt;

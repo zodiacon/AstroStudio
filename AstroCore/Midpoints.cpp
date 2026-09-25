@@ -110,3 +110,23 @@ std::vector<MidpointContact> Midpoints::Contacts(std::vector<MidpointData> const
 	ContactOptions const& options) {
 	return Contacts(midpoints, std::vector<ChartPoint>{ point }, options);
 }
+
+std::vector<MidpointBranch> Midpoints::Tree(std::vector<MidpointData> const& midpoints, std::vector<ChartPoint> const& points,
+	ContactOptions const& options) {
+	std::vector<MidpointBranch> tree;
+	auto contacts = Contacts(midpoints, points, options);		// (tightest first over all: the branches inherit that order)
+	for (auto const& point : points) {
+		MidpointBranch branch;
+		branch.Point = point;
+		branch.Dial = OnDial(point.Longitude.Value);
+		for (auto const& contact : contacts)
+			if (contact.Point.SameAs(point))
+				branch.Contacts.push_back(contact);
+		if (!branch.Contacts.empty())
+			tree.push_back(std::move(branch));
+	}
+	std::ranges::stable_sort(tree, [](auto const& a, auto const& b) {
+		return a.Dial < b.Dial;
+	});
+	return tree;
+}

@@ -15,6 +15,8 @@ struct AppSettings : Settings {
 		SETTING(ViewStatusBar, 1, SettingType::Bool);
 		SETTING(AlwaysOnTop, 0, SettingType::Bool);
 		SETTING(TextFont, LOGFONT{}, SettingType::Binary);		// the font for text that is not astrological symbols (empty face: Consolas); lfHeight in tenths of a point
+		SETTING(MidpointTreeOrb, 15, SettingType::Int32);		// the midpoint tree's orb, in tenths of a degree
+		SETTING(MidpointTreeAxis, 0, SettingType::Bool);		// the midpoint tree counts only the axis (on and opposite), not the whole 90 degree dial
 		SETTING(ShowPartOfFortune, 0, SettingType::Bool);		// the charts have the Part of Fortune among their planets (and on the wheel)
 		SETTING(LastHouseSystem, (int)'K', SettingType::Int32);		// the last one used for a chart (Koch to begin with)
 
@@ -48,6 +50,8 @@ struct AppSettings : Settings {
 	DEF_SETTING(TextFont, LOGFONT)
 	DEF_SETTING(LastHouseSystem, int)
 	DEF_SETTING(ShowPartOfFortune, int)
+	DEF_SETTING(MidpointTreeOrb, int)
+	DEF_SETTING(MidpointTreeAxis, int)
 	DEF_SETTING(ChartStepCount, int)
 	DEF_SETTING(ChartStepUnit, int)
 	DEF_SETTING(ChartStepInterval, int)

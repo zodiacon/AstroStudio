@@ -216,6 +216,7 @@
     <ClCompile Include="AspectGridWnd.cpp" />
     <ClCompile Include="AspectListView.cpp" />
     <ClCompile Include="MidpointListView.cpp" />
+    <ClCompile Include="MidpointTreeView.cpp" />
     <ClCompile Include="PartListView.cpp" />
     <ClCompile Include="Printing.cpp" />
     <ClCompile Include="AstroFont.cpp" />
@@ -264,6 +265,7 @@
     <ClInclude Include="AspectGridWnd.h" />
     <ClInclude Include="AspectListView.h" />
     <ClInclude Include="MidpointListView.h" />
+    <ClInclude Include="MidpointTreeView.h" />
     <ClInclude Include="PartListView.h" />
     <ClInclude Include="Printing.h" />
     <ClInclude Include="AstroFont.h" />

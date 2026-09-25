@@ -284,3 +284,68 @@ TEST_CASE("A chart's midpoint tree", "[Midpoints]") {
 	// (45 midpoints and 8 other planets each on a dial that is 4 degrees in 45 covered: there are always some)
 	CHECK_FALSE(contacts.empty());
 }
+
+TEST_CASE("A midpoint tree", "[Midpoints]") {
+	// Sun 10, Moon 50 (midpoint 30), Mercury 15, Venus 45 (midpoint 30 too); Mars at 30 sits on both; Jupiter at 75 is 45 from them
+	std::vector points{ Body(Planet::Sun, 10), Body(Planet::Moon, 50), Body(Planet::Mercury, 15), Body(Planet::Venus, 45),
+		Body(Planet::Mars, 30), Body(Planet::Jupiter, 75.5) };
+	auto midpoints = Midpoints::Calculate(points);
+	ContactOptions options;
+	options.Kind = ContactKind::Dial90;
+	options.Orb = 1;
+	auto tree = Midpoints::Tree(midpoints, points, options);
+
+	auto branchOf = [&](Planet planet) -> MidpointBranch const* {
+		auto it = std::ranges::find_if(tree, [&](auto const& b) { return b.Point.Body == planet; });
+		return it == tree.end() ? nullptr : &*it;
+	};
+	SECTION("a branch for each point with a midpoint on it") {
+		auto mars = branchOf(Planet::Mars);
+		REQUIRE(mars != nullptr);
+		// Sun/Moon and Mercury/Venus both at 30, exactly
+		int exact = 0;
+		for (auto const& contact : mars->Contacts) {
+			CHECK(contact.Point.Body == Planet::Mars);
+			CHECK(contact.Orb <= 1 + 1e-9);
+			auto const& m = midpoints[contact.Midpoint];
+			if (contact.Angle == 0 && contact.Orb < 1e-9) {
+				exact++;
+				CHECK(m.Longitude.Value == Approx(30));
+			}
+		}
+		CHECK(exact == 2);
+		CHECK(mars->Dial == Approx(30));
+	}
+	SECTION("the branches follow the dial, and the contacts are the tightest first") {
+		REQUIRE(tree.size() >= 2);
+		for (size_t i = 1; i < tree.size(); i++)
+			CHECK(tree[i - 1].Dial <= tree[i].Dial);
+		for (auto const& branch : tree)
+			for (size_t i = 1; i < branch.Contacts.size(); i++)
+				CHECK(branch.Contacts[i - 1].Orb <= branch.Contacts[i].Orb);
+	}
+	SECTION("a point is not on a midpoint it is an end of") {
+		for (auto const& branch : tree)
+			for (auto const& contact : branch.Contacts) {
+				auto const& m = midpoints[contact.Midpoint];
+				CHECK_FALSE(branch.Point.SameAs(m.A));
+				CHECK_FALSE(branch.Point.SameAs(m.B));
+			}
+	}
+	SECTION("the tree holds the contacts of the whole chart") {
+		size_t total = 0;
+		for (auto const& branch : tree)
+			total += branch.Contacts.size();
+		CHECK(total == Midpoints::Contacts(midpoints, points, options).size());
+	}
+	SECTION("points with nothing on them are left out") {
+		ContactOptions tight = options;
+		tight.Orb = 0.01;
+		auto strict = Midpoints::Tree(midpoints, points, tight);
+		CHECK(strict.size() < tree.size());
+		for (auto const& branch : strict)
+			CHECK_FALSE(branch.Contacts.empty());
+		CHECK(Midpoints::Tree({}, points, options).empty());
+		CHECK(Midpoints::Tree(midpoints, {}, options).empty());
+	}
+}

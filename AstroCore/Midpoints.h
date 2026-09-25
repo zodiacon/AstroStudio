@@ -68,6 +68,13 @@ struct MidpointContact {
 	double Orb;					// how far from exact, in degrees
 };
 
+// One branch of a midpoint tree: a point and the midpoints that stand on it (or at an angle to it), the tightest first.
+struct MidpointBranch {
+	ChartPoint Point;
+	double Dial{ 0 };								// where the point is on the 90 degree dial
+	std::vector<MidpointContact> Contacts;			// (Midpoint is an index into the midpoints the tree was made from)
+};
+
 class Midpoints final {
 public:
 	// The points of a chart that the options let take part: its planets in the order they are kept in, then the Ascendant and
@@ -87,6 +94,12 @@ public:
 		ContactOptions const& options = {});
 	// The contacts of one point only: its midpoint tree.
 	static std::vector<MidpointContact> Contacts(std::vector<MidpointData> const& midpoints, ChartPoint const& point,
+		ContactOptions const& options = {});
+
+	// The midpoint tree of a set of points: for each of them that has a midpoint on it, the midpoints there (as Contacts finds them,
+	// so with the same options), the points in the order of their places on the 90 degree dial - the order the tree is read in, the
+	// contacts of the whole chart side by side - and the midpoints of each branch tightest first. Points with none are left out.
+	static std::vector<MidpointBranch> Tree(std::vector<MidpointData> const& midpoints, std::vector<ChartPoint> const& points,
 		ContactOptions const& options = {});
 
 	// the position of a longitude on a dial of 360/n degrees: on the 90 degree dial (n = 4) the conjunction, square and

@@ -117,6 +117,9 @@
     <ClCompile Include="PartListView.cpp">
       <Filter>Views</Filter>
     </ClCompile>
+    <ClCompile Include="MidpointTreeView.cpp">
+      <Filter>Views</Filter>
+    </ClCompile>
     <ClCompile Include="MidpointListView.cpp">
       <Filter>Views</Filter>
     </ClCompile>
@@ -276,6 +279,9 @@
       <Filter>Views</Filter>
     </ClInclude>
     <ClInclude Include="PartListView.h">
+      <Filter>Views</Filter>
+    </ClInclude>
+    <ClInclude Include="MidpointTreeView.h">
       <Filter>Views</Filter>
     </ClInclude>
     <ClInclude Include="MidpointListView.h">
