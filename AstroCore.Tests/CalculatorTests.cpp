@@ -1,4 +1,5 @@
 #include "TestCommon.h"
+#include <atomic>
 #include "AstroCalculator.h"
 #include "ChartData.h"
 
@@ -250,4 +251,38 @@ TEST_CASE("The nodes have ingresses and stations", "[Calculator]") {
 		auto at = calc.CalcPlanet(node, ingress.Time).Longitude;
 		CHECK(std::min(at.DegreeInSign(), 30 - at.DegreeInSign()) < 0.01);
 	}
+}
+
+#include <thread>
+#include <vector>
+
+TEST_CASE("Calculating on several threads at once gives the same answers as on one", "[Calculator]") {
+	// the ephemeris keeps its state per thread, so an analysis can run on a worker while the program goes on calculating
+	struct Sample { Planet Planet; double Jd; };
+	std::vector<Sample> samples;
+	const Planet planets[] = { Planet::Sun, Planet::Moon, Planet::Mercury, Planet::Mars, Planet::Jupiter, Planet::Saturn, Planet::Pluto, Planet::Chiron };
+	for (int i = 0; i < 4000; i++)
+		samples.push_back({ planets[i % 8], 2451545.0 + i * 3.7 });
+
+	AstroCalculator calc;
+	std::vector<double> expected;
+	for (auto const& s : samples)
+		expected.push_back(calc.CalcPlanet(s.Planet, DateTime(s.Jd, true), 1, true).Longitude.Value);
+
+	std::atomic<int> wrong{ 0 };
+	auto work = [&](int shift) {
+		AstroCalculator mine;
+		for (size_t n = 0; n < samples.size(); n++) {
+			size_t i = (n + shift * 517) % samples.size();
+			auto got = mine.CalcPlanet(samples[i].Planet, DateTime(samples[i].Jd, true), 1, true).Longitude.Value;
+			if (got != expected[i])
+				wrong++;
+		}
+	};
+	std::vector<std::thread> threads;
+	for (int t = 0; t < 4; t++)
+		threads.emplace_back(work, t);
+	for (auto& thread : threads)
+		thread.join();
+	CHECK(wrong == 0);
 }

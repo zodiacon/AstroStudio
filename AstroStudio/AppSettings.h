@@ -24,6 +24,7 @@ struct AppSettings : Settings {
 
 		// the ephemeris (its start date is not kept: it starts a month before today)
 		SETTING(EphemerisGlyphs, 1, SettingType::Bool);
+		SETTING(AnalysisFontSize, 90, SettingType::Int32);		// the analysis view's text size, in tenths of a point
 		SETTING(AnalysisGlyphs, 1, SettingType::Bool);		// the analysis view shows glyphs rather than names
 		SETTING(EphemerisSeconds, 0, SettingType::Bool);
 		SETTING(EphemerisGridLines, 0, SettingType::Bool);
@@ -47,6 +48,7 @@ struct AppSettings : Settings {
 	DEF_SETTING(ChartStepUnit, int)
 	DEF_SETTING(ChartStepInterval, int)
 	DEF_SETTING(EphemerisGlyphs, int)
+	DEF_SETTING(AnalysisFontSize, int)
 	DEF_SETTING(AnalysisGlyphs, int)
 	DEF_SETTING(EphemerisSeconds, int)
 	DEF_SETTING(EphemerisGridLines, int)

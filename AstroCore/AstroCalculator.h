@@ -111,7 +111,8 @@ private:
 	double MoonSignChange(double jd, bool forward) const;
 	VoidOfCourseData CalcVoid(double entered, double left, bool outerPlanets) const;
 
-	static inline bool s_init{ false };
+	// (the library's state is per thread, so the ephemeris path is set once for each thread that calculates)
+	static inline thread_local bool s_init{ false };
 	int m_SweFlags;
 };
 

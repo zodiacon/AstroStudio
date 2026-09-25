@@ -683,6 +683,8 @@ BEGIN
     ID_OPTIONS_COLORS       "Choose the colours of the chart wheel\nChart Colors"
     ID_CHART_ANALYSIS       
                             "Find when things happen between this chart and the sky, over a range of dates \nAnalysis"
+    ID_ANALYSIS_CANCEL      
+                            "Stop the analysis that is running \nCancel"
     ID_CHART_DERIVED_SOLARARC 
                             "Open this chart with every point moved by the solar arc to a date you choose \nSolar Arc Chart"
     ID_TOOL_ANALYSIS        "Find when things happen between a chart and the sky, over a range of dates \nAnalysis"

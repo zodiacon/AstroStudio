@@ -19,17 +19,23 @@ namespace {
 
 LRESULT CAnalysisView::OnCreate(UINT, WPARAM, LPARAM, BOOL&) {
 	m_Glyphs = AppSettings::Get().AnalysisGlyphs() != 0;
+	m_FontSize = std::clamp(AppSettings::Get().AnalysisFontSize(), 70, 180);
 
 	m_hWndClient = m_List.Create(m_hWnd, rcDefault, nullptr,
 		WS_CHILD | WS_VISIBLE | WS_CLIPSIBLINGS | LVS_OWNERDATA | LVS_REPORT | LVS_SHOWSELALWAYS);
 	m_List.SetExtendedListViewStyle(LVS_EX_FULLROWSELECT | LVS_EX_DOUBLEBUFFER);
 	CreateFonts();
+	m_List.SetFont(m_StdFont);
 
 	ToolBarButtonInfo buttons[] = {
 		{ ID_VIEW_GLYPHS, IDI_GLYPH, BTNS_CHECK, L"Glyphs" },
+		{ ID_FONT_BIGGER, IDI_FONT_BIGGER },
+		{ ID_FONT_SMALLER, IDI_FONT_SMALLER },
+		{ ID_FONT_SIZE_DEFAULT, IDI_FONT_SIZE_DEFAULT },
 		{ 0 },
 		{ ID_ANALYSIS_OPTIONS, IDI_OPTIONS, 0, L"Options" },
 		{ ID_ANALYSIS_REFRESH, IDI_CLOCK_REFRESH, 0, L"Refresh" },
+		{ ID_ANALYSIS_CANCEL, IDI_STOP, 0, L"Cancel" },
 	};
 	CreateSimpleReBar(ATL_SIMPLE_REBAR_NOBORDER_STYLE);
 	auto tb = ToolbarHelper::CreateAndInitToolBar(m_hWndToolBar, buttons, _countof(buttons), 16);
@@ -50,6 +56,10 @@ LRESULT CAnalysisView::OnCreate(UINT, WPARAM, LPARAM, BOOL&) {
 	cm->UpdateColumns();
 	UpdateHeaders(true);
 
+	// where the progress of a run shows
+	CreateSimpleStatusBar(L"", WS_CHILD | WS_VISIBLE | WS_CLIPSIBLINGS | WS_CLIPCHILDREN);
+	ShowRunning(false);
+
 	DarkMode::setDarkWndNotifySafe(m_hWnd);
 	return 0;
 }
@@ -57,21 +67,64 @@ LRESULT CAnalysisView::OnCreate(UINT, WPARAM, LPARAM, BOOL&) {
 void CAnalysisView::CreateFonts() {
 	if (m_SymbolFont)
 		m_SymbolFont.DeleteObject();
-	LOGFONT lf;
-	CFontHandle(m_List.GetFont()).GetLogFont(lf);
-	wcscpy_s(lf.lfFaceName, L"HamburgSymbols");
-	m_SymbolFont.CreateFontIndirect(&lf);
+	m_SymbolFont.CreatePointFont(m_FontSize, L"HamburgSymbols");
+
+	// the text font the user chose with Options > Font, or the system's; its size is the toolbar's
+	if (m_StdFont)
+		m_StdFont.DeleteObject();
+	LOGFONT lf = AppSettings::Get().TextFont();
+	if (lf.lfFaceName[0] == 0) {
+		CFontHandle(AtlGetDefaultGuiFont()).GetLogFont(lf);
+		lf.lfWeight = FW_NORMAL;
+	}
+	lf.lfHeight = m_FontSize;
+	m_StdFont.CreatePointFontIndirect(&lf);
+}
+
+void CAnalysisView::ApplyFontSize(int oldSize) {
+	AppSettings::Get().AnalysisFontSize(m_FontSize);
+	CreateFonts();
+	m_List.SetFont(m_StdFont);
+	// the columns grow and shrink with the text
+	for (int column = 0; column < _countof(ColumnNames); column++)
+		if (int width = m_List.GetColumnWidth(column); width > 0 && oldSize > 0)
+			m_List.SetColumnWidth(column, width * m_FontSize / oldSize);
+	UpdateViewUI();
+	m_List.Invalidate();
+}
+
+LRESULT CAnalysisView::OnChangeFontSize(WORD, WORD id, HWND, BOOL&) {
+	int old = m_FontSize;
+	if (id == ID_FONT_SIZE_DEFAULT)
+		m_FontSize = 90;
+	else
+		m_FontSize = std::clamp(m_FontSize + (id == ID_FONT_BIGGER ? 8 : -8), 70, 180);
+	ApplyFontSize(old);
+	return 0;
+}
+
+void CAnalysisView::TextFontChanged() {
+	// the size of the chosen font becomes the list's
+	int old = m_FontSize;
+	if (int size = AppSettings::Get().TextFont().lfHeight; size > 0)
+		m_FontSize = std::clamp(size, 70, 180);
+	ApplyFontSize(old);
 }
 
 void CAnalysisView::UpdateViewUI() {
-	Frame()->GetUI().UISetCheck(ID_VIEW_GLYPHS, m_Glyphs);
+	auto& ui = Frame()->GetUI();
+	ui.UISetCheck(ID_VIEW_GLYPHS, m_Glyphs);
+	ui.UIEnable(ID_FONT_BIGGER, m_FontSize < 180);
+	ui.UIEnable(ID_FONT_SMALLER, m_FontSize > 70);
 }
 
 void CAnalysisView::PageActivated(bool active) {
+	m_PageActive = active;
 	auto& ui = Frame()->GetUI();
 	if (active) {
 		ui.UIEnable(ID_FILE_EXPORT, TRUE);
 		UpdateViewUI();
+		ShowRunning(m_Job != nullptr);
 	}
 	else
 		ui.UIEnable(ID_FILE_EXPORT, FALSE);		// the next page enables it again if it can export
@@ -126,20 +179,103 @@ void CAnalysisView::UpdateHeaders(bool resetWidths) {
 }
 
 void CAnalysisView::Analyse(OpenChart chart, AnalysisSettings const& settings) {
-	m_Chart = std::move(chart);
-	m_Settings = settings;
-	Run();
+	Frame()->SetViewTitle(this, L"Analysing...");
+	Start(std::move(chart), settings);
 }
 
-void CAnalysisView::Run() {
-	{
-		CWaitCursor wait;
-		m_Events = Analysis::RunAll(m_Calc, m_Chart.Data, m_Settings).Events;
-		m_List.SetItemCount(static_cast<int>(m_Events.size()));
-		m_List.Invalidate();
+void CAnalysisView::SetStatus(PCWSTR text) {
+	if (m_hWndStatusBar)
+		CStatusBarCtrl(m_hWndStatusBar).SetText(0, text);
+}
+
+void CAnalysisView::ShowRunning(bool running) {
+	if (running)
+		SetTimer(ProgressTimer, 150);
+	else
+		KillTimer(ProgressTimer);
+	if (m_PageActive)
+		Frame()->GetUI().UIEnable(ID_ANALYSIS_CANCEL, running);
+	if (running)
+		SetStatus(L"Analysing...");
+}
+
+void CAnalysisView::StopWorker() {
+	if (m_Job)
+		m_Job->Cancel = true;
+	if (m_Worker.joinable())
+		m_Worker.join();		// (it looks at the flag every few thousand steps, so this is quick)
+	m_Job.reset();
+}
+
+void CAnalysisView::Start(OpenChart chart, AnalysisSettings settings) {
+	StopWorker();
+	auto job = std::make_shared<Job>();
+	job->Chart = std::move(chart);
+	job->Settings = std::move(settings);
+	m_Job = job;
+	WPARAM id = ++m_JobId;
+	m_Worker = std::thread([job, id, hwnd = m_hWnd] {
+		// the ephemeris keeps its state per thread, so this calculator is the thread's own
+		AstroCalculator calc;
+		job->Result = Analysis::RunAll(calc, job->Chart.Data, job->Settings, [&](double fraction) {
+			job->Percent = static_cast<int>(fraction * 100);
+			return !job->Cancel;
+		});
+		::PostMessage(hwnd, WM_ANALYSIS_DONE, id, 0);
+	});
+	ShowRunning(true);
+}
+
+LRESULT CAnalysisView::OnTimer(UINT, WPARAM id, LPARAM, BOOL& handled) {
+	if (id != ProgressTimer) {
+		handled = FALSE;
+		return 0;
 	}
+	if (m_Job) {
+		CString text;
+		text.Format(L"Analysing...  %d%%", m_Job->Percent.load());
+		SetStatus(text);
+	}
+	return 0;
+}
+
+LRESULT CAnalysisView::OnDone(UINT, WPARAM id, LPARAM, BOOL&) {
+	if (!m_Job || id != m_JobId)
+		return 0;		// the message of a run that was replaced
+	m_Worker.join();
+	auto job = std::move(m_Job);
+	m_Job.reset();
+	ShowRunning(false);
+
+	if (job->Result.Cancelled) {
+		SetStatus(L"Cancelled");
+		if (m_Events.empty() && m_Chart.Name.IsEmpty())
+			Frame()->SetViewTitle(this, L"Analysis (cancelled)");
+		return 0;
+	}
+	m_Chart = std::move(job->Chart);
+	m_Settings = std::move(job->Settings);
+	m_Events = std::move(job->Result.Events);
+	m_List.SetItemCount(static_cast<int>(m_Events.size()));
+	m_List.Invalidate();
 	UpdateHeaders(false);
 	UpdateTitle();
+	CString status;
+	status.Format(L"%d events", static_cast<int>(m_Events.size()));
+	SetStatus(status);
+	return 0;
+}
+
+LRESULT CAnalysisView::OnCancel(WORD, WORD, HWND, BOOL&) {
+	if (m_Job)
+		m_Job->Cancel = true;		// OnDone hears of it
+	return 0;
+}
+
+LRESULT CAnalysisView::OnDestroy(UINT, WPARAM, LPARAM, BOOL& handled) {
+	StopWorker();
+	handled = FALSE;
+	return 0;
 }
 
 void CAnalysisView::UpdateTitle() {
@@ -303,7 +439,7 @@ DWORD CAnalysisView::OnSubItemPrePaint(int, LPNMCUSTOMDRAW cd) {
 	lv->clrTextBk = RowColor(m_Events[row]);
 	lv->clrText = WTLHelper::IsDarkMode() ? RGB(235, 235, 235) : RGB(0, 0, 0);		// (without it the date cell comes out in a colour of its own)
 	auto column = GetColumnManager(m_List)->GetColumnTag<ColumnType>(lv->iSubItem);
-	::SelectObject(cd->hdc, m_Glyphs && IsGlyphColumn(column) ? m_SymbolFont.m_hFont : m_List.GetFont());
+	::SelectObject(cd->hdc, m_Glyphs && IsGlyphColumn(column) ? m_SymbolFont.m_hFont : m_StdFont.m_hFont);
 	return CDRF_NEWFONT | CDRF_SKIPPOSTPAINT;
 }
 
@@ -357,22 +493,20 @@ LRESULT CAnalysisView::OnOptions(WORD, WORD, HWND, BOOL&) {
 		return 0;
 
 	// (choosing the closed chart again keeps the copy that was made of it)
-	if (!(closed && dlg.Chart() == 0))
-		m_Chart = charts[dlg.Chart()];
-	m_Settings = dlg.Settings();
-	Run();
+	Start(closed && dlg.Chart() == 0 ? m_Chart : charts[dlg.Chart()], dlg.Settings());
 	return 0;
 }
 
 LRESULT CAnalysisView::OnRefresh(WORD, WORD, HWND, BOOL&) {
 	// the chart as it is now, if it is still open
+	OpenChart chart = m_Chart;
 	if (m_Chart.View)
-		for (auto& chart : Frame()->OpenCharts())
-			if (chart.View == m_Chart.View) {
-				m_Chart = std::move(chart);
+		for (auto& open : Frame()->OpenCharts())
+			if (open.View == m_Chart.View) {
+				chart = std::move(open);
 				break;
 			}
-	Run();
+	Start(std::move(chart), m_Settings);
 	return 0;
 }
 

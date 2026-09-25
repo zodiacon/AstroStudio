@@ -83,7 +83,10 @@
  * Sun Studio C/C++, IBM XL C/C++, GNU C and Intel C/C++ (Linux systems) -> __thread
  * Borland, VC++ -> __declspec(thread)
  */
-#if !defined(TLSOFF) && !defined( __APPLE__ ) && !defined(WIN32) && !defined(DOS32)
+/* Astro Studio: the Windows exclusion below left the library without thread-local state under Visual C++ (which defines WIN32 in
+   its project templates), so every thread shared one set of globals and two threads calculating at once corrupted each other's
+   results. Visual C++ supports __declspec(thread), so it is switched on for it. */
+#if !defined(TLSOFF) && !defined( __APPLE__ ) && (!defined(WIN32) || defined(_MSC_VER)) && !defined(DOS32)
 #if defined( __GNUC__ ) || defined( __CYGWIN__ ) 
 #define TLS     __thread
 #else
