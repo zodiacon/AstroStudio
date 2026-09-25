@@ -500,3 +500,59 @@ TEST_CASE("Running several analyses reports progress across them and can be canc
 	CHECK(cancelled.Cancelled);
 	CHECK(cancelled.Events.empty());
 }
+
+TEST_CASE("The event that ends a stay within an orb has the whole stay", "[Analysis]") {
+	AstroCalculator calc;
+	auto natal = Natal({ Planet::Sun }, DateTime(2000, 1, 1, 12, 0, 0));
+	auto result = Analysis::Run(calc, natal, Transits(DateTime(2000, 12, 25, 0, 0, 0), DateTime(2001, 1, 8, 0, 0, 0), { Planet::Sun }, { Planet::Sun }, ConjunctionOnly(1)));
+	REQUIRE(result.Events.size() == 3);
+	CHECK_FALSE(result.Events[0].Window);
+	CHECK_FALSE(result.Events[1].Window);
+	REQUIRE(result.Events[2].Window);
+	auto const& stay = *result.Events[2].Window;
+	CHECK(stay.HasEnter);
+	CHECK(stay.HasLeave);
+	CHECK(stay.Enter.Julian() == result.Events[0].Time.Julian());
+	REQUIRE(stay.Exacts.size() == 1);
+	CHECK(stay.Exacts[0].Julian() == result.Events[1].Time.Julian());
+	CHECK(stay.Leave.Julian() == result.Events[2].Time.Julian());
+
+	// a range that begins inside the orb: no entry; one that ends inside it: no leaving
+	double exact = result.Events[1].Time.Julian();
+	auto starting = Analysis::Run(calc, natal, Transits(DateTime(exact - 0.2, true), DateTime(exact + 3, true), { Planet::Sun }, { Planet::Sun }, ConjunctionOnly(1)));
+	REQUIRE(starting.Events.size() == 3);
+	REQUIRE(starting.Events[2].Window);
+	CHECK_FALSE(starting.Events[2].Window->HasEnter);
+	CHECK(starting.Events[2].Window->HasLeave);
+	CHECK(starting.Events[2].Window->Exacts.size() == 1);
+
+	auto ending = Analysis::Run(calc, natal, Transits(DateTime(exact - 3, true), DateTime(exact + 0.2, true), { Planet::Sun }, { Planet::Sun }, ConjunctionOnly(1)));
+	REQUIRE(ending.Events.size() == 3);
+	REQUIRE(ending.Events[2].Kind == AnalysisEventKind::InOrbAtEnd);
+	REQUIRE(ending.Events[2].Window);
+	CHECK(ending.Events[2].Window->HasEnter);
+	CHECK_FALSE(ending.Events[2].Window->HasLeave);
+}
+
+TEST_CASE("Each pass of a retrograde planet is a stay of its own", "[Analysis]") {
+	AstroCalculator calc;
+	auto retro = calc.CalcPlanetStation(Planet::Mars, DateTime(2022, 10, 1, 0, 0, 0));
+	auto direct = calc.CalcPlanetStation(Planet::Mars, DateTime(retro.Time.Julian() + 5, true));
+	auto natal = Natal({ Planet::Sun }, DateTime(2000, 1, 1, 12, 0, 0));
+	natal.AllPlanets()[0].Longitude = AstroPoint(AstroPoint::MidPoint(retro.Position, direct.Position).Value);
+	auto result = Analysis::Run(calc, natal, Transits(DateTime(retro.Time.Julian() - 120, true), DateTime(direct.Time.Julian() + 120, true), { Planet::Mars }, { Planet::Sun }, ConjunctionOnly(1)));
+
+	auto leaves = Of(result, AnalysisEventKind::LeaveOrb);
+	REQUIRE(leaves.size() == 3);
+	double previousLeave = 0;
+	for (auto const& leave : leaves) {
+		REQUIRE(leave.Window);
+		auto const& stay = *leave.Window;
+		CHECK(stay.HasEnter);
+		REQUIRE(stay.Exacts.size() == 1);
+		CHECK(stay.Enter.Julian() < stay.Exacts[0].Julian());
+		CHECK(stay.Exacts[0].Julian() < stay.Leave.Julian());
+		CHECK(stay.Enter.Julian() > previousLeave);
+		previousLeave = stay.Leave.Julian();
+	}
+}

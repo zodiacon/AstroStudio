@@ -163,7 +163,7 @@ void CChartView::PageActivated(bool active) {
 	ui.UIEnable(ID_CHART_OVERLAY_SOLARARC, active && !m_ReadOnly);
 	for (UINT id : { ID_CHART_DERIVED_SOLARRETURN, ID_CHART_DERIVED_LUNARRETURN, ID_CHART_DERIVED_SOLARARC, ID_CHART_DERIVED_COMPOSITE, ID_CHART_DERIVED_DAVISON })
 		ui.UIEnable(id, active && !m_ReadOnly);
-	for (UINT id : { ID_CHART_OVERLAY, ID_CHART_TRANSITS, ID_CHART_OVERLAY_NONE, ID_CHART_OVERLAY_SYNASTRY })
+	for (UINT id : { ID_CHART_ANALYSIS, ID_CHART_OVERLAY, ID_CHART_TRANSITS, ID_CHART_OVERLAY_NONE, ID_CHART_OVERLAY_SYNASTRY })
 		ui.UIEnable(id, active);
 	ui.UIEnable(ID_FILE_SAVE, active && !m_ReadOnly);
 	ui.UIEnable(ID_FILE_SAVE_AS, active && !m_ReadOnly);
@@ -535,6 +535,12 @@ void CChartView::NewPairChart(bool davison) {
 	CString title;
 	title.Format(L"%s: %s + %s", davison ? L"Davison" : L"Composite", (PCWSTR)m_Title, (PCWSTR)other.Name);
 	Frame()->AddDerivedChartView(std::move(chart), title);
+}
+
+LRESULT CChartView::OnAnalysis(WORD, WORD, HWND, BOOL&) {
+	if (!m_Data.AllPlanets().empty())
+		Frame()->NewAnalysis(this);
+	return 0;
 }
 
 LRESULT CChartView::OnDerived(WORD, WORD id, HWND, BOOL&) {

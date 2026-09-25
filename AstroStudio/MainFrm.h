@@ -81,6 +81,7 @@ private:
 	IView* AddDerivedChartView(ChartData data, PCWSTR title) override;
 	bool IsLocationPending() const override;
 	std::vector<OpenChart> OpenCharts(IView* except = nullptr) override;
+	void NewAnalysis(IView* chart = nullptr) override;
 
 	// Handler prototypes (uncomment arguments if needed):
 	//	LRESULT MessageHandler(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, BOOL& /*bHandled*/)

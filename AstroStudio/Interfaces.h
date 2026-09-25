@@ -42,6 +42,10 @@ struct IMainFrame abstract {
 
 	// Copies of the charts open in tabs, in tab order, leaving out `except` (the asker).
 	virtual std::vector<OpenChart> OpenCharts(IView* except = nullptr) = 0;
+
+	// Asks what to analyse (the analysis dialog, starting on this chart - or on the one showing, if none is given) and opens the
+	// result in a new tab.
+	virtual void NewAnalysis(IView* chart = nullptr) = 0;
 };
 
 struct IView {

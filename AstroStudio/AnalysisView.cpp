@@ -12,9 +12,9 @@
 #include <algorithm>
 
 namespace {
-	PCWSTR const ColumnNames[] = { L"Date", L"Analysis", L"Event", L"Mover", L"Aspect", L"Target", L"Orb", L"Pass", L"Position" };
+	PCWSTR const ColumnNames[] = { L"Date", L"Analysis", L"Event", L"Mover", L"Aspect", L"Target", L"Orb", L"Pass", L"Position", L"Enter / Exact / Leave" };
 	// where the columns that change their headers with the glyphs are (the order they were added in)
-	constexpr int AnalysisColumn = 1, MoverColumn = 3, TargetColumn = 5;
+	constexpr int AnalysisColumn = 1, MoverColumn = 3, AspectColumn = 4, TargetColumn = 5;
 }
 
 LRESULT CAnalysisView::OnCreate(UINT, WPARAM, LPARAM, BOOL&) {
@@ -40,14 +40,15 @@ LRESULT CAnalysisView::OnCreate(UINT, WPARAM, LPARAM, BOOL&) {
 	cm->AddColumn(ColumnNames[0], LVCFMT_LEFT, 140, ColumnType::Date);
 	cm->AddColumn(ColumnNames[1], LVCFMT_LEFT, 160, ColumnType::Analysis);
 	cm->AddColumn(ColumnNames[2], LVCFMT_LEFT, 140, ColumnType::Event);
-	cm->AddColumn(ColumnNames[3], LVCFMT_LEFT, 130, ColumnType::Mover);
-	cm->AddColumn(ColumnNames[4], LVCFMT_LEFT, 110, ColumnType::Aspect);
-	cm->AddColumn(ColumnNames[5], LVCFMT_LEFT, 150, ColumnType::Target);
+	cm->AddColumn(ColumnNames[3], LVCFMT_CENTER, 130, ColumnType::Mover);
+	cm->AddColumn(ColumnNames[4], LVCFMT_CENTER, 110, ColumnType::Aspect);
+	cm->AddColumn(ColumnNames[5], LVCFMT_CENTER, 150, ColumnType::Target);
 	cm->AddColumn(ColumnNames[6], LVCFMT_RIGHT, 80, ColumnType::Orb);
 	cm->AddColumn(ColumnNames[7], LVCFMT_CENTER, 50, ColumnType::Pass);
 	cm->AddColumn(ColumnNames[8], LVCFMT_LEFT, 130, ColumnType::Longitude);
+	cm->AddColumn(ColumnNames[9], LVCFMT_LEFT, 380, ColumnType::Stay);
 	cm->UpdateColumns();
-	UpdateHeaders();
+	UpdateHeaders(true);
 
 	DarkMode::setDarkWndNotifySafe(m_hWnd);
 	return 0;
@@ -80,7 +81,7 @@ LRESULT CAnalysisView::OnViewGlyphs(WORD, WORD, HWND, BOOL&) {
 	m_Glyphs = !m_Glyphs;
 	AppSettings::Get().AnalysisGlyphs(m_Glyphs ? 1 : 0);
 	UpdateViewUI();
-	UpdateHeaders();
+	UpdateHeaders(true);
 	m_List.Invalidate();
 	return 0;
 }
@@ -90,7 +91,7 @@ LRESULT CAnalysisView::OnThemeChanged(UINT, WPARAM, LPARAM, BOOL&) {
 	return 0;
 }
 
-void CAnalysisView::UpdateHeaders() {
+void CAnalysisView::UpdateHeaders(bool resetWidths) {
 	// With glyphs a cell has only the glyph, so what the planets are - transits, progressed, natal - is said once, in the header.
 	// (When several analyses are listed together it is said by the Analysis column, which is shown only then.)
 	auto types = m_Settings.TypeList();
@@ -109,6 +110,19 @@ void CAnalysisView::UpdateHeaders() {
 	};
 	set(MoverColumn, mover);
 	set(TargetColumn, target);
+
+	// A glyph is narrow, so with glyphs the three columns need only what their headers do; with words they need room for the names.
+	struct Sizing { int Column; CString const& Header; int Words; };
+	CString aspect = ColumnNames[AspectColumn];
+	for (auto const& sizing : { Sizing{ MoverColumn, mover, 130 }, Sizing{ AspectColumn, aspect, 110 }, Sizing{ TargetColumn, target, 150 } }) {
+		if (m_Glyphs) {
+			int needed = std::max(44, m_List.GetStringWidth(sizing.Header) + 28);
+			if (resetWidths || m_List.GetColumnWidth(sizing.Column) < needed)
+				m_List.SetColumnWidth(sizing.Column, needed);
+		}
+		else if (resetWidths)
+			m_List.SetColumnWidth(sizing.Column, sizing.Words);
+	}
 }
 
 void CAnalysisView::Analyse(OpenChart chart, AnalysisSettings const& settings) {
@@ -124,7 +138,7 @@ void CAnalysisView::Run() {
 		m_List.SetItemCount(static_cast<int>(m_Events.size()));
 		m_List.Invalidate();
 	}
-	UpdateHeaders();
+	UpdateHeaders(false);
 	UpdateTitle();
 }
 
@@ -177,17 +191,42 @@ COLORREF CAnalysisView::RowColor(AnalysisEvent const& event) {
 	return CLR_INVALID;
 }
 
+CString CAnalysisView::LocalText(DateTime const& ut, bool withTime) const {
+	auto const& zone = m_Chart.Data.Info().TimeZone;
+	int offset = zone.OffsetUT;
+	auto local = TimeZones::UtToLocal(ut, zone, &offset);
+	CString text;
+	if (withTime)
+		text.Format(L"%04ld/%02ld/%02ld  %02ld:%02ld", local.Year, local.Month, local.Day, local.Hour, local.Minute);
+	else
+		text.Format(L"%04ld/%02ld/%02ld", local.Year, local.Month, local.Day);
+	return text;
+}
+
+CString CAnalysisView::StayText(AnalysisEvent const& event) const {
+	if (!event.Window)
+		return CString();
+	auto const& stay = *event.Window;
+	// dates are enough for a stay of weeks or years; a short one needs its hours
+	double first = stay.HasEnter ? stay.Enter.Julian() : (stay.Exacts.empty() ? stay.Leave.Julian() : stay.Exacts.front().Julian());
+	bool withTime = stay.Leave.Julian() - first <= 14;
+
+	CString exacts;
+	for (auto const& exact : stay.Exacts)
+		exacts += (exacts.IsEmpty() ? L"" : L", ") + LocalText(exact, withTime);
+	if (exacts.IsEmpty())
+		exacts = L"-";
+	// (a stay that was under way when the range began, or still is at its end, has no entering or no leaving to show)
+	return (stay.HasEnter ? LocalText(stay.Enter, withTime) : CString(L"(range start)")) + L"  /  " + exacts + L"  /  " +
+		(stay.HasLeave ? LocalText(stay.Leave, withTime) : CString(L"(range end)"));
+}
+
 CString CAnalysisView::CellText(AnalysisEvent const& event, ColumnType column, bool glyphs) const {
 	CString text;
 	bool aspect = event.Aspect != AspectType::None;
 	switch (column) {
 		case ColumnType::Date: {
-			// as the chart's own time is shown: in its zone
-			auto const& zone = m_Chart.Data.Info().TimeZone;
-			int offset = zone.OffsetUT;
-			auto local = TimeZones::UtToLocal(event.Time, zone, &offset);
-			text.Format(L"%04ld/%02ld/%02ld  %02ld:%02ld", local.Year, local.Month, local.Day, local.Hour, local.Minute);
-			return text;
+			return LocalText(event.Time, true);
 		}
 		case ColumnType::Analysis:
 			return AnalysisNames::TypeName(event.Type);
@@ -225,6 +264,8 @@ CString CAnalysisView::CellText(AnalysisEvent const& event, ColumnType column, b
 			if (aspect)
 				text.Format(L"%d", event.Pass);
 			return text;
+		case ColumnType::Stay:
+			return StayText(event);
 		case ColumnType::Longitude: {
 			// where the mover is, with the retrograde mark after it while it goes backward
 			AstroPoint position(event.Longitude);
@@ -280,6 +321,15 @@ void CAnalysisView::DoSort(SortInfo const* si) {
 			case ColumnType::Orb: return SortHelper::Sort(a.Orb, b.Orb, si->SortAscending);
 			case ColumnType::Pass: return SortHelper::Sort(a.Pass, b.Pass, si->SortAscending);
 			case ColumnType::Longitude: return SortHelper::Sort(a.Longitude, b.Longitude, si->SortAscending);
+			case ColumnType::Stay: {
+				// by when the stay was entered (or, failing that, left); rows without one after those with
+				auto key = [](AnalysisEvent const& e) {
+					if (!e.Window)
+						return 1e300;
+					return e.Window->HasEnter ? e.Window->Enter.Julian() : e.Window->Leave.Julian();
+				};
+				return SortHelper::Sort(key(a), key(b), si->SortAscending);
+			}
 		}
 		return false;
 	};

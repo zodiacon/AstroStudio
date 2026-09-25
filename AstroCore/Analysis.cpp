@@ -576,6 +576,38 @@ namespace {
 				pass++;
 			event.Pass = pass;
 		}
+		// the stays within an orb, gathered as their events go by and given to the event that ends each
+		struct Stay {
+			std::shared_ptr<AnalysisWindow> Window;
+		};
+		std::map<Key, Stay> stays;
+		for (auto& event : m_events) {
+			if (event.Aspect == AspectType::None)
+				continue;
+			auto& stay = stays[{ event.Mover, event.TargetKind, event.Target, event.Aspect }];
+			switch (event.Kind) {
+				case AnalysisEventKind::EnterOrb:
+					stay.Window = std::make_shared<AnalysisWindow>();
+					stay.Window->HasEnter = true;
+					stay.Window->Enter = event.Time;
+					break;
+				case AnalysisEventKind::InOrbAtStart:
+					stay.Window = std::make_shared<AnalysisWindow>();
+					break;
+				case AnalysisEventKind::Exact:
+					if (stay.Window)
+						stay.Window->Exacts.push_back(event.Time);
+					break;
+				case AnalysisEventKind::LeaveOrb:
+				case AnalysisEventKind::InOrbAtEnd:
+					if (stay.Window) {
+						stay.Window->HasLeave = event.Kind == AnalysisEventKind::LeaveOrb;
+						stay.Window->Leave = event.Time;
+						event.Window = std::move(stay.Window);
+					}
+					break;
+			}
+		}
 		result.Events = std::move(m_events);
 	}
 

@@ -304,7 +304,7 @@ double CAnalysisDlg::EstimateSeconds(AnalysisSettings const& settings) {
 			case AnalysisType::ProgressedToProgressed: factor = 0.00024; break;
 		}
 		double years = (settings.To.Julian() - settings.From.Julian()) / 365.25;
-		double references = settings.Targets.size() + (settings.NatalAngles && one.NatalTargets() ? 2 : 0) + 2;
+		auto references = settings.Targets.size() + (settings.NatalAngles && one.NatalTargets() ? 2 : 0) + 2;
 		seconds += years * one.EffectiveMovers().size() * references * factor;
 	}
 	return seconds;

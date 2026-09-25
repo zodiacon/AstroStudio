@@ -59,6 +59,7 @@ public:
 		NOTIFY_CODE_HANDLER(TBN_DROPDOWN, OnOverlayDropDown)
 		COMMAND_ID_HANDLER(ID_CHART_DERIVED_SOLARRETURN, OnDerived)
 		COMMAND_ID_HANDLER(ID_CHART_DERIVED_LUNARRETURN, OnDerived)
+		COMMAND_ID_HANDLER(ID_CHART_ANALYSIS, OnAnalysis)
 		COMMAND_ID_HANDLER(ID_CHART_DERIVED_SOLARARC, OnDerived)
 		COMMAND_ID_HANDLER(ID_CHART_DERIVED_COMPOSITE, OnDerived)
 		COMMAND_ID_HANDLER(ID_CHART_DERIVED_DAVISON, OnDerived)
@@ -80,6 +81,7 @@ public:
 		COMMAND_ID_HANDLER(ID_CHART_OVERLAY_SYNASTRY, OnOverlay)
 		COMMAND_ID_HANDLER(ID_CHART_DERIVED_SOLARRETURN, OnDerived)
 		COMMAND_ID_HANDLER(ID_CHART_DERIVED_LUNARRETURN, OnDerived)
+		COMMAND_ID_HANDLER(ID_CHART_ANALYSIS, OnAnalysis)
 		COMMAND_ID_HANDLER(ID_CHART_DERIVED_SOLARARC, OnDerived)
 		COMMAND_ID_HANDLER(ID_CHART_DERIVED_COMPOSITE, OnDerived)
 		COMMAND_ID_HANDLER(ID_CHART_DERIVED_DAVISON, OnDerived)
@@ -138,6 +140,8 @@ private:
 	// ...and a composite or Davison chart of this and another open chart
 	void NewPairChart(bool davison);
 	LRESULT OnDerived(WORD /*wNotifyCode*/, WORD wID, HWND /*hWndCtl*/, BOOL& /*bHandled*/);
+	// Chart > Analysis: the analysis dialog, on this chart
+	LRESULT OnAnalysis(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/);
 	// the menu's and the toolbar's marks for the overlay shown
 	void UpdateOverlayUI();
 	void StopTimeIfFixed();

@@ -46,7 +46,7 @@ public:
 
 private:
 	enum class ColumnType {
-		Date, Analysis, Event, Mover, Aspect, Target, Orb, Pass, Longitude,
+		Date, Analysis, Event, Mover, Aspect, Target, Orb, Pass, Longitude, Stay,
 	};
 
 	LRESULT OnCreate(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, BOOL& /*bHandled*/);
@@ -69,9 +69,15 @@ private:
 	static COLORREF RowColor(AnalysisEvent const& event);
 	void CreateFonts();
 	// with glyphs the Mover and Target columns say what they hold in their headers, since the cells have only the glyph
-	void UpdateHeaders();
+	// resetWidths: also put the Mover, Aspect and Target columns to the width that suits glyphs or words (otherwise a glyph column
+	// is only widened, when a longer header needs it, so that what the user dragged is kept)
+	void UpdateHeaders(bool resetWidths);
 	void UpdateViewUI();
 	CString EventText(AnalysisEvent const& event) const;
+	// a moment as the chart's own time is shown: in its zone
+	CString LocalText(DateTime const& ut, bool withTime) const;
+	// for the row that ends a stay within an orb: when it entered, was exact and left
+	CString StayText(AnalysisEvent const& event) const;
 	// the events (the given rows of the list) as a table with a header line: tab separated, or CSV for a file
 	CString BuildTable(std::vector<int> const& rows, bool csv) const;
 

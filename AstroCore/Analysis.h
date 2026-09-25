@@ -4,6 +4,7 @@
 #include "Aspects.h"
 #include "DerivedCharts.h"
 #include <functional>
+#include <memory>
 #include <vector>
 
 // What is compared with what.
@@ -32,6 +33,15 @@ enum class AnalysisTarget : unsigned char {
 	Planet, Ascendant, Midheaven,
 };
 
+// The whole of an aspect's stay within its orb, as far as the range shows it.
+struct AnalysisWindow {
+	bool HasEnter{ false };			// false if it was already within its orb when the range began
+	DateTime Enter;
+	std::vector<DateTime> Exacts;	// usually one; a planet that turns inside the orb can be exact twice or more
+	bool HasLeave{ false };			// false if it is still within its orb when the range ends
+	DateTime Leave;
+};
+
 struct AnalysisEvent {
 	AnalysisType Type{ AnalysisType::TransitsToNatal };		// which analysis found it (they can be run together)
 	DateTime Time;								// UT
@@ -45,6 +55,9 @@ struct AnalysisEvent {
 	bool Retrograde{ false };					// the mover's motion at that moment
 	int Index{ 0 };								// ingresses: the house or the sign
 	double Longitude{ 0 };						// where the mover is
+	// The row that ends a stay within the orb - the event that leaves it, or the one that says it still is at the end of the
+	// range - has the whole stay: when it entered, was exact and left. Null for every other event.
+	std::shared_ptr<AnalysisWindow const> Window;
 };
 
 struct AnalysisSettings {

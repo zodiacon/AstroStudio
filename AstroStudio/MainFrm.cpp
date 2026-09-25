@@ -108,6 +108,7 @@ LRESULT CMainFrame::OnCreate(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/
 	UIEnable(ID_CHART_LIVE, FALSE);
 	UIEnable(ID_CHART_TRANSITS, FALSE);
 	UIEnable(ID_CHART_OVERLAY, FALSE);
+	UIEnable(ID_CHART_ANALYSIS, FALSE);
 	for (UINT id : { ID_CHART_DERIVED_SOLARRETURN, ID_CHART_DERIVED_LUNARRETURN, ID_CHART_DERIVED_SOLARARC, ID_CHART_DERIVED_COMPOSITE, ID_CHART_DERIVED_DAVISON })
 		UIEnable(id, FALSE);
 	UIEnable(ID_CHART_OVERLAY_NONE, FALSE);
@@ -184,27 +185,31 @@ LRESULT CMainFrame::OnToolEphemeris(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*h
 }
 
 LRESULT CMainFrame::OnToolAnalysis(WORD, WORD, HWND, BOOL&) {
+	NewAnalysis();
+	return 0;
+}
+
+void CMainFrame::NewAnalysis(IView* chart) {
 	auto charts = OpenCharts();
 	if (charts.empty()) {
 		AtlMessageBox(m_hWnd, L"Open a chart first: an analysis compares the sky with a chart.", L"Analysis", MB_ICONINFORMATION);
-		return 0;
+		return;
 	}
-	// starts on the chart that is showing, if one is
+	// starts on the chart it was asked for, or else the one that is showing, if there is one
 	int index = 0;
 	for (int i = 0; i < static_cast<int>(charts.size()); i++)
-		if (charts[i].Active)
+		if (chart ? charts[i].View == chart : charts[i].Active)
 			index = i;
 
 	CAnalysisDlg dlg;
 	dlg.Init(&charts, index, CAnalysisDlg::Defaults());
 	if (dlg.DoModal(m_hWnd) != IDOK)
-		return 0;
+		return;
 
 	auto pView = new CAnalysisView(this);
 	pView->Create(m_view, rcDefault, nullptr, WS_CHILD | WS_VISIBLE | WS_CLIPCHILDREN | WS_CLIPSIBLINGS, 0);
 	m_view.AddPage(pView->m_hWnd, L"Analysis", 2, pView);
 	pView->Analyse(charts[dlg.Chart()], dlg.Settings());
-	return 0;
 }
 
 LRESULT CMainFrame::OnNewChart(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/) {
