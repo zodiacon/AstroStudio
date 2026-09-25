@@ -29,7 +29,7 @@ namespace {
 }
 
 std::wstring WheelOptions::ToText() const {
-	return std::format(L"planets={};aspects={};beyond={}", List(HiddenPlanets), List(HiddenAspects), BeyondPluto ? 1 : 0);
+	return std::format(L"planets={};aspects={};beyond={};extras={}", List(HiddenPlanets), List(HiddenAspects), BeyondPluto ? 1 : 0, List(ExtraBodies));
 }
 
 void WheelOptions::FromText(std::wstring const& text) {
@@ -46,6 +46,8 @@ void WheelOptions::FromText(std::wstring const& text) {
 			ReadList(value, HiddenAspects);
 		else if (key == L"beyond")
 			BeyondPluto = value == L"1";
+		else if (key == L"extras")
+			ReadList(value, ExtraBodies);
 	}
 }
 

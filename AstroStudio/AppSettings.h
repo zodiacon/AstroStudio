@@ -15,6 +15,7 @@ struct AppSettings : Settings {
 		SETTING(ViewStatusBar, 1, SettingType::Bool);
 		SETTING(AlwaysOnTop, 0, SettingType::Bool);
 		SETTING(TextFont, LOGFONT{}, SettingType::Binary);		// the font for text that is not astrological symbols (empty face: Consolas); lfHeight in tenths of a point
+		SETTING(ShowPartOfFortune, 0, SettingType::Bool);		// the charts have the Part of Fortune among their planets (and on the wheel)
 		SETTING(LastHouseSystem, (int)'K', SettingType::Int32);		// the last one used for a chart (Koch to begin with)
 
 		// the chart view's Step, Auto and Live controls
@@ -46,6 +47,7 @@ struct AppSettings : Settings {
 	DEF_SETTING(AlwaysOnTop, int)
 	DEF_SETTING(TextFont, LOGFONT)
 	DEF_SETTING(LastHouseSystem, int)
+	DEF_SETTING(ShowPartOfFortune, int)
 	DEF_SETTING(ChartStepCount, int)
 	DEF_SETTING(ChartStepUnit, int)
 	DEF_SETTING(ChartStepInterval, int)

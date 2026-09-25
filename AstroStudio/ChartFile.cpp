@@ -203,6 +203,8 @@ namespace {
 		ini.SetInt(section(L"Chart"), L"Harmonic", chart.Harmonic());
 		std::wstring planets;
 		for (auto const& planet : chart.AllPlanets()) {
+			if (planet.Planet == Planet::PartOfFortune)
+				continue;		// (that is a matter of the option, not of the chart)
 			if (!planets.empty())
 				planets += L", ";
 			planets += Helpers::GetPlanetName(planet.Planet);

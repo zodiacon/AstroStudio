@@ -23,7 +23,8 @@ LRESULT CWheelOptionsDlg::OnInitDialog(UINT, WPARAM, LPARAM, BOOL&) {
 			continue;		// (the charts are seen from it)
 		int item = m_Planets.AddItem(m_Planets.GetItemCount(), 0, Helpers::GetPlanetName(planet));
 		m_Planets.SetItemData(item, i);
-		m_Planets.SetCheckState(item, m_Options.ShowsPlanet(planet));
+		// (an extra body is ticked only if the charts are to have it: that is what ticking it means)
+		m_Planets.SetCheckState(item, WheelOptions::IsExtra(planet) ? m_Options.WantsExtra(planet) : m_Options.ShowsPlanet(planet));
 	}
 	for (int i = FirstLineAspect; i < AspectSettings::AspectTypeCount; i++) {
 		auto type = static_cast<AspectType>(i);
@@ -44,8 +45,12 @@ LRESULT CWheelOptionsDlg::OnInitDialog(UINT, WPARAM, LPARAM, BOOL&) {
 
 LRESULT CWheelOptionsDlg::OnOK(WORD, WORD, HWND, BOOL&) {
 	WheelOptions options;
-	for (int i = 0; i < m_Planets.GetItemCount(); i++)
-		options.HiddenPlanets[m_Planets.GetItemData(i)] = !m_Planets.GetCheckState(i);
+	for (int i = 0; i < m_Planets.GetItemCount(); i++) {
+		auto index = m_Planets.GetItemData(i);
+		bool checked = m_Planets.GetCheckState(i);
+		options.HiddenPlanets[index] = !checked;
+		options.ExtraBodies[index] = WheelOptions::IsExtra(static_cast<Planet>(index)) && checked;
+	}
 	for (int i = 0; i < m_Aspects.GetItemCount(); i++)
 		options.HiddenAspects[m_Aspects.GetItemData(i)] = !m_Aspects.GetCheckState(i);
 	options.BeyondPluto = IsDlgButtonChecked(IDC_WHEEL_BEYOND) == BST_CHECKED;

@@ -48,6 +48,10 @@ public:
 
 	void CalcHouses(AstroCalculator& calc) noexcept;
 	void CalcPlanets(AstroCalculator& calc) noexcept;
+	// Works the Part of Fortune out from the Sun, the Moon and the Ascendant as they are in the chart now - if it has all of them, and
+	// the Part of Fortune is among its planets - so it has to come after the planets and the houses. In a harmonic chart it is the
+	// harmonic of the real one (the sect comes from the real Sun, which the calculator, if given, supplies).
+	void UpdatePartOfFortune(AstroCalculator const* calc = nullptr) noexcept;
 
 private:
 	HouseSystem m_HouseSystem{ HouseSystem::Koch };

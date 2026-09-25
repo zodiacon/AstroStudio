@@ -27,9 +27,57 @@ void CChartView::Chart(ChartData data) {
 	AstroCalculator calc;
 	calc.Calculate(data);
 	m_Data = std::move(data);
+	m_ExtraAdded.clear();
+	SyncExtraBodies();
+	SyncPartOfFortune();
 	m_DetailsView.SetChartData(&m_Data);
 	m_ChartDrawing.SetChartData(&m_Data);
 	m_AspectGrid.SetChartData(&m_Data);
+	UpdateAspects();
+}
+
+bool CChartView::SyncExtraBodies() {
+	if (m_ReadOnly)
+		return false;
+	bool changed = false;
+	auto& planets = m_Data.AllPlanets();
+	auto options = WheelOptions::Current();
+	for (int i = 0; i < static_cast<int>(Planet::NumPlanets); i++) {
+		auto planet = static_cast<Planet>(i);
+		if (!WheelOptions::IsExtra(planet))
+			continue;
+		bool has = std::ranges::find(planets, planet, &PlanetPosition::Planet) != planets.end();
+		if (options.WantsExtra(planet) && !has) {
+			planets.push_back(m_Calc.CalcPlanet(planet, m_Data.Info().Time, m_Data.Harmonic()));
+			m_ExtraAdded.insert(planet);
+			changed = true;
+		}
+		else if (!options.WantsExtra(planet) && has && m_ExtraAdded.contains(planet)) {
+			m_Data.RemovePlanets({ planet });
+			m_ExtraAdded.erase(planet);
+			changed = true;
+		}
+	}
+	return changed;
+}
+
+void CChartView::SyncPartOfFortune() {
+	auto& planets = m_Data.AllPlanets();
+	auto has = std::ranges::find(planets, Planet::PartOfFortune, &PlanetPosition::Planet) != planets.end();
+	bool want = AppSettings::Get().ShowPartOfFortune() != 0;
+	if (want && !has) {
+		m_Data.AddPlanets({ Planet::PartOfFortune });
+		m_Data.UpdatePartOfFortune(&m_Calc);
+	}
+	else if (!want && has)
+		m_Data.RemovePlanets({ Planet::PartOfFortune });
+}
+
+void CChartView::PartOfFortuneChanged() {
+	if (m_Data.AllPlanets().empty())
+		return;
+	SyncPartOfFortune();
+	m_DetailsView.UpdateControls(Recalc::Planets);		// (the list of planets is made again)
 	UpdateAspects();
 }
 
@@ -50,6 +98,12 @@ void CChartView::UpdateAspects() {
 }
 
 void CChartView::WheelOptionsChanged() {
+	if (!m_Data.AllPlanets().empty() && SyncExtraBodies()) {
+		// the chart has other planets now: everything that lists them starts over
+		m_DetailsView.UpdateControls(Recalc::Planets);
+		UpdateAspects();
+		return;
+	}
 	m_ChartDrawing.Refresh();
 	m_AspectGrid.Refresh();		// (its colours are the wheel's)
 }
@@ -72,6 +126,7 @@ void CChartView::DerivedChart(ChartData data, DerivedRecipe const* recipe) {
 	if (recipe)
 		m_Recipe = *recipe;
 	m_Data = std::move(data);
+	SyncPartOfFortune();
 	m_DetailsView.SetChartData(&m_Data);
 	m_DetailsView.SetReadOnly();
 	m_ChartDrawing.SetChartData(&m_Data);
@@ -249,8 +304,12 @@ bool CChartView::Save(bool saveAs) {
 		path = dlg.m_szFileName;
 	}
 
+	// (what the wheel options added to the planets is not the chart's)
+	ChartData toSave = m_Data;
+	for (auto planet : m_ExtraAdded)
+		toSave.RemovePlanets({ planet });
 	std::wstring error;
-	if (!(m_Recipe ? ChartFile::SaveDerived(*m_Recipe, path, error) : ChartFile::Save(m_Data, path, error))) {
+	if (!(m_Recipe ? ChartFile::SaveDerived(*m_Recipe, path, error) : ChartFile::Save(toSave, path, error))) {
 		CString message;
 		message.Format(L"The chart could not be saved to %s:\n\n%s", (PCWSTR)path, error.c_str());
 		AtlMessageBox(m_hWnd, (PCWSTR)message, L"Astro Studio", MB_ICONWARNING);
@@ -627,7 +686,8 @@ bool CChartView::ShowOverlay(OverlayKind kind, ProgressionMethod method) {
 			// the same planets as the chart's, with the chart's place
 			std::vector<Planet> planets;
 			for (auto const& p : m_Data.AllPlanets())
-				planets.push_back(p.Planet);
+				if (p.Planet != Planet::PartOfFortune)		// (it needs the chart's Ascendant: the sky at another moment has no Part of Fortune of its own)
+					planets.push_back(p.Planet);
 			overlay.Data.AddPlanets(planets);
 			overlay.Data.Info() = m_Data.Info();
 		}

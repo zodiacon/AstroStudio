@@ -7,14 +7,15 @@ std::vector<ChartPoint> Midpoints::Points(std::vector<PlanetPosition> const& pla
 	std::vector<ChartPoint> points;
 	points.reserve(planets.size());
 	for (auto const& planet : planets)
-		points.push_back({ PointKind::Planet, planet.Planet, planet.Longitude, planet.Speed });
+		if (planet.Planet != Planet::PartOfFortune)		// (a midpoint of bodies, not of the Part of Fortune)
+			points.push_back({ PointKind::Planet, planet.Planet, planet.Longitude, planet.Speed });
 	return points;
 }
 
 std::vector<ChartPoint> Midpoints::Points(ChartData const& chart, MidpointOptions const& options) {
 	std::vector<ChartPoint> points;
 	for (auto const& planet : chart.AllPlanets()) {
-		if (!options.Only.empty() && std::ranges::find(options.Only, planet.Planet) == options.Only.end())
+		if (planet.Planet == Planet::PartOfFortune || (!options.Only.empty() && std::ranges::find(options.Only, planet.Planet) == options.Only.end()))
 			continue;
 		points.push_back({ PointKind::Planet, planet.Planet, planet.Longitude, planet.Speed });
 	}

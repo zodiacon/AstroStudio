@@ -98,6 +98,7 @@ LRESULT CMainFrame::OnCreate(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/
 		UISetCheck(ID_OPTIONS_ALWAYSONTOP, 1);
 	}
 	UISetCheck(ID_VIEW_STATUS_BAR, 1);
+	UISetCheck(ID_OPTIONS_FORTUNE, AppSettings::Get().ShowPartOfFortune() != 0);
 	if (!AppSettings::Get().ViewStatusBar()) {
 		::ShowWindow(m_hWndStatusBar, SW_HIDE);
 		UISetCheck(ID_VIEW_STATUS_BAR, 0);
@@ -305,6 +306,16 @@ LRESULT CMainFrame::OnChartColors(WORD, WORD, HWND, BOOL&) {
 
 	show(dlg.GetColors());
 	ChartColors::StoreInSettings();
+	return 0;
+}
+
+LRESULT CMainFrame::OnPartOfFortune(WORD, WORD, HWND, BOOL&) {
+	bool show = AppSettings::Get().ShowPartOfFortune() == 0;
+	AppSettings::Get().ShowPartOfFortune(show ? 1 : 0);
+	UISetCheck(ID_OPTIONS_FORTUNE, show);
+	for (int i = 0; i < m_view.GetPageCount(); i++)
+		if (auto view = ViewOfPage(i))
+			view->PartOfFortuneChanged();
 	return 0;
 }
 

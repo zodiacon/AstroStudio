@@ -51,7 +51,9 @@ AstroCalculator::AstroCalculator() : m_SweFlags(SEFLG_MOSEPH) {
 
 PlanetPosition AstroCalculator::CalcPlanet(Planet planet, DateTime const& dt, int harmonic, bool withSpeed) const {
 	double xx[6]{};		// stays zero if the ephemeris can't give the body (its file is missing, or the year is outside it)
-	swe_calc_ut(dt, (int)planet, m_SweFlags | (withSpeed ? SEFLG_SPEED : 0), xx, s_error);
+	// (the Part of Fortune has no body: the number would be another one of the ephemeris's - ChartData works it out)
+	if (planet != Planet::PartOfFortune)
+		swe_calc_ut(dt, (int)planet, m_SweFlags | (withSpeed ? SEFLG_SPEED : 0), xx, s_error);
 	PlanetPosition pp;
 	pp.Planet = planet;
 	pp.Longitude = xx[0] * harmonic;
@@ -268,6 +270,7 @@ bool AstroCalculator::Calculate(ChartData& data) {
 	for (auto& p : data.AllPlanets()) {
 		p = CalcPlanet(p.Planet, info.Time, data.Harmonic());
 	}
+	data.UpdatePartOfFortune(this);
 
 	return true;
 }

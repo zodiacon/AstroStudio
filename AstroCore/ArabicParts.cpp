@@ -7,7 +7,7 @@
 namespace {
 	const wchar_t* const PlanetNames[] = {
 		L"Sun", L"Moon", L"Mercury", L"Venus", L"Mars", L"Jupiter", L"Saturn", L"Uranus", L"Neptune", L"Pluto",
-		L"Mean Node", L"True Node", L"Lilith", L"Osculating Apogee", L"Earth", L"Chiron", L"Pholus", L"Ceres", L"Pallas", L"Juno", L"Vesta",
+		L"Mean Node", L"True Node", L"Lilith", L"Osculating Apogee", L"Earth", L"Chiron", L"Pholus", L"Ceres", L"Pallas", L"Juno", L"Vesta", L"Part of Fortune",
 	};
 	static_assert(_countof(PlanetNames) == static_cast<int>(Planet::NumPlanets));
 

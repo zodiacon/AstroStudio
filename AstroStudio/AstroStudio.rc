@@ -125,6 +125,7 @@ BEGIN
         MENUITEM "&Aspects...",                 ID_OPTIONS_ASPECTS
         MENUITEM "Chart &Wheel...",             ID_OPTIONS_WHEEL
         MENUITEM "Chart &Colors...",            ID_OPTIONS_COLORS
+        MENUITEM "Show &Part of Fortune",       ID_OPTIONS_FORTUNE
         MENUITEM SEPARATOR
         MENUITEM "&Always On Top",              ID_OPTIONS_ALWAYSONTOP
         MENUITEM "&Font...",                    ID_OPTIONS_FONT
@@ -380,24 +381,24 @@ BEGIN
     PUSHBUTTON      "Cancel",IDCANCEL,131,216,50,14
 END
 
-IDD_WHEELOPTIONS DIALOGEX 0, 0, 250, 217
+IDD_WHEELOPTIONS DIALOGEX 0, 0, 250, 332
 STYLE DS_SETFONT | DS_MODALFRAME | DS_CENTER | WS_POPUP | WS_CAPTION | WS_SYSMENU
 CAPTION "Chart Wheel"
 FONT 9, "Segoe UI", 400, 0, 0x0
 BEGIN
     LTEXT           "Planets to draw:",IDC_STATIC,7,7,110,8
-    CONTROL         "",IDC_WHEEL_PLANETS,"SysListView32",LVS_REPORT | LVS_SINGLESEL | LVS_SHOWSELALWAYS | LVS_NOCOLUMNHEADER | WS_BORDER | WS_TABSTOP,7,18,112,112
-    PUSHBUTTON      "All",IDC_WHEEL_PLANETS_ALL,7,140,54,14
-    PUSHBUTTON      "None",IDC_WHEEL_PLANETS_NONE,65,140,54,14
+    CONTROL         "",IDC_WHEEL_PLANETS,"SysListView32",LVS_REPORT | LVS_SINGLESEL | LVS_SHOWSELALWAYS | LVS_NOCOLUMNHEADER | WS_BORDER | WS_TABSTOP,7,18,112,224
+    PUSHBUTTON      "All",IDC_WHEEL_PLANETS_ALL,7,250,54,14
+    PUSHBUTTON      "None",IDC_WHEEL_PLANETS_NONE,65,250,54,14
     LTEXT           "Aspect lines to draw:",IDC_STATIC,131,7,110,8
-    CONTROL         "",IDC_WHEEL_ASPECTS,"SysListView32",LVS_REPORT | LVS_SINGLESEL | LVS_SHOWSELALWAYS | LVS_NOCOLUMNHEADER | WS_BORDER | WS_TABSTOP,131,18,112,113
-    PUSHBUTTON      "All",IDC_WHEEL_ASPECTS_ALL,131,140,54,14
-    PUSHBUTTON      "None",IDC_WHEEL_ASPECTS_NONE,189,140,54,14
+    CONTROL         "",IDC_WHEEL_ASPECTS,"SysListView32",LVS_REPORT | LVS_SINGLESEL | LVS_SHOWSELALWAYS | LVS_NOCOLUMNHEADER | WS_BORDER | WS_TABSTOP,131,18,112,224
+    PUSHBUTTON      "All",IDC_WHEEL_ASPECTS_ALL,131,250,54,14
+    PUSHBUTTON      "None",IDC_WHEEL_ASPECTS_NONE,189,250,54,14
     CONTROL         "Also draw aspect lines to Chiron, the nodes, Lilith and the asteroids",IDC_WHEEL_BEYOND,
-                    "Button",BS_AUTOCHECKBOX | WS_TABSTOP,7,161,236,10
-    LTEXT           "This is only about the picture: the aspect list, the grid and the tooltips are not affected. Conjunctions have no line.",IDC_STATIC,7,174,180,16
-    DEFPUSHBUTTON   "OK",IDOK,67,196,50,14
-    PUSHBUTTON      "Cancel",IDCANCEL,133,196,50,14
+                    "Button",BS_AUTOCHECKBOX | WS_TABSTOP,7,272,236,10
+    LTEXT           "This is only about the picture: the aspect list, the grid and the tooltips are not affected. Conjunctions have no line.",IDC_STATIC,7,286,180,16
+    DEFPUSHBUTTON   "OK",IDOK,67,311,50,14
+    PUSHBUTTON      "Cancel",IDCANCEL,133,311,50,14
 END
 
 IDD_CHARTCOLORS DIALOGEX 0, 0, 350, 230
@@ -683,6 +684,7 @@ BEGIN
                             "Open the chart for the midpoint in time and place of this chart and another open chart \nDavison"
     ID_OPTIONS_WHEEL        "Choose the planets and the aspect lines the chart wheel draws\nChart Wheel"
     ID_OPTIONS_COLORS       "Choose the colours of the chart wheel\nChart Colors"
+    ID_OPTIONS_FORTUNE      "Show the Part of Fortune among the planets of the charts and on their wheels"
     ID_CHART_DERIVED_SOLARARC 
                             "Open this chart with every point moved by the solar arc to a date you choose \nSolar Arc Chart"
     ID_TOOL_ANALYSIS        "Find when things happen between a chart and the sky, over a range of dates \nAnalysis"

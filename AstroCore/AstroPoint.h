@@ -27,6 +27,10 @@ enum class Planet {
 	Pallas,
 	Juno,
 	Vesta,
+	// Not a body: a point worked out from the Sun, the Moon and the Ascendant (the Part of Fortune, by day Asc + Moon - Sun, by night
+	// Asc + Sun - Moon). It is in a chart's planets only when it is asked for; AstroCalculator can't calculate it (nothing to ask
+	// the ephemeris), ChartData::UpdatePartOfFortune does, and the number is past the ones the ephemeris knows.
+	PartOfFortune,
 	NumPlanets,
 };
 

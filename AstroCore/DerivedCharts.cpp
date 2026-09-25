@@ -131,6 +131,7 @@ ChartData DerivedCharts::Progress(AstroCalculator& calc, ChartData const& natal,
 			break;
 		}
 	}
+	chart.UpdatePartOfFortune(&calc);		// (if the chart has one: from the moved or progressed Sun, Moon and Ascendant)
 	return chart;
 }
 
@@ -253,6 +254,7 @@ ChartData DerivedCharts::Composite(AstroCalculator& calc, ChartData const& a, Ch
 		double armc = AstroPoint::MidPoint(a.Houses().Armc, b.Houses().Armc).Value;
 		chart.Houses() = calc.CalcHousesFromArmc(armc, info.Latitude, calc.Obliquity(info.Time.Julian()), chart.GetHouseSystem());
 	}
+	chart.UpdatePartOfFortune(&calc);		// (worked out from the composite's own Sun, Moon and Ascendant)
 	return chart;
 }
 

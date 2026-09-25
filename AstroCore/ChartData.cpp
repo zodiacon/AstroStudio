@@ -1,5 +1,6 @@
 #include "pch.h"
 #include "ChartData.h"
+#include "ArabicParts.h"
 #include <assert.h>
 
 ChartData& ChartData::AddPlanets(std::initializer_list<PlanetPosition> const& planets) {
@@ -21,7 +22,8 @@ ChartData& ChartData::AddPlanets(std::initializer_list<Planet> const& planets) {
 
 ChartData& ChartData::RemovePlanets(std::initializer_list<Planet> planets) {
     for (auto planet : planets)
-        m_Planets.erase(std::find_if(m_Planets.begin(), m_Planets.end(), [&](auto& pp) { return pp.Planet == planet; }));
+        if (auto it = std::find_if(m_Planets.begin(), m_Planets.end(), [&](auto& pp) { return pp.Planet == planet; }); it != m_Planets.end())
+            m_Planets.erase(it);
     return *this;
 }
 
@@ -83,9 +85,29 @@ int ChartData::Harmonic(int harmonic) noexcept {
 
 void ChartData::CalcHouses(AstroCalculator& calc) noexcept {
     m_Houses = calc.CalcHouses(m_Info.Time, m_Info.Latitude, m_Info.Longitude, m_HouseSystem);
+    UpdatePartOfFortune(&calc);
 }
 
 void ChartData::CalcPlanets(AstroCalculator& calc) noexcept {
     for (auto& p : m_Planets)
         p = calc.CalcPlanet(p.Planet, m_Info.Time, m_Harmonic);
+    UpdatePartOfFortune(&calc);
+}
+
+void ChartData::UpdatePartOfFortune(AstroCalculator const* calc) noexcept {
+    auto find = [&](Planet planet) {
+        return std::find_if(m_Planets.begin(), m_Planets.end(), [&](auto const& p) { return p.Planet == planet; });
+    };
+    auto fortune = find(Planet::PartOfFortune), sun = find(Planet::Sun), moon = find(Planet::Moon);
+    if (fortune == m_Planets.end() || sun == m_Planets.end() || moon == m_Planets.end())
+        return;
+
+    // the sect by where the Sun really is: a harmonic chart has its planets multiplied
+    AstroPoint realSun = sun->Longitude;
+    if (m_Harmonic > 1 && calc)
+        realSun = calc->CalcPlanet(Planet::Sun, m_Info.Time, 1, false).Longitude;
+    bool day = ArabicParts::IsDay(realSun, m_Houses.Asc);
+    double asc = m_Houses.Asc.Value * m_Harmonic;
+    double value = day ? asc + moon->Longitude.Value - sun->Longitude.Value : asc + sun->Longitude.Value - moon->Longitude.Value;
+    *fortune = PlanetPosition{ .Longitude = AstroPoint(value), .Planet = Planet::PartOfFortune };
 }

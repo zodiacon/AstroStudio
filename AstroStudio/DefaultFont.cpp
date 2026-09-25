@@ -42,11 +42,13 @@ WCHAR DefaultFont::GetPlanetGlyph(Planet planet) const {
     // Juno 66, Vesta 78 ("preferred symbol of North American astrologers" -
     // three alternates exist at 166-168).
     //
+    // The Part of Fortune is the circle with a cross, code 60 (the less-than sign) of the font.
+    //
     // 172 is 0xAC, which sits in the Latin-1 half of Windows-1252 and so needs
     // no remapping, unlike the 0x80-0x9F entries above. The literal has to be
     // split before "CVBN": \xacC would otherwise be swallowed as a single hex
     // escape, since C is a hex digit.
-    static const WCHAR planets[] = L"QWERTYUIOP\x2039{\x60\x7e\x2030M\xac" L"CVBN";
+    static const WCHAR planets[] = L"QWERTYUIOP\x2039{\x60\x7e\x2030M\xac" L"CVBN<";
 
     // The table used to stop at Chiron while Planet ran on to Vesta, so asking
     // for any of the last five read past the end - ATLASSERT caught it in debug

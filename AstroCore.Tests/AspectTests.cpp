@@ -224,7 +224,8 @@ TEST_CASE("Aspect settings start out with everything on", "[Aspects]") {
 		CHECK(settings.AspectOrb[i] < 0);
 	}
 	for (int i = 0; i < AspectSettings::PlanetCount; i++) {
-		CHECK(settings.PlanetEnabled[i]);
+		// (all but the Part of Fortune, which is a point and makes aspects only when asked to)
+		CHECK(settings.PlanetEnabled[i] == (i != static_cast<int>(Planet::PartOfFortune)));
 		CHECK(settings.PlanetOrbAdd[i] == 0);
 	}
 	CHECK(settings.OrbFor(AspectType::Trine) == Approx(8));

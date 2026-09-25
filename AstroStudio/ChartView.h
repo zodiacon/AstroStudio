@@ -3,6 +3,7 @@
 #include "ChartData.h"
 #include "ChartOverlay.h"
 #include <optional>
+#include <set>
 #include <FrameView.h>
 #include "Interfaces.h"
 #include <VirtualListView.h>
@@ -42,6 +43,7 @@ public:
 	bool CanClose() override;
 	void AspectSettingsChanged() override;
 	void WheelOptionsChanged() override;
+	void PartOfFortuneChanged() override;
 	void TextFontChanged() override;
 	bool GetChart(OpenChart& chart) const override;
 	bool ShowMoment(DateTime const& ut, MomentKind kind) override;
@@ -182,6 +184,12 @@ private:
 	std::optional<ListTab> ActiveListTab();
 	// the chart as pages for the printer or the preview: the wheel and the details, then the list of the tab that is showing, if any
 	std::unique_ptr<Printing::Document> MakePrintDocument();
+	// puts the Part of Fortune among the chart's planets, or takes it out, as AppSettings::ShowPartOfFortune says
+	void SyncPartOfFortune();
+	// puts the extra bodies the user asked for in the wheel options (Ceres, Pallas, Juno, Vesta...) among the chart's planets, and takes
+	// out those it put there that are no longer wanted; true if the planets changed. Only a chart of our own has them: a chart worked
+	// out from others has no ephemeris to ask.
+	bool SyncExtraBodies();
 	LRESULT OnRecalc(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, BOOL& /*bHandled*/);
 	LRESULT OnForwardMsg(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM lParam, BOOL& /*bHandled*/);
 	LRESULT OnThemeChanged(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, BOOL& /*bHandled*/);
@@ -211,6 +219,7 @@ private:
 	bool m_AutoStep{ false };
 	bool m_Live{ false };
 	bool m_ReadOnly{ false };
+	std::set<Planet> m_ExtraAdded;		// the extra bodies put among the chart's planets by the wheel options (not the chart's own: not saved)
 	std::optional<DerivedRecipe> m_Recipe;		// what a read-only chart was made from, if that is known
 	std::optional<ChartOverlay> m_Overlay;
 	CString m_FilePath, m_Title;

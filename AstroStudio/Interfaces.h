@@ -67,6 +67,8 @@ struct IView {
 	virtual void TextFontChanged() {}
 	// The aspect settings (AspectOptions::Current) changed: a view that shows aspects works them out again.
 	virtual void AspectSettingsChanged() {}
+	// the option to have the Part of Fortune among a chart's planets (AppSettings::ShowPartOfFortune) was switched
+	virtual void PartOfFortuneChanged() {}
 	// what the chart wheel draws (WheelOptions::Current) or the colours it draws in (ChartColors::Current) changed
 	virtual void WheelOptionsChanged() {}
 	// the file the view's document lives in, or null

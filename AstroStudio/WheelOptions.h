@@ -9,12 +9,31 @@
 // still work with everything. It applies to the planets around the chart (transits...) as it does to the chart's own.
 // Conjunctions have no line to draw (the planets stand together), so they are not an option.
 //
-// Kept in the app settings (AppSettings::WheelOptions) as text like  planets=10,13;aspects=9,10;beyond=1  - the numbers are
-// the planets (Planet) and aspects (AspectType) left out, so that whatever is new is drawn.
+// Kept in the app settings (AppSettings::WheelOptions) as text like  planets=10,13;aspects=9,10;beyond=1;extras=17,18  - the
+// numbers of planets (Planet) and aspects (AspectType) are those left out, so that whatever is new is drawn, and (extras) the extra
+// bodies the charts are to have.
 struct WheelOptions {
 	std::bitset<static_cast<size_t>(Planet::NumPlanets)> HiddenPlanets;
 	std::bitset<AspectSettings::AspectTypeCount> HiddenAspects;
 	bool BeyondPluto{ false };
+	// The extra bodies - the ones a chart doesn't have unless it is asked to (the mean node, the true Lilith, Pholus and the
+	// asteroids) - that the user wants in the charts: ticked in the dialog, they are added to every chart and drawn.
+	std::bitset<static_cast<size_t>(Planet::NumPlanets)> ExtraBodies;
+
+	// is this one of the extra bodies? (the standard planets, Chiron, the true node and Lilith are in a chart from the start)
+	static bool IsExtra(Planet planet) {
+		switch (planet) {
+			case Planet::MeanNode: case Planet::OscuApog: case Planet::Pholus: case Planet::Ceres:
+			case Planet::Pallas: case Planet::Juno: case Planet::Vesta:
+				return true;
+			default:
+				return false;
+		}
+	}
+	// an extra body the charts are to have (and the wheel draws)
+	bool WantsExtra(Planet planet) const {
+		return IsExtra(planet) && ExtraBodies[static_cast<size_t>(planet)] && ShowsPlanet(planet);
+	}
 
 	bool ShowsPlanet(Planet planet) const {
 		auto index = static_cast<size_t>(planet);

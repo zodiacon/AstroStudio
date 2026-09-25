@@ -12,7 +12,7 @@ namespace {
 		static std::vector<Planet> bodies = [] {
 			std::vector<Planet> result;
 			for (int i = 0; i < static_cast<int>(Planet::NumPlanets); i++)
-				if (static_cast<Planet>(i) != Planet::Earth)
+				if (static_cast<Planet>(i) != Planet::Earth && static_cast<Planet>(i) != Planet::PartOfFortune)
 					result.push_back(static_cast<Planet>(i));
 			return result;
 		}();

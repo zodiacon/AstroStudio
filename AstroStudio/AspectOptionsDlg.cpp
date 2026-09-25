@@ -8,7 +8,7 @@ namespace {
 	const Planet Bodies[] = {
 		Planet::Sun, Planet::Moon, Planet::Mercury, Planet::Venus, Planet::Mars, Planet::Jupiter, Planet::Saturn,
 		Planet::Uranus, Planet::Neptune, Planet::Pluto, Planet::MeanNode, Planet::TrueNode, Planet::Lilith, Planet::OscuApog,
-		Planet::Chiron, Planet::Pholus, Planet::Ceres, Planet::Pallas, Planet::Juno, Planet::Vesta,
+		Planet::Chiron, Planet::Pholus, Planet::Ceres, Planet::Pallas, Planet::Juno, Planet::Vesta, Planet::PartOfFortune,
 	};
 
 	CString Degrees(double value) {

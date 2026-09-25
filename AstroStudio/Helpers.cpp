@@ -110,7 +110,7 @@ PCWSTR Helpers::GetPlanetName(Planet type) {
 	static PCWSTR names[] = {
 		L"Sun", L"Moon", L"Mercury", L"Venus", L"Mars", L"Jupiter", L"Saturn", L"Uranus", L"Neptune", L"Pluto",
 		L"Mean Node", L"True Node", L"Lilith", L"True Lilith", L"Earth", L"Chiron", L"Pholus",
-		L"Ceres", L"Pallas", L"Juno", L"Vesta",
+		L"Ceres", L"Pallas", L"Juno", L"Vesta", L"Part of Fortune",
 	};
 	ATLASSERT((int)type < _countof(names));
 	return names[(int)type];

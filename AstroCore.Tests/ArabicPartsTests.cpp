@@ -1,6 +1,7 @@
 #include "TestCommon.h"
 #include "ArabicParts.h"
 #include "DerivedCharts.h"
+#include "Midpoints.h"
 #include <algorithm>
 #include <cmath>
 
@@ -371,4 +372,146 @@ TEST_CASE("Aspects between the parts and the planets", "[ArabicParts]") {
 		CHECK(ArabicParts::Aspects({}, planets, AspectCalculator()).empty());
 		CHECK(ArabicParts::Aspects(parts, {}, AspectCalculator()).empty());
 	}
+}
+
+TEST_CASE("The Part of Fortune as a point of a chart", "[ArabicParts][Fortune]") {
+	SECTION("worked out from the Sun, the Moon and the Ascendant") {
+		// the hand-made chart of the tests above: the Ascendant at 100, the Moon at 50; by day the Sun at 300, by night at 250
+		auto day = Chart(300);
+		day.AddPlanets({ Planet::PartOfFortune });
+		day.UpdatePartOfFortune();
+		REQUIRE(day.AllPlanets().back().Planet == Planet::PartOfFortune);
+		CHECK(day.AllPlanets().back().Longitude.Value == Approx(210));		// 100 + 50 - 300
+
+		auto night = Chart(250);
+		night.AddPlanets({ Planet::PartOfFortune });
+		night.UpdatePartOfFortune();
+		CHECK(night.AllPlanets().back().Longitude.Value == Approx(300));	// 100 + 250 - 50
+		// it is the part the parts calculate
+		CHECK(night.AllPlanets().back().Longitude.Value == Approx(Part(ArabicParts::Calculate(night), L"Fortune").Longitude.Value));
+	}
+	SECTION("only if it is asked for, and only if the chart has what it needs") {
+		auto chart = Chart(300);
+		auto before = chart.AllPlanets().size();
+		chart.UpdatePartOfFortune();
+		CHECK(chart.AllPlanets().size() == before);		// (nothing added)
+
+		ChartData noSun;
+		noSun.AddPlanets({ At(Planet::Moon, 50), At(Planet::PartOfFortune, 7) });
+		noSun.Houses().Asc = 100;
+		noSun.UpdatePartOfFortune();
+		CHECK(noSun.AllPlanets()[1].Longitude.Value == Approx(7));		// (left as it was)
+	}
+	SECTION("the calculator does not ask the ephemeris for it") {
+		AstroCalculator calc;
+		auto point = calc.CalcPlanet(Planet::PartOfFortune, DateTime(2000, 1, 1, 12, 0, 0));
+		CHECK(point.Planet == Planet::PartOfFortune);
+		CHECK(point.Longitude.Value == 0);
+		CHECK(point.Speed == 0);
+	}
+}
+
+TEST_CASE("The Part of Fortune follows the chart's calculation", "[ArabicParts][Fortune]") {
+	auto chartFor = [](int hour, int harmonic) {
+		ChartData chart;
+		chart.AddPlanets(std::vector<Planet>{ Planet::Sun, Planet::Moon, Planet::Mercury, Planet::PartOfFortune });
+		chart.Info().Time = DateTime(2000, 1, 1, hour, 0, 0);
+		chart.Info().Latitude = 51.5;
+		chart.Info().Longitude = 0;
+		chart.SetHouseSystem(HouseSystem::Placidus);
+		chart.Harmonic(harmonic);
+		return chart;
+	};
+	AstroCalculator calc;
+
+	for (int hour : { 2, 12, 22 }) {
+		INFO("hour " << hour);
+		auto chart = chartFor(hour, 1);
+		calc.Calculate(chart);
+		auto fortune = std::ranges::find(chart.AllPlanets(), Planet::PartOfFortune, &PlanetPosition::Planet);
+		REQUIRE(fortune != chart.AllPlanets().end());
+		// as the parts calculate it (which needs the Sun and the Moon of the chart, and not the point itself)
+		auto expected = ArabicParts::Calculate(chart, ArabicParts::Standard()[0]);
+		REQUIRE(expected.has_value());
+		CHECK(Diff(fortune->Longitude.Value, expected->Longitude.Value) < 1e-9);
+	}
+
+	SECTION("CalcPlanets and CalcHouses keep it right on their own") {
+		auto chart = chartFor(12, 1);
+		calc.Calculate(chart);
+		double first = std::ranges::find(chart.AllPlanets(), Planet::PartOfFortune, &PlanetPosition::Planet)->Longitude.Value;
+		chart.Info().Time = DateTime(2000, 1, 1, 15, 30, 0);
+		chart.CalcPlanets(calc);
+		chart.CalcHouses(calc);
+		double second = std::ranges::find(chart.AllPlanets(), Planet::PartOfFortune, &PlanetPosition::Planet)->Longitude.Value;
+		CHECK(Diff(first, second) > 1);
+		auto expected = ArabicParts::Calculate(chart, ArabicParts::Standard()[0]);
+		CHECK(Diff(second, expected->Longitude.Value) < 1e-9);
+	}
+	SECTION("in a harmonic chart it is the harmonic of the real one") {
+		auto plain = chartFor(10, 1);
+		calc.Calculate(plain);
+		auto third = chartFor(10, 3);
+		calc.Calculate(third);
+		double real = std::ranges::find(plain.AllPlanets(), Planet::PartOfFortune, &PlanetPosition::Planet)->Longitude.Value;
+		double harmonic = std::ranges::find(third.AllPlanets(), Planet::PartOfFortune, &PlanetPosition::Planet)->Longitude.Value;
+		CHECK(Diff(harmonic, AstroPoint(real * 3).Value) < 1e-6);
+	}
+}
+
+TEST_CASE("The Part of Fortune in derived charts", "[ArabicParts][Fortune][Derived]") {
+	AstroCalculator calc;
+	auto natal = [&](int y, int m, int d, int hour, double latitude, double longitude) {
+		ChartData chart;
+		chart.AddPlanets(std::vector<Planet>{ Planet::Sun, Planet::Moon, Planet::Mercury, Planet::Venus, Planet::Mars, Planet::PartOfFortune });
+		chart.Info().Time = DateTime(y, m, d, hour, 0, 0);
+		chart.Info().Latitude = latitude;
+		chart.Info().Longitude = longitude;
+		chart.SetHouseSystem(HouseSystem::Placidus);
+		calc.Calculate(chart);
+		return chart;
+	};
+	auto fortuneOf = [](ChartData const& chart) {
+		return std::ranges::find(chart.AllPlanets(), Planet::PartOfFortune, &PlanetPosition::Planet)->Longitude.Value;
+	};
+	auto a = natal(1980, 5, 17, 9, 40.7, -74);
+	auto b = natal(1985, 11, 2, 21, 51.5, 0);
+
+	SECTION("progressions") {
+		for (auto method : { ProgressionMethod::Secondary, ProgressionMethod::SolarArc }) {
+			ProgressionOptions options;
+			options.Method = method;
+			auto progressed = DerivedCharts::Progress(calc, a, DateTime(2010, 5, 17, 9, 0, 0), options);
+			auto expected = ArabicParts::Calculate(progressed, ArabicParts::Standard()[0]);
+			REQUIRE(expected.has_value());
+			CHECK(Diff(fortuneOf(progressed), expected->Longitude.Value) < 1e-9);
+			CHECK(Diff(fortuneOf(progressed), fortuneOf(a)) > 1);		// (it has moved)
+		}
+	}
+	SECTION("composite and Davison charts") {
+		for (auto chart : { DerivedCharts::Composite(calc, a, b), DerivedCharts::Davison(calc, a, b) }) {
+			auto expected = ArabicParts::Calculate(chart, ArabicParts::Standard()[0]);
+			REQUIRE(expected.has_value());
+			CHECK(Diff(fortuneOf(chart), expected->Longitude.Value) < 1e-9);
+		}
+	}
+}
+
+TEST_CASE("The Part of Fortune makes no aspects and no midpoints unless asked", "[ArabicParts][Fortune]") {
+	CHECK_FALSE(AspectSettings().IsEnabled(Planet::PartOfFortune));
+	CHECK(AspectSettings().IsEnabled(Planet::Sun));
+	// with the planets, and switched on, it is one like the others
+	std::vector<PlanetPosition> planets{ At(Planet::Sun, 100), At(Planet::PartOfFortune, 190) };
+	CHECK(AspectCalculator().Calculate(planets).empty());
+	AspectSettings settings;
+	settings.PlanetEnabled[static_cast<int>(Planet::PartOfFortune)] = true;
+	auto aspects = AspectCalculator(settings).Calculate(planets);
+	REQUIRE(aspects.size() == 1);
+	CHECK(aspects[0].Type == AspectType::Square);
+
+	// (midpoints are of the bodies)
+	ChartData chart;
+	chart.AddPlanets({ At(Planet::Sun, 100), At(Planet::Moon, 20), At(Planet::PartOfFortune, 190) });
+	CHECK(Midpoints::Points(chart).size() == 2);
+	CHECK(Midpoints::Calculate(chart).size() == 1);
 }

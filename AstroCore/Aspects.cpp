@@ -12,6 +12,7 @@ AspectSettings::AspectSettings() {
 	AspectEnabled.fill(true);
 	AspectOrb.fill(-1);
 	PlanetEnabled.fill(true);
+	PlanetEnabled[static_cast<int>(Planet::PartOfFortune)] = false;		// (a point, not a body: it makes no aspects unless it is asked to)
 	PlanetOrbAdd.fill(0);
 }
 

@@ -428,7 +428,7 @@ LRESULT CEphemerisView::OnCreate(UINT, WPARAM, LPARAM, BOOL&) {
 		for (auto token = bodies.Tokenize(L",", position); !token.IsEmpty(); token = bodies.Tokenize(L",", position)) {
 			int value = _wtoi(token);
 			auto planet = static_cast<Planet>(value);
-			if (value >= 0 && value < (int)Planet::NumPlanets && planet != Planet::Earth &&
+			if (value >= 0 && value < (int)Planet::NumPlanets && planet != Planet::Earth && planet != Planet::PartOfFortune &&
 				std::find(m_Planets.begin(), m_Planets.end(), planet) == m_Planets.end())
 				m_Planets.push_back(planet);
 		}
