@@ -15,6 +15,10 @@ namespace ChartImage {
 	// Writes the bitmap to a PNG file. On failure, error says why.
 	bool SavePng(IWICBitmap* bitmap, PCWSTR path, std::wstring& error);
 
+	// The bitmap as a packed device independent bitmap (a header and the pixels, bottom-up, 32 bits): what Printing draws with
+	// StretchDIBits. Empty if it can't be read.
+	std::vector<BYTE> ToDib(IWICBitmap* bitmap);
+
 	// Puts the bitmap on the clipboard as a device independent bitmap (which every program that pastes pictures takes).
 	bool CopyToClipboard(HWND owner, IWICBitmap* bitmap);
 }

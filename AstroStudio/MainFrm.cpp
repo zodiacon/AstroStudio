@@ -7,6 +7,7 @@
 #include "EphemerisView.h"
 #include "AboutDlg.h"
 #include "MainFrm.h"
+#include "Printing.h"
 #include "Helpers.h"
 #include "ToolbarHelper.h"
 #include "ChartView.h"
@@ -115,9 +116,13 @@ LRESULT CMainFrame::OnCreate(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/
 	UIEnable(ID_CHART_OVERLAY_PROGRESSED, FALSE);
 	UIEnable(ID_CHART_OVERLAY_SOLARARC, FALSE);
 	UIEnable(ID_CHART_OVERLAY_SYNASTRY, FALSE);
+	UIEnable(ID_CHART_OVERLAY_DATE, FALSE);
 	UIEnable(ID_FILE_SAVE, FALSE);
 	UIEnable(ID_FILE_SAVE_AS, FALSE);
 	UIEnable(ID_FILE_EXPORT, FALSE);
+	// (printing is for the pages that can: they enable these while they are showing)
+	UIEnable(ID_FILE_PRINT, FALSE);
+	UIEnable(ID_FILE_PRINT_PREVIEW, FALSE);
 	UISetCheck(ID_OPTIONS_DARKMODE, WTLHelper::IsDarkMode());
 
 	CImageList images;
@@ -349,6 +354,11 @@ IView* CMainFrame::AddChartView(ChartData data, PCWSTR title, PCWSTR filePath) {
 	pView->SetFile(title ? title : L"Chart", filePath);
 
 	return pView;
+}
+
+LRESULT CMainFrame::OnPrintSetup(WORD, WORD, HWND, BOOL&) {
+	Printing::PageSetup(m_hWnd);
+	return 0;
 }
 
 LRESULT CMainFrame::OnFileOpen(WORD, WORD, HWND, BOOL&) {

@@ -5,6 +5,7 @@
 #include "Aspects.h"
 #include "AppSettings.h"
 #include <cmath>
+#include <CommCtrl.h>
 
 bool Helpers::LoadAstroFont(UINT id) {
 	auto res = ::FindResource(nullptr, MAKEINTRESOURCE(id), L"TTF");
@@ -280,4 +281,49 @@ bool Helpers::CopyTextToClipboard(HWND owner, PCWSTR text) {
 	if (!ok)
 		::GlobalFree(mem);		// the clipboard owns it only if it took it
 	return ok;
+}
+
+CString Helpers::TableText(TableSource const& table, std::vector<int> const& rows, bool csv) {
+	auto quote = [&](CString text) {
+		if (!csv)
+			return text;
+		text.Replace(L"\"", L"\"\"");
+		return CString(L"\"") + text + L"\"";
+	};
+	PCWSTR separator = csv ? L"," : L"\t";
+	CString text;
+	for (int column = 0; column < static_cast<int>(table.Headers.size()); column++) {
+		if (column)
+			text += separator;
+		text += quote(table.Headers[column]);
+	}
+	text += L"\r\n";
+	for (int row : rows) {
+		for (int column = 0; column < static_cast<int>(table.Headers.size()); column++) {
+			if (column)
+				text += separator;
+			text += quote(table.Cell(row, column));
+		}
+		text += L"\r\n";
+	}
+	return text;
+}
+
+bool Helpers::CopyListRows(HWND owner, HWND list, TableSource const& table) {
+	std::vector<int> rows;
+	for (int row = ListView_GetNextItem(list, -1, LVNI_SELECTED); row >= 0; row = ListView_GetNextItem(list, row, LVNI_SELECTED))
+		if (row < table.Rows)
+			rows.push_back(row);
+	if (rows.empty())
+		return false;
+	if (!CopyTextToClipboard(owner, TableText(table, rows, false)))
+		AtlMessageBox(owner, L"The rows could not be copied to the clipboard.", L"Astro Studio", MB_ICONWARNING);
+	return true;
+}
+
+bool Helpers::SaveTable(HWND owner, TableSource const& table, PCWSTR path, PCWSTR what) {
+	std::vector<int> rows(table.Rows);
+	for (int i = 0; i < table.Rows; i++)
+		rows[i] = i;
+	return SaveTextFileUtf8(owner, path, TableText(table, rows, true), what);
 }

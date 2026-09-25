@@ -4,6 +4,7 @@
 #include <VirtualListView.h>
 #include "Aspects.h"
 #include "Interfaces.h"
+#include "Helpers.h"
 
 class CAspectListView :
 	public CFrameView<CAspectListView, IMainFrame>,
@@ -25,6 +26,12 @@ public:
 
 	// the colour for a longitude by its element (fire, earth, air, water), for the cells that show one; the midpoint list uses it too
 	static COLORREF GetElementColor(ZodiacSign sign);
+
+	// for Copy and Export: the list as a table of plain words, in the order it is shown now, and its window (for the selection)
+	Helpers::TableSource Table() const;
+	HWND ListWindow() const {
+		return m_List;
+	}
 
 	CString GetColumnText(HWND, int row, int col) const;
 	void DoSort(SortInfo const* si);

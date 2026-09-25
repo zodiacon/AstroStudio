@@ -101,6 +101,30 @@ CString CMidpointListView::GetColumnText(HWND h, int row, int col) const {
 	return CString();
 }
 
+Helpers::TableSource CMidpointListView::Table() const {
+	Helpers::TableSource table;
+	table.Headers = { L"Point 1", L"Point 2", L"Midpoint", L"Opposite", L"Arc", L"House", L"On the midpoint" };
+	table.Rows = static_cast<int>(m_Rows.size());
+	table.Cell = [this](int row, int column) -> CString {
+		auto& r = m_Rows[row];
+		auto position = [](AstroPoint const& longitude) {
+			return Helpers::FormatLongitude(longitude, FormatOptions::ShowSeconds | FormatOptions::ShowDegreeGlyph);
+		};
+		CString text;
+		switch (column) {
+			case 0: return PointName(r.Data.A);
+			case 1: return PointName(r.Data.B);
+			case 2: return position(r.Data.Longitude);
+			case 3: return position(r.Data.Opposite());
+			case 4: text.Format(L"%.2f%c", r.Data.Arc, 0xb0); return text;
+			case 5: if (r.House > 0) text.Format(L"%d", r.House); return text;
+			case 6: return r.On;
+		}
+		return text;
+	};
+	return table;
+}
+
 void CMidpointListView::DoSort(SortInfo const* si) {
 	auto compare = [&](Row const& r1, Row const& r2) {
 		switch (GetColumnManager(m_List)->GetColumnTag<ColumnType>(si->SortColumn)) {

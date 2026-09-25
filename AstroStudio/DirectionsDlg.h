@@ -6,7 +6,7 @@
 #include "TimeControls.h"
 
 // Asks for what a directed chart needs: the date it is for (wall-clock time in a zone, like the New Chart dialog's) and the
-// yearly arc the chart's points are moved by.
+// yearly arc the chart's points are moved by. Without the arc (HideArc) it asks for a moment only (the date of an overlay).
 class CDirectionsDlg :
 	public CDialogImpl<CDirectionsDlg>,
 	public CDialogHelper<CDirectionsDlg> {
@@ -19,6 +19,10 @@ public:
 		m_Zone = zone;
 		m_Key = key;
 		m_Caption = caption;
+	}
+	// for a dialog that only asks for a moment: no arc to choose
+	void HideArc() {
+		m_ShowArc = false;
 	}
 	// valid after DoModal returned IDOK
 	DateTime const& Target() const {
@@ -55,6 +59,7 @@ private:
 	TimeZoneInfo m_Zone;
 	ArcKey m_Key{ ArcKey::Actual };
 	CString m_Caption;
+	bool m_ShowArc{ true };
 	CTimeControls m_Time;
 	CComboBox m_Arc;
 };

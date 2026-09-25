@@ -7,6 +7,10 @@
 #include "DefaultFont.h"
 #include "AppSettings.h"
 #include "AspectOptions.h"
+#include "Printing.h"
+#include "ChartImage.h"
+#include "StringHelper.h"
+#include "DerivedCharts.h"
 #include <filesystem>
 #include <ToolbarHelper.h>
 #include <DarkMode/DmlibColor.h>
@@ -182,6 +186,8 @@ void CChartView::PageActivated(bool active) {
 	ui.UIEnable(ID_FILE_SAVE, active && (!m_ReadOnly || m_Recipe));
 	ui.UIEnable(ID_FILE_SAVE_AS, active && (!m_ReadOnly || m_Recipe));
 	ui.UIEnable(ID_FILE_EXPORT, active);
+	ui.UIEnable(ID_FILE_PRINT, active);
+	ui.UIEnable(ID_FILE_PRINT_PREVIEW, active);
 	if (active) {
 		// the menu and toolbars are shared; show this chart's state
 		ui.UISetCheck(ID_CHART_AUTOSTEP, m_AutoStep);
@@ -661,6 +667,7 @@ void CChartView::UpdateOverlayUI() {
 	ui.UISetCheck(ID_CHART_OVERLAY_PROGRESSED, kind == OverlayKind::Progressed && !solarArc);
 	ui.UISetCheck(ID_CHART_OVERLAY_SOLARARC, kind == OverlayKind::Progressed && solarArc);
 	ui.UISetCheck(ID_CHART_OVERLAY_SYNASTRY, kind == OverlayKind::Synastry);
+	ui.UIEnable(ID_CHART_OVERLAY_DATE, OverlayHasTime());		// (a synastry overlay has no moment)
 }
 
 void CChartView::UpdateOverlay() {
@@ -757,6 +764,29 @@ LRESULT CChartView::OnOverlay(WORD, WORD id, HWND, BOOL&) {
 	return 0;
 }
 
+LRESULT CChartView::OnOverlayDate(WORD, WORD, HWND, BOOL&) {
+	if (!OverlayHasTime())
+		return 0;
+	// the moment is shown in the overlay's zone, as the chart's own time is
+	auto zone = m_Overlay->Zone;
+	int offset = zone.OffsetUT;
+	TimeZones::UtToLocal(m_Overlay->When, zone, &offset);
+	zone.OffsetUT = offset;
+
+	CDirectionsDlg dlg;
+	dlg.HideArc();
+	dlg.Init(m_Overlay->When, zone, ArcKey::Actual, m_Overlay->Kind == OverlayKind::Transit ? L"Transit Date" : L"Progression Date");
+	if (dlg.DoModal(m_hWnd) != IDOK)
+		return 0;
+
+	if (m_Live)
+		SetLive(false);		// the user took over the time
+	m_Overlay->When = dlg.Target();
+	m_Overlay->Zone = dlg.Zone();
+	UpdateOverlay();
+	return 0;
+}
+
 LRESULT CChartView::OnOverlayDropDown(int, LPNMHDR pnmh, BOOL& handled) {
 	auto nmtb = reinterpret_cast<NMTOOLBAR*>(pnmh);
 	if (nmtb->iItem != ID_CHART_OVERLAY) {
@@ -784,6 +814,8 @@ LRESULT CChartView::OnOverlayDropDown(int, LPNMHDR pnmh, BOOL& handled) {
 	menu.CreatePopupMenu();
 	for (auto const& choice : choices)
 		menu.AppendMenu(MF_STRING | (choice.Checked ? MF_CHECKED : 0) | (choice.Enabled ? 0 : MF_GRAYED), choice.Id, choice.Text);
+	menu.AppendMenu(MF_SEPARATOR);
+	menu.AppendMenu(MF_STRING | (OverlayHasTime() ? 0 : MF_GRAYED), ID_CHART_OVERLAY_DATE, L"Set Date and Time...");
 
 	// under the button; the choice comes back as a command, like one from the menu bar
 	CPoint pt(nmtb->rcButton.left, nmtb->rcButton.bottom);
@@ -933,21 +965,123 @@ LRESULT CChartView::OnEditCopy(WORD, WORD, HWND, BOOL&) {
 		return 0;
 	}
 
-	// anywhere else it is the chart wheel, as a picture
+	// on a tab with a list, the selected rows as text
+	if (auto tab = ActiveListTab(); tab && Helpers::CopyListRows(m_hWnd, tab->List, tab->Table))
+		return 0;
+
+	// anywhere else (or with no row selected) it is the chart wheel, as a picture
 	auto image = m_ChartDrawing.RenderImage(ChartImage::DefaultSize);
 	if (!image || !ChartImage::CopyToClipboard(m_hWnd, image))
 		AtlMessageBox(m_hWnd, L"The chart could not be copied to the clipboard.", L"Astro Studio", MB_ICONWARNING);
 	return 0;
 }
 
+LRESULT CChartView::OnPrint(WORD, WORD id, HWND, BOOL&) {
+	if (m_Data.AllPlanets().empty())
+		return 0;
+	std::unique_ptr<Printing::Document> document;
+	{
+		CWaitCursor wait;
+		document = MakePrintDocument();
+	}
+	if (id == ID_FILE_PRINT_PREVIEW)
+		Printing::Preview(m_hWnd, *document);
+	else
+		Printing::Print(m_hWnd, *document);
+	return 0;
+}
+
+std::unique_ptr<Printing::Document> CChartView::MakePrintDocument() {
+	Printing::ChartSheet sheet;
+	sheet.Title = m_Title.IsEmpty() ? CString(L"Chart") : m_Title;
+
+	// what the chart is: the moment (as the chart's own zone shows it), the place, the houses
+	auto& info = m_Data.Info();
+	int offset = info.TimeZone.OffsetUT;
+	auto local = TimeZones::UtToLocal(info.Time, info.TimeZone, &offset);
+	CString line;
+	line.Format(L"%04ld/%02ld/%02ld  %02ld:%02ld:%02ld  (UTC%s)", local.Year, local.Month, local.Day, local.Hour, local.Minute, local.Second,
+		(PCWSTR)TimeZones::FormatOffset(offset));
+	sheet.Lines.push_back(line);
+	CString place;
+	for (auto const* part : { &info.City, &info.State, &info.Country })
+		if (!part->empty())
+			place += (place.IsEmpty() ? L"" : L", ") + CString(part->c_str());
+	line.Format(L"%s%s%.4f%c%c  %.4f%c%c", (PCWSTR)place, place.IsEmpty() ? L"" : L"   ", std::fabs(info.Latitude), 0xb0, info.Latitude >= 0 ? L'N' : L'S',
+		std::fabs(info.Longitude), 0xb0, info.Longitude >= 0 ? L'E' : L'W');
+	sheet.Lines.push_back(line);
+	line.Format(L"House system: %s", StringHelper::HouseSystemToString(m_Data.GetHouseSystem()));
+	if (m_Data.Harmonic() > 1)
+		line.AppendFormat(L"   Harmonic: %d", m_Data.Harmonic());
+	sheet.Lines.push_back(line);
+	if (m_Overlay)
+		sheet.Lines.push_back(CString(m_Overlay->Caption.c_str()));
+
+	// the wheel, on white whatever the program looks like
+	if (auto image = m_ChartDrawing.RenderImage(2400, true))
+		sheet.Wheel = ChartImage::ToDib(image);
+
+	std::vector<std::vector<CString>> planets;
+	for (auto const& planet : m_Data.AllPlanets()) {
+		CString position = Helpers::FormatLongitude(planet.Longitude, FormatOptions::ShowSeconds | FormatOptions::ShowDegreeGlyph);
+		// (the retrograde mark is part of the text)
+		CString speed, house;
+		speed.Format(L"%.4f", planet.Speed);
+		if (int h = DerivedCharts::HouseOf(m_Data.Houses(), planet.Longitude); h > 0)
+			house.Format(L"%d", h);
+		planets.push_back({ CString(Helpers::GetPlanetName(planet.Planet)), position, speed, house });
+	}
+	sheet.Planets = Printing::TableFromRows({ L"Planet", L"Position", L"Speed", L"House" }, std::move(planets));
+
+	std::vector<std::vector<CString>> houses;
+	auto cusp = [](AstroPoint const& value) { return Helpers::FormatLongitude(value, FormatOptions::ShowDegreeGlyph); };
+	for (int i = 0; i < 12; i++) {
+		CString number;
+		number.Format(L"%d", i + 1);
+		houses.push_back({ number, cusp(m_Data.Houses().Cusps[i]) });
+	}
+	houses.push_back({ L"Asc", cusp(m_Data.Houses().Asc) });
+	houses.push_back({ L"MC", cusp(m_Data.Houses().MC) });
+	sheet.Houses = Printing::TableFromRows({ L"House", L"Cusp" }, std::move(houses));
+
+	// on a tab with a list, the list follows on the pages after
+	if (auto tab = ActiveListTab()) {
+		sheet.Extra = tab->Table;
+		sheet.ExtraTitle = CString(tab->Name) + L" - " + sheet.Title;
+	}
+	return Printing::MakeChartDocument(std::move(sheet));
+}
+
+std::optional<CChartView::ListTab> CChartView::ActiveListTab() {
+	HWND page = m_DetailsTabs.GetPageHWND(m_DetailsTabs.GetActivePage());
+	if (page == nullptr)
+		return std::nullopt;
+	if (page == m_AspectList.m_hWnd)
+		return ListTab{ m_AspectList.ListWindow(), m_AspectList.Table(), L"Aspects" };
+	if (page == m_MidpointList.m_hWnd)
+		return ListTab{ m_MidpointList.ListWindow(), m_MidpointList.Table(), L"Midpoints" };
+	if (page == m_PartList.m_hWnd)
+		return ListTab{ m_PartList.ListWindow(), m_PartList.Table(), L"Arabic Parts" };
+	return std::nullopt;
+}
+
 LRESULT CChartView::OnExport(WORD, WORD, HWND, BOOL&) {
-	static constexpr wchar_t filter[] = L"PNG pictures (*.png)\0*.png\0";
-	CSimpleFileDialog dlg(FALSE, L"png", SafeFileName(m_Title), OFN_OVERWRITEPROMPT | OFN_PATHMUSTEXIST | OFN_HIDEREADONLY | OFN_EXPLORER | OFN_ENABLESIZING, filter, m_hWnd);
+	// the tab's list as a CSV file (offered first), or the wheel as a picture: the file type chosen says which
+	auto tab = ActiveListTab();
+	static constexpr wchar_t pictureFilter[] = L"PNG pictures (*.png)\0*.png\0";
+	static constexpr wchar_t listFilter[] = L"CSV files (*.csv)\0*.csv\0PNG pictures (the chart wheel) (*.png)\0*.png\0";
+	CString suggestion = tab ? CString(tab->Name) + L" " + SafeFileName(m_Title) : SafeFileName(m_Title);
+	CSimpleFileDialog dlg(FALSE, tab ? L"csv" : L"png", suggestion, OFN_OVERWRITEPROMPT | OFN_PATHMUSTEXIST | OFN_HIDEREADONLY | OFN_EXPLORER | OFN_ENABLESIZING,
+		tab ? listFilter : pictureFilter, m_hWnd);
 	WTLHelper::SuspendHook();
 	auto ok = dlg.DoModal(m_hWnd) == IDOK;
 	WTLHelper::ResumeHook();
 	if (!ok)
 		return 0;
+	if (tab && _wcsicmp(std::filesystem::path(dlg.m_szFileName).extension().c_str(), L".png") != 0) {
+		Helpers::SaveTable(m_hWnd, tab->Table, dlg.m_szFileName, tab->Name);
+		return 0;
+	}
 
 	std::wstring error;
 	if (auto image = m_ChartDrawing.RenderImage(ChartImage::DefaultSize); !image)

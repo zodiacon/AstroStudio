@@ -20,6 +20,25 @@ LRESULT CDirectionsDlg::OnInitDialog(UINT, WPARAM, LPARAM, BOOL&) {
 		if (key.Key == m_Key)
 			m_Arc.SetCurSel(item);
 	}
+	if (!m_ShowArc) {
+		// the arc goes and the buttons move up into its place
+		CRect arc, ok;
+		m_Arc.GetWindowRect(&arc);
+		GetDlgItem(IDOK).GetWindowRect(&ok);
+		int shift = ok.top - arc.top;
+		m_Arc.ShowWindow(SW_HIDE);
+		GetDlgItem(IDC_DIR_ARC_LABEL).ShowWindow(SW_HIDE);
+		for (int id : { IDOK, IDCANCEL }) {
+			CRect rc;
+			GetDlgItem(id).GetWindowRect(&rc);
+			ScreenToClient(&rc);
+			GetDlgItem(id).SetWindowPos(nullptr, rc.left, rc.top - shift, 0, 0, SWP_NOSIZE | SWP_NOZORDER);
+		}
+		CRect window;
+		GetWindowRect(&window);
+		SetWindowPos(nullptr, 0, 0, window.Width(), window.Height() - shift, SWP_NOMOVE | SWP_NOZORDER);
+		CenterWindow(GetParent());
+	}
 	return TRUE;
 }
 
@@ -33,7 +52,8 @@ LRESULT CDirectionsDlg::OnOK(WORD, WORD, HWND, BOOL&) {
 	}
 	m_Target = ut;
 	m_Zone = zone;
-	m_Key = static_cast<ArcKey>(m_Arc.GetItemData(m_Arc.GetCurSel()));
+	if (m_ShowArc)
+		m_Key = static_cast<ArcKey>(m_Arc.GetItemData(m_Arc.GetCurSel()));
 	EndDialog(IDOK);
 	return 0;
 }

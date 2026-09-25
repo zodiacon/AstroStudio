@@ -56,6 +56,31 @@ CString CAspectListView::GetColumnText(HWND h, int row, int col) const {
 	return CString();
 }
 
+Helpers::TableSource CAspectListView::Table() const {
+	Helpers::TableSource table;
+	table.Headers = { L"Point 1", L"Position 1", L"Point 2", L"Position 2", L"Aspect", L"Orb", L"A/S" };
+	table.Rows = static_cast<int>(m_Rows.size());
+	table.Cell = [this](int row, int column) -> CString {
+		auto& r = m_Rows[row];
+		auto& aspect = r.Data;
+		auto position = [](AstroPoint const& longitude) {
+			return Helpers::FormatLongitude(longitude, FormatOptions::ShowSeconds | FormatOptions::ShowDegreeGlyph);
+		};
+		CString text;
+		switch (column) {
+			case 0: return PlanetLabel(r, true);
+			case 1: return position(aspect.Planet1.Longitude);
+			case 2: return PlanetLabel(r, false);
+			case 3: return position(aspect.Planet2.Longitude);
+			case 4: return Helpers::GetAspectName(aspect.Type);
+			case 5: text.Format(L"%.2f%c", aspect.Orb, 0xb0); return text;
+			case 6: return aspect.Applying ? L"A" : L"S";
+		}
+		return text;
+	};
+	return table;
+}
+
 void CAspectListView::DoSort(SortInfo const* si) {
 	auto compare = [&](Row const& r1, Row const& r2) {
 		auto& a1 = r1.Data;

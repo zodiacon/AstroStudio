@@ -101,6 +101,8 @@ BEGIN
             MENUITEM "&Secondary Progressions",     ID_CHART_OVERLAY_PROGRESSED
             MENUITEM "Solar &Arc Directions",       ID_CHART_OVERLAY_SOLARARC
             MENUITEM "S&ynastry...",                ID_CHART_OVERLAY_SYNASTRY
+            MENUITEM SEPARATOR
+            MENUITEM "Set &Date and Time...",       ID_CHART_OVERLAY_DATE
         END
         POPUP "New &Derived Chart"
         BEGIN
@@ -230,7 +232,7 @@ FONT 9, "Segoe UI", 0, 0, 0x0
 BEGIN
     DEFPUSHBUTTON   "OK",IDOK,89,93,50,14
     CTEXT           "Place search: Open-Meteo.com geocoding\nGeoNames data, CC BY 4.0",IDC_STATIC,7,59,215,20
-    CTEXT           "Astro Studio v0.3\n\n©2022-2026 Pavel Yosifovich",IDC_STATIC,57,14,107,27
+    CTEXT           "Astro Studio v0.6\n\n©2022-2026 Pavel Yosifovich",IDC_STATIC,57,14,107,27
     ICON            IDR_MAINFRAME,IDC_STATIC,7,7,20,20
     CONTROL         "<a>https://github.com/zodiacon/astrostudio</a>",IDC_LINK,
                     "SysLink",WS_TABSTOP,50,42,130,14
@@ -433,7 +435,7 @@ BEGIN
     COMBOBOX        IDC_TIMEZONE,48,28,265,150,CBS_DROPDOWNLIST | WS_VSCROLL | WS_TABSTOP
     CONTROL         "Manual UT offset:",IDC_MANUALTZ,"Button",BS_AUTOCHECKBOX | WS_TABSTOP,48,48,70,10
     EDITTEXT        IDC_TZOFFSET,122,46,40,14,ES_AUTOHSCROLL
-    LTEXT           "Arc:",IDC_STATIC,7,73,18,8
+    LTEXT           "Arc:",IDC_DIR_ARC_LABEL,7,73,18,8
     COMBOBOX        IDC_DIR_ARC,48,70,200,60,CBS_DROPDOWNLIST | WS_VSCROLL | WS_TABSTOP
     DEFPUSHBUTTON   "OK",IDOK,207,100,50,14
     PUSHBUTTON      "Cancel",IDCANCEL,263,100,50,14
@@ -557,8 +559,8 @@ END
 //
 
 VS_VERSION_INFO VERSIONINFO
- FILEVERSION 0,4,0,0
- PRODUCTVERSION 0,4,0,0
+ FILEVERSION 0,6,0,0
+ PRODUCTVERSION 0,6,0,0
  FILEFLAGSMASK 0x3fL
 #ifdef _DEBUG
  FILEFLAGS 0x1L
@@ -575,12 +577,12 @@ BEGIN
         BEGIN
             VALUE "CompanyName", "Scorpio Software LLC"
             VALUE "FileDescription", "Astrology Studio"
-            VALUE "FileVersion", "0.4.0.0"
+            VALUE "FileVersion", "0.6.0.0"
             VALUE "InternalName", "AstroStudio"
             VALUE "LegalCopyright", "©2022-2026 Pavel Yosifovich"
             VALUE "OriginalFilename", "AstroStudio.exe"
             VALUE "ProductName", "Astro Studio - Astrology Studio"
-            VALUE "ProductVersion", "0.4.0.0"
+            VALUE "ProductVersion", "0.6.0.0"
         END
     END
     BLOCK "VarFileInfo"
@@ -681,15 +683,14 @@ BEGIN
                             "Open the chart for the midpoint in time and place of this chart and another open chart \nDavison"
     ID_OPTIONS_WHEEL        "Choose the planets and the aspect lines the chart wheel draws\nChart Wheel"
     ID_OPTIONS_COLORS       "Choose the colours of the chart wheel\nChart Colors"
-    ID_CHART_ANALYSIS       
-                            "Find when things happen between this chart and the sky, over a range of dates \nAnalysis"
-    ID_ANALYSIS_CANCEL      
-                            "Stop the analysis that is running \nCancel"
     ID_CHART_DERIVED_SOLARARC 
                             "Open this chart with every point moved by the solar arc to a date you choose \nSolar Arc Chart"
     ID_TOOL_ANALYSIS        "Find when things happen between a chart and the sky, over a range of dates \nAnalysis"
     ID_ANALYSIS_OPTIONS     "Change what is analysed and for which dates \nOptions"
     ID_ANALYSIS_REFRESH     "Run the analysis again \nRefresh"
+    ID_CHART_ANALYSIS       "Find when things happen between this chart and the sky, over a range of dates \nAnalysis"
+    ID_ANALYSIS_CANCEL      "Stop the analysis that is running \nCancel"
+    ID_CHART_OVERLAY_DATE   "Choose the moment the transits or progressions are shown for"
 END
 
 STRINGTABLE

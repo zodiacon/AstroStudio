@@ -35,6 +35,7 @@ protected:
 		COMMAND_ID_HANDLER(ID_NEW_CHART, OnNewChart)
 		COMMAND_ID_HANDLER(ID_NEW_CHARTFORNOW, OnNewChartNow)
 		COMMAND_ID_HANDLER(ID_FILE_OPEN, OnFileOpen)
+		COMMAND_ID_HANDLER(ID_FILE_PRINT_SETUP, OnPrintSetup)
 		COMMAND_RANGE_HANDLER(ID_FILE_MRU_FIRST, ID_FILE_MRU_LAST, OnFileRecent)
 		COMMAND_ID_HANDLER(ID_OPTIONS_DARKMODE, OnToggleDarkMode)
 		COMMAND_ID_HANDLER(ID_OPTIONS_ASPECTS, OnAspectOptions)
@@ -102,6 +103,7 @@ private:
 	LRESULT OnPageActivated(int /*idCtrl*/, LPNMHDR /*pnmh*/, BOOL& /*bHandled*/);
 	LRESULT OnFileRecent(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/);
 	LRESULT OnFileOpen(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/);
+	LRESULT OnPrintSetup(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/);
 	LRESULT OnClose(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, BOOL& /*bHandled*/);
 	LRESULT OnNewChart(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/);
 	LRESULT OnNewChartNow(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/);

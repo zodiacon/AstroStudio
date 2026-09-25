@@ -4,6 +4,7 @@
 #include <VirtualListView.h>
 #include "Midpoints.h"
 #include "Interfaces.h"
+#include "Helpers.h"
 
 // The midpoints of a chart, one row for every pair of its planets and its Ascendant and Midheaven (a tab of the chart view).
 class CMidpointListView :
@@ -17,6 +18,12 @@ public:
 	void SetChartData(ChartData const* chart);
 	// puts the text font the user chose with Options > Font on the list (nothing if they have not chosen one)
 	void ApplyTextFont();
+
+	// for Copy and Export: the list as a table of plain words, in the order it is shown now, and its window (for the selection)
+	Helpers::TableSource Table() const;
+	HWND ListWindow() const {
+		return m_List;
+	}
 
 	CString GetColumnText(HWND, int row, int col) const;
 	void DoSort(SortInfo const* si);

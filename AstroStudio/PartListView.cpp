@@ -74,6 +74,25 @@ CString CPartListView::GetColumnText(HWND h, int row, int col) const {
 	return CString();
 }
 
+Helpers::TableSource CPartListView::Table() const {
+	Helpers::TableSource table;
+	table.Headers = { L"Part", L"Position", L"House", L"Formula", L"Aspects" };
+	table.Rows = static_cast<int>(m_Rows.size());
+	table.Cell = [this](int row, int column) -> CString {
+		auto& r = m_Rows[row];
+		CString text;
+		switch (column) {
+			case 0: return r.Data.Name.c_str();
+			case 1: return Helpers::FormatLongitude(r.Data.Longitude, FormatOptions::ShowSeconds | FormatOptions::ShowDegreeGlyph);
+			case 2: if (r.Data.House > 0) text.Format(L"%d", r.Data.House); return text;
+			case 3: return r.Data.Formula.c_str();
+			case 4: return r.AspectText;
+		}
+		return text;
+	};
+	return table;
+}
+
 void CPartListView::DoSort(SortInfo const* si) {
 	auto compare = [&](Row const& r1, Row const& r2) {
 		switch (GetColumnManager(m_List)->GetColumnTag<ColumnType>(si->SortColumn)) {

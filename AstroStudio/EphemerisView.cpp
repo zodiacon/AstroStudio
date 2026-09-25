@@ -1,5 +1,6 @@
 #include "pch.h"
 #include "EphemerisView.h"
+#include "Printing.h"
 #include "ChartData.h"
 #include "TimeZones.h"
 #include "EphemerisOptionsDlg.h"
@@ -210,8 +211,11 @@ void CEphemerisView::TextFontChanged() {
 void CEphemerisView::PageActivated(bool active) {
 	if (active)
 		UpdateViewUI();
-	else
+	else {
 		Frame()->GetUI().UIEnable(ID_FILE_EXPORT, FALSE);	// the next page enables it again if it can export
+		Frame()->GetUI().UIEnable(ID_FILE_PRINT, FALSE);
+		Frame()->GetUI().UIEnable(ID_FILE_PRINT_PREVIEW, FALSE);
+	}
 }
 
 void CEphemerisView::UpdateList() {
@@ -337,6 +341,8 @@ void CEphemerisView::UpdateViewUI() {
 	ui.UIEnable(ID_FONT_BIGGER, m_FontSize < 180);
 	ui.UIEnable(ID_FONT_SMALLER, m_FontSize > 70);
 	ui.UIEnable(ID_FILE_EXPORT, TRUE);
+	ui.UIEnable(ID_FILE_PRINT, TRUE);
+	ui.UIEnable(ID_FILE_PRINT_PREVIEW, TRUE);
 	ui.UISetCheck(ID_VIEW_GRIDLINES, (m_List.GetExtendedListViewStyle() & LVS_EX_GRIDLINES) != 0);
 }
 
@@ -787,6 +793,25 @@ LRESULT CEphemerisView::OnExport(WORD, WORD, HWND, BOOL&) {
 	CString table = BuildTable(rows, true);
 
 	Helpers::SaveTextFileUtf8(m_hWnd, dlg.m_szFileName, table, L"The ephemeris");
+	return 0;
+}
+
+LRESULT CEphemerisView::OnPrint(WORD, WORD id, HWND, BOOL&) {
+	// every row of the list, in words, on as many pages as it takes (with many columns the paper is turned)
+	std::unique_ptr<Printing::TableDocument> document;
+	{
+		CWaitCursor wait;
+		std::vector<int> rows(m_List.GetItemCount());
+		for (int i = 0; i < (int)rows.size(); i++)
+			rows[i] = i;
+		auto table = Printing::TableFromText(BuildTable(rows, false));
+		bool wide = table.Headers.size() > 8;
+		document = std::make_unique<Printing::TableDocument>(L"Ephemeris", L"", std::move(table), wide);
+	}
+	if (id == ID_FILE_PRINT_PREVIEW)
+		Printing::Preview(m_hWnd, *document);
+	else
+		Printing::Print(m_hWnd, *document);
 	return 0;
 }
 

@@ -11,6 +11,7 @@
 #include "AspectGridWnd.h"
 #include "AspectListView.h"
 #include "MidpointListView.h"
+#include "Printing.h"
 #include "PartListView.h"
 #include "TimeStep.h"
 #include "ChartFile.h"
@@ -61,6 +62,7 @@ public:
 		COMMAND_ID_HANDLER(ID_CHART_OVERLAY_PROGRESSED, OnOverlay)
 		COMMAND_ID_HANDLER(ID_CHART_OVERLAY_SOLARARC, OnOverlay)
 		COMMAND_ID_HANDLER(ID_CHART_OVERLAY_SYNASTRY, OnOverlay)
+		COMMAND_ID_HANDLER(ID_CHART_OVERLAY_DATE, OnOverlayDate)
 		NOTIFY_CODE_HANDLER(TBN_DROPDOWN, OnOverlayDropDown)
 		COMMAND_ID_HANDLER(ID_CHART_DERIVED_SOLARRETURN, OnDerived)
 		COMMAND_ID_HANDLER(ID_CHART_DERIVED_LUNARRETURN, OnDerived)
@@ -84,6 +86,7 @@ public:
 		COMMAND_ID_HANDLER(ID_CHART_OVERLAY_PROGRESSED, OnOverlay)
 		COMMAND_ID_HANDLER(ID_CHART_OVERLAY_SOLARARC, OnOverlay)
 		COMMAND_ID_HANDLER(ID_CHART_OVERLAY_SYNASTRY, OnOverlay)
+		COMMAND_ID_HANDLER(ID_CHART_OVERLAY_DATE, OnOverlayDate)
 		COMMAND_ID_HANDLER(ID_CHART_DERIVED_SOLARRETURN, OnDerived)
 		COMMAND_ID_HANDLER(ID_CHART_DERIVED_LUNARRETURN, OnDerived)
 		COMMAND_ID_HANDLER(ID_CHART_ANALYSIS, OnAnalysis)
@@ -93,6 +96,8 @@ public:
 		COMMAND_ID_HANDLER(ID_FILE_SAVE, OnSave)
 		COMMAND_ID_HANDLER(ID_FILE_SAVE_AS, OnSave)
 		COMMAND_ID_HANDLER(ID_FILE_EXPORT, OnExport)
+		COMMAND_ID_HANDLER(ID_FILE_PRINT, OnPrint)
+		COMMAND_ID_HANDLER(ID_FILE_PRINT_PREVIEW, OnPrint)
 	END_MSG_MAP()
 
 private:
@@ -104,6 +109,7 @@ private:
 	LRESULT OnSave(WORD /*wNotifyCode*/, WORD wID, HWND /*hWndCtl*/, BOOL& /*bHandled*/);
 	// File > Export: the chart wheel as a PNG picture
 	LRESULT OnExport(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/);
+	LRESULT OnPrint(WORD /*wNotifyCode*/, WORD wID, HWND /*hWndCtl*/, BOOL& /*bHandled*/);
 	void CreateStepToolBar();
 	// Moves the chart's time by the toolbar's step count and unit; direction is 1 (forward) or -1 (back).
 	// Returns false if it couldn't (no chart yet, or the result is outside the years the ephemeris covers).
@@ -151,6 +157,7 @@ private:
 	void UpdateOverlayUI();
 	void StopTimeIfFixed();
 	LRESULT OnOverlay(WORD /*wNotifyCode*/, WORD wID, HWND /*hWndCtl*/, BOOL& /*bHandled*/);
+	LRESULT OnOverlayDate(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/);
 	// the toolbar's Overlay button: a menu of the same choices as the Chart menu's, under the button
 	LRESULT OnOverlayDropDown(int /*idCtrl*/, LPNMHDR pnmh, BOOL& bHandled);
 	LRESULT OnStep(WORD /*wNotifyCode*/, WORD wID, HWND /*hWndCtl*/, BOOL& /*bHandled*/);
@@ -166,6 +173,15 @@ private:
 
 	LRESULT OnCreate(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, BOOL& /*bHandled*/);
 	LRESULT OnEditCopy(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/);
+	// the list on the details tab that is showing, for Copy and Export (nothing on the other tabs)
+	struct ListTab {
+		HWND List;
+		Helpers::TableSource Table;
+		PCWSTR Name;
+	};
+	std::optional<ListTab> ActiveListTab();
+	// the chart as pages for the printer or the preview: the wheel and the details, then the list of the tab that is showing, if any
+	std::unique_ptr<Printing::Document> MakePrintDocument();
 	LRESULT OnRecalc(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, BOOL& /*bHandled*/);
 	LRESULT OnForwardMsg(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM lParam, BOOL& /*bHandled*/);
 	LRESULT OnThemeChanged(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, BOOL& /*bHandled*/);

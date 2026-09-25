@@ -76,11 +76,14 @@ LRESULT CGraphicChartView::OnThemeChanged(UINT, WPARAM, LPARAM, BOOL& handled) {
 	return 0;
 }
 
-void CGraphicChartView::ApplyState() {
+void CGraphicChartView::ApplyState(bool forPaper) {
 	// the pictures (Export, Copy) follow the mode as well: they are what is on the screen
-	auto params = WTLHelper::IsDarkMode() ? ChartDrawingParameters::Dark() : ChartDrawingParameters();
+	bool dark = WTLHelper::IsDarkMode() && !forPaper;
+	auto params = dark ? ChartDrawingParameters::Dark() : ChartDrawingParameters();
 	params.Wheel = WheelOptions::Current();
-	ChartColors::Current().Apply(params, WTLHelper::IsDarkMode());
+	ChartColors::Current().Apply(params, dark);
+	if (forPaper)
+		params.BackColor = D2D1::ColorF(D2D1::ColorF::White);
 	m_Drawing.DrawingParameters(params);
 	m_Drawing.Rotation(m_Rotation).Highlight(m_Selected);
 	m_Drawing.Overlay(m_Overlay);
@@ -105,10 +108,10 @@ void CGraphicChartView::ResetRotation() {
 	Invalidate();
 }
 
-CComPtr<IWICBitmap> CGraphicChartView::RenderImage(int size) {
+CComPtr<IWICBitmap> CGraphicChartView::RenderImage(int size, bool forPaper) {
 	m_Drawing.Chart(m_ChartData);
 	m_Drawing.Aspects(&m_Aspects);
-	ApplyState();
+	ApplyState(forPaper);
 	return ChartImage::Render(m_Drawing, size);
 }
 

@@ -14,7 +14,8 @@ public:
 	void Refresh();
 	void SetAspects(std::vector<AspectData> aspects) noexcept;
 	// The chart as a size x size picture, drawn the same way as on screen. Null if it couldn't be drawn.
-	CComPtr<IWICBitmap> RenderImage(int size);
+	// forPaper: the light look, on white, whatever the program's mode is (a chart on paper is not printed white on black)
+	CComPtr<IWICBitmap> RenderImage(int size, bool forPaper = false);
 
 	// The wheel can be turned by dragging it and a planet picked with a click, which fades the aspects that
 	// are not its own. Neither belongs to the chart itself.
@@ -68,7 +69,7 @@ private:
 	CString OverlayPlanetTip(int index) const;
 	CString OverlayAspectTip(int index) const;
 	// what the drawing needs to know besides the chart
-	void ApplyState();
+	void ApplyState(bool forPaper = false);
 	int HouseOf(AstroPoint const& longitude) const;
 
 private:

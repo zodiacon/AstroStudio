@@ -127,6 +127,7 @@
 #define IDC_COLOR_LOAD                  1071
 #define IDC_COLOR_SAVE                  1072
 #define IDC_DIR_ARC                     1073
+#define IDC_DIR_ARC_LABEL               1099
 #define IDC_AN_CHART                    1074
 #define IDC_AN_TYPE                     1075
 #define IDC_AN_FROM_DAY                 1076
@@ -192,14 +193,15 @@
 #define ID_ANALYSIS_REFRESH             32810
 #define ID_CHART_ANALYSIS               32811
 #define ID_ANALYSIS_CANCEL              32812
+#define ID_CHART_OVERLAY_DATE           32813
 
 // Next default values for new objects
 // 
 #ifdef APSTUDIO_INVOKED
 #ifndef APSTUDIO_READONLY_SYMBOLS
 #define _APS_NEXT_RESOURCE_VALUE        241
-#define _APS_NEXT_COMMAND_VALUE         32813
-#define _APS_NEXT_CONTROL_VALUE         1099
+#define _APS_NEXT_COMMAND_VALUE         32814
+#define _APS_NEXT_CONTROL_VALUE         1100
 #define _APS_NEXT_SYMED_VALUE           108
 #endif
 #endif

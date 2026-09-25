@@ -88,6 +88,8 @@ protected:
 		COMMAND_ID_HANDLER(ID_NEW_CHART, OnNewChart)
 		COMMAND_ID_HANDLER(ID_EDIT_COPY, OnEditCopy)
 		COMMAND_ID_HANDLER(ID_FILE_EXPORT, OnExport)
+		COMMAND_ID_HANDLER(ID_FILE_PRINT, OnPrint)
+		COMMAND_ID_HANDLER(ID_FILE_PRINT_PREVIEW, OnPrint)
 	END_MSG_MAP()
 
 	// Planet is last: the columns of the bodies follow it, one value each
@@ -155,6 +157,7 @@ private:
 	LRESULT OnEditCopy(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/);
 	LRESULT OnOptions(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/);
 	LRESULT OnExport(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/);
+	LRESULT OnPrint(WORD /*wNotifyCode*/, WORD wID, HWND /*hWndCtl*/, BOOL& /*bHandled*/);
 	LRESULT OnNewChart(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/);
 	LRESULT OnDestroy(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, BOOL& /*bHandled*/);
 	LRESULT OnTimer(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, BOOL& /*bHandled*/);

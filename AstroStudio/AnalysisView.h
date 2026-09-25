@@ -61,6 +61,8 @@ public:
 	ALT_MSG_MAP(1)
 		COMMAND_ID_HANDLER(ID_EDIT_COPY, OnEditCopy)
 		COMMAND_ID_HANDLER(ID_FILE_EXPORT, OnExport)
+		COMMAND_ID_HANDLER(ID_FILE_PRINT, OnPrint)
+		COMMAND_ID_HANDLER(ID_FILE_PRINT_PREVIEW, OnPrint)
 	END_MSG_MAP()
 
 private:
@@ -83,6 +85,7 @@ private:
 	LRESULT OnThemeChanged(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, BOOL& /*bHandled*/);
 	LRESULT OnEditCopy(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/);
 	LRESULT OnExport(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/);
+	LRESULT OnPrint(WORD /*wNotifyCode*/, WORD wID, HWND /*hWndCtl*/, BOOL& /*bHandled*/);
 
 	// Starts the analysis of a chart (a copy) by settings on a worker thread, stopping the one that was running if there was one.
 	// The tab takes the chart, the settings and the events when it is done.

@@ -132,3 +132,32 @@ bool ChartImage::CopyToClipboard(HWND owner, IWICBitmap* bitmap) {
 		::GlobalFree(mem);		// the clipboard owns it only if it took it
 	return ok;
 }
+
+std::vector<BYTE> ChartImage::ToDib(IWICBitmap* bitmap) {
+	UINT width, height;
+	bitmap->GetSize(&width, &height);
+	CComPtr<IWICBitmapLock> lock;
+	WICRect all{ 0, 0, (INT)width, (INT)height };
+	if (FAILED(bitmap->Lock(&all, WICBitmapLockRead, &lock)))
+		return {};
+	UINT stride = 0, bytes = 0;
+	BYTE* pixels = nullptr;
+	if (FAILED(lock->GetStride(&stride)) || FAILED(lock->GetDataPointer(&bytes, &pixels)))
+		return {};
+
+	const size_t rowBytes = (size_t)width * 4;
+	std::vector<BYTE> dib(sizeof(BITMAPINFOHEADER) + rowBytes * height);
+	auto header = reinterpret_cast<BITMAPINFOHEADER*>(dib.data());
+	*header = {};
+	header->biSize = sizeof(BITMAPINFOHEADER);
+	header->biWidth = (LONG)width;
+	header->biHeight = (LONG)height;		// the rows are stored bottom-up
+	header->biPlanes = 1;
+	header->biBitCount = 32;
+	header->biCompression = BI_RGB;
+	header->biSizeImage = (DWORD)(rowBytes * height);
+	auto dest = dib.data() + sizeof(BITMAPINFOHEADER);
+	for (UINT y = 0; y < height; y++)
+		memcpy(dest + rowBytes * (height - 1 - y), pixels + (size_t)stride * y, rowBytes);
+	return dib;
+}

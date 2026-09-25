@@ -3,6 +3,7 @@
 #include "AstroPoint.h"
 #include "DefaultFont.h"
 #include "ChartData.h"
+#include <functional>
 class DateTime;
 enum class AspectType;
 
@@ -39,6 +40,20 @@ struct Helpers abstract final {
 	// fills a house system drop-down list; the item data of each entry is the HouseSystem
 	static void FillHouseSystems(CComboBox combo);
 	static ChartData CreateChartData(ChartInfo info, HouseSystem houseSystem = HouseSystem::Koch);
+	// A table for Copy and Export: the headers and, for a row and a column, the cell as plain words (no glyphs) - what the lists
+	// show, in the order they are declared.
+	struct TableSource {
+		std::vector<CString> Headers;
+		int Rows{ 0 };
+		std::function<CString(int row, int column)> Cell;
+	};
+	// the headers and the given rows (all of them if none are given), as tab-separated text or as CSV with quoted cells
+	static CString TableText(TableSource const& table, std::vector<int> const& rows, bool csv);
+	// puts the selected rows of a list view (whose row numbers are the table's) on the clipboard as tab-separated text; false, having
+	// done nothing, if no row is selected
+	static bool CopyListRows(HWND owner, HWND list, TableSource const& table);
+	// writes all the rows as a CSV file for Excel (UTF-8 with a byte order mark); says so if it can't
+	static bool SaveTable(HWND owner, TableSource const& table, PCWSTR path, PCWSTR what);
 	// puts text on the clipboard; false if the clipboard could not be opened
 	static bool CopyTextToClipboard(HWND owner, PCWSTR text);
 	// Writes text as UTF-8 with a byte order mark (which is how Excel knows it is UTF-8: the degree signs need it). On failure says

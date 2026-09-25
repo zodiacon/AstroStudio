@@ -1,5 +1,6 @@
 #include "pch.h"
 #include "AnalysisView.h"
+#include "Printing.h"
 #include "AnalysisDlg.h"
 #include "AnalysisNames.h"
 #include "AppSettings.h"
@@ -140,11 +141,16 @@ void CAnalysisView::PageActivated(bool active) {
 	auto& ui = Frame()->GetUI();
 	if (active) {
 		ui.UIEnable(ID_FILE_EXPORT, TRUE);
+		ui.UIEnable(ID_FILE_PRINT, TRUE);
+		ui.UIEnable(ID_FILE_PRINT_PREVIEW, TRUE);
 		UpdateViewUI();
 		ShowRunning(m_Job != nullptr);
 	}
-	else
+	else {
 		ui.UIEnable(ID_FILE_EXPORT, FALSE);		// the next page enables it again if it can export
+		ui.UIEnable(ID_FILE_PRINT, FALSE);
+		ui.UIEnable(ID_FILE_PRINT_PREVIEW, FALSE);
+	}
 }
 
 LRESULT CAnalysisView::OnViewGlyphs(WORD, WORD, HWND, BOOL&) {
@@ -672,6 +678,23 @@ LRESULT CAnalysisView::OnEditCopy(WORD, WORD, HWND, BOOL&) {
 		return 0;
 	if (!Helpers::CopyTextToClipboard(m_hWnd, BuildTable(rows, false)))
 		AtlMessageBox(m_hWnd, L"The rows could not be copied to the clipboard.", L"Astro Studio", MB_ICONWARNING);
+	return 0;
+}
+
+LRESULT CAnalysisView::OnPrint(WORD, WORD id, HWND, BOOL&) {
+	// the events the list shows (what the filter lets through), in words
+	std::unique_ptr<Printing::TableDocument> document;
+	{
+		CWaitCursor wait;
+		std::vector<int> rows(m_Shown.size());
+		for (int i = 0; i < static_cast<int>(rows.size()); i++)
+			rows[i] = i;
+		document = std::make_unique<Printing::TableDocument>(L"Analysis", L"", Printing::TableFromText(BuildTable(rows, false)), true);
+	}
+	if (id == ID_FILE_PRINT_PREVIEW)
+		Printing::Preview(m_hWnd, *document);
+	else
+		Printing::Print(m_hWnd, *document);
 	return 0;
 }
 
