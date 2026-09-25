@@ -13,7 +13,15 @@ public:
 	explicit CAspectListView(IMainFrame* frame);
 
 	void SetAspects(std::vector<AspectData> aspects) noexcept;
+	// With an overlay (transits...) the list is the aspects between its planets and the chart's - as on the wheel and in the grid
+	// the chart's own aren't shown then - with the overlay's label before the planets that belong to it ("Transit Sun") and the
+	// chart's label ("natal") before the others. Refresh puts it on the screen.
+	void SetOverlayAspects(std::vector<AspectData> aspects, std::wstring label, std::wstring baseLabel);
+	// no overlay: the chart's own aspects again
+	void ClearOverlayAspects();
 	void Refresh();
+	// puts the text font the user chose with Options > Font on the list (nothing if they have not chosen one)
+	void ApplyTextFont();
 
 	CString GetColumnText(HWND, int row, int col) const;
 	void DoSort(SortInfo const* si);
@@ -41,6 +49,16 @@ private:
 	static COLORREF GetElementColor(ZodiacSign sign);
 
 	CListViewCtrl m_List;
-	CFont m_Font;
-	std::vector<AspectData> m_Aspects;
+	CFont m_Font, m_TextFont;
+	// a row of the list: a chart's aspect or an overlay's
+	struct Row {
+		AspectData Data;
+		bool Overlay;
+	};
+	std::vector<AspectData> m_Natal, m_OverlayAspects;
+	std::wstring m_OverlayLabel, m_BaseLabel;
+	bool m_HasOverlay{ false };
+	std::vector<Row> m_Rows;
+	// the name of a planet of a row, with the label of the chart or the overlay it is in when the row is an overlay's
+	CString PlanetLabel(Row const& row, bool first) const;
 };

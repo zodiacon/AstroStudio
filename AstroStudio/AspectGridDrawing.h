@@ -3,6 +3,7 @@
 #include "ChartData.h"
 #include "Aspects.h"
 #include "D2DResources.h"
+#include "ChartOverlay.h"
 
 struct AspectGridDrawingParameters {
 	D2D1_COLOR_F BackColor{ D2D1::ColorF(D2D1::ColorF::White) };
@@ -12,6 +13,7 @@ struct AspectGridDrawingParameters {
 	D2D1_COLOR_F HardAspectColor{ D2D1::ColorF(D2D1::ColorF::Red) };
 	D2D1_COLOR_F MinorAspectColor{ D2D1::ColorF(D2D1::ColorF::Purple) };
 	D2D1_COLOR_F AspectColor{ D2D1::ColorF(D2D1::ColorF::Black) };
+	D2D1_COLOR_F OverlayColor{ D2D1::ColorF(D2D1::ColorF::Crimson) };		// the overlay's planets, when they are down the side
 
 	int CellSize{ 44 };
 };
@@ -27,9 +29,12 @@ public:
 	AspectGridDrawing& Chart(ChartData* data);
 	ChartData* Chart() const;
 	AspectGridDrawing& Aspects(std::vector<AspectData>* aspects);
+	// With an overlay (transits...) the grid is the overlay's planets down the side against the chart's along the top, with the
+	// overlay's aspects between them (the chart's own aspects are not shown then). Null: the chart's planets against each other.
+	AspectGridDrawing& Overlay(ChartOverlay const* overlay);
 
-	// pixel size (width == height) needed to draw the current chart's grid
-	int GridSize() const;
+	// the pixel size needed to draw the grid as it is now (not square with an overlay: it has its own planets)
+	SIZE GridSize() const;
 
 private:
 	HRESULT EnsureFormats();
@@ -37,9 +42,12 @@ private:
 	AspectGridDrawingParameters m_params;
 	ChartData* m_data{ nullptr };
 	std::vector<AspectData>* m_aspects{ nullptr };
+	ChartOverlay const* m_overlay{ nullptr };
 
 	// text formats scale with the cell size, so they are rebuilt when it changes
 	CComPtr<IDWriteTextFormat> m_glyphFormat;
 	CComPtr<IDWriteTextFormat> m_infoFormat;
+	CComPtr<IDWriteTextFormat> m_labelFormat;
 	int m_formatCellSize{ 0 };
+	std::wstring m_formatFamily;
 };

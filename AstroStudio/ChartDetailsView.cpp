@@ -223,7 +223,39 @@ LRESULT CChartDetailsView::OnInitView(UINT, WPARAM, LPARAM, BOOL&) {
 	cm->UpdateColumns();
 	cm->DeleteColumn(0);
 
+	ApplyTextFont();
 	return 0;
+}
+
+void CChartDetailsView::ApplyTextFont() {
+	int size = 0;
+	// the fields and labels only take the family and at most the size they were laid out for (a dialog's controls don't move),
+	// the two lists a fifth larger than the chosen size, as they are made
+	if (!Helpers::UserTextFont(m_TextFont, 0, &size) || !Helpers::UserTextFont(m_ListFont, size * 12 / 10))
+		return;
+	Helpers::UserTextFont(m_TextFont, std::min(size, 90));
+	for (HWND child = GetWindow(GW_CHILD); child; child = ::GetWindow(child, GW_HWNDNEXT))
+		if (child != m_ctlPlanets && child != m_ctlHouses)
+			::SendMessage(child, WM_SETFONT, reinterpret_cast<WPARAM>(m_TextFont.m_hFont), TRUE);
+	m_ctlPlanets.SetFont(m_ListFont);
+	m_ctlHouses.SetFont(m_ListFont);
+
+	// the glyph font of the position columns goes with the lists
+	LOGFONT lf;
+	m_ListFont.GetLogFont(lf);
+	wcscpy_s(lf.lfFaceName, L"HamburgSymbols");
+	if (m_Font)
+		m_Font.DeleteObject();
+	m_Font.CreateFontIndirect(&lf);
+	// the columns grow with the text (they were made for 9 points, a fifth larger)
+	double ratio = std::max(1.0, size * 1.2 / 108);
+	const int planetWidths[] = { 30, 115, 70, 75 }, houseWidths[] = { 40, 90 };
+	for (int i = 0; i < _countof(planetWidths); i++)
+		Helpers::SetColumnWidth(m_ctlPlanets, i, static_cast<int>(std::lround(planetWidths[i] * ratio)));
+	for (int i = 0; i < _countof(houseWidths); i++)
+		Helpers::SetColumnWidth(m_ctlHouses, i, static_cast<int>(std::lround(houseWidths[i] * ratio)));
+	m_ctlPlanets.Invalidate();
+	m_ctlHouses.Invalidate();
 }
 
 LRESULT CChartDetailsView::OnHouseSystemChanged(WORD, WORD, HWND, BOOL&) {

@@ -1,5 +1,6 @@
 #include "pch.h"
 #include "AspectGridWnd.h"
+#include "ChartColors.h"
 
 LRESULT CAspectGridWnd::OnEraseBkgnd(UINT, WPARAM, LPARAM, BOOL&) {
 	return 1;
@@ -44,20 +45,31 @@ void CAspectGridWnd::SetAspects(std::vector<AspectData> aspects) noexcept {
 	m_Aspects = std::move(aspects);
 }
 
-int CAspectGridWnd::NaturalSize() const noexcept {
+void CAspectGridWnd::SetOverlay(ChartOverlay const* overlay) noexcept {
+	m_Overlay = overlay;
+}
+
+SIZE CAspectGridWnd::NaturalSize() const noexcept {
 	return m_Drawing.GridSize();
 }
 
 void CAspectGridWnd::Refresh() {
+	// the wheel's colours - the program's for the look, with the user's on top - so that the grid is of a piece with the wheel
+	bool dark = WTLHelper::IsDarkMode();
+	auto wheel = dark ? ChartDrawingParameters::Dark() : ChartDrawingParameters();
+	ChartColors::Current().Apply(wheel, dark);
 	AspectGridDrawingParameters params;
-	if (WTLHelper::IsDarkMode()) {
-		params.BackColor = ColorFromRgb(30, 30, 30);
-		params.GridLineColor = ColorFromRgb(90, 90, 90);
-		params.AspectColor = ColorFromRgb(220, 220, 220);
-	}
+	params.BackColor = wheel.BackColor;
+	params.GridLineColor = wheel.GridColor;
+	params.AspectColor = wheel.TextColor;
+	params.SoftAspectColor = wheel.SoftAspectColor;
+	params.HardAspectColor = wheel.HardAspectColor;
+	params.MinorAspectColor = wheel.MinorAspectColor;
+	params.OverlayColor = wheel.OverlayColor;
 	m_Drawing.DrawingParameters(params);
 	m_Drawing.Chart(m_ChartData);
 	m_Drawing.Aspects(&m_Aspects);
+	m_Drawing.Overlay(m_Overlay);
 
 	Invalidate();
 }

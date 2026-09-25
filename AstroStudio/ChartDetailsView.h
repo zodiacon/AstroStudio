@@ -32,6 +32,8 @@ public:
 	bool IsLocationEdited() const;
 
 	void UpdateControls(Recalc type = Recalc::All);
+	// puts the text font the user chose with Options > Font on the fields and lists (nothing if they have not chosen one)
+	void ApplyTextFont();
 	// Turns every field and button off (the two lists stay usable). For good: a read-only chart stays read-only.
 	void SetReadOnly();
 
@@ -107,7 +109,7 @@ private:
 	CUpDownCtrl m_ctlHarmonicSpin;
 	ChartData* m_Data{ nullptr };
 	std::vector<PlanetPosition> m_Planets;
-	CFont m_Font;
+	CFont m_Font, m_TextFont, m_ListFont;
 	CWindow m_NotifyWnd;
 	CLocationControls m_Location;
 	CTimeControls m_Time;

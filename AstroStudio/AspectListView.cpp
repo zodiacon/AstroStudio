@@ -10,11 +10,40 @@
 CAspectListView::CAspectListView(IMainFrame* frame) : CFrameView(frame) {
 }
 
+void CAspectListView::ApplyTextFont() {
+	if (!Helpers::UserTextFont(m_TextFont))
+		return;
+	m_List.SetFont(m_TextFont);
+	// the glyph font goes with it
+	LOGFONT lf;
+	m_TextFont.GetLogFont(lf);
+	wcscpy_s(lf.lfFaceName, L"HamburgSymbols");
+	if (m_Font)
+		m_Font.DeleteObject();
+	m_Font.CreateFontIndirect(&lf);
+	// the columns grow with the text (they were made for 9 points)
+	int size = -MulDiv(lf.lfHeight, 72 * 10, ::GetDeviceCaps(CClientDC(m_hWnd), LOGPIXELSY));
+	double ratio = std::max(1.0, size / 90.0);
+	const int widths[] = { 120, 100, 120, 100, 110, 60, 50 };
+	for (int i = 0; i < _countof(widths); i++)
+		Helpers::SetColumnWidth(m_List, i, static_cast<int>(std::lround(widths[i] * ratio)));
+	m_List.Invalidate();
+}
+
+CString CAspectListView::PlanetLabel(Row const& row, bool first) const {
+	auto planet = (first ? row.Data.Planet1 : row.Data.Planet2).Planet;
+	if (!row.Overlay)
+		return Helpers::GetPlanetName(planet);
+	CString text;
+	text.Format(L"%s %s", first ? m_OverlayLabel.c_str() : m_BaseLabel.c_str(), Helpers::GetPlanetName(planet));
+	return text;
+}
+
 CString CAspectListView::GetColumnText(HWND h, int row, int col) const {
-	auto& aspect = m_Aspects[row];
+	auto& aspect = m_Rows[row].Data;
 	switch (GetColumnManager(h)->GetColumnTag<ColumnType>(col)) {
-		case ColumnType::Planet1: return Helpers::GetPlanetName(aspect.Planet1.Planet);
-		case ColumnType::Planet2: return Helpers::GetPlanetName(aspect.Planet2.Planet);
+		case ColumnType::Planet1: return PlanetLabel(m_Rows[row], true);
+		case ColumnType::Planet2: return PlanetLabel(m_Rows[row], false);
 		case ColumnType::Aspect: return Helpers::GetAspectName(aspect.Type);
 		case ColumnType::Orb: {
 			CString s;
@@ -29,7 +58,9 @@ CString CAspectListView::GetColumnText(HWND h, int row, int col) const {
 }
 
 void CAspectListView::DoSort(SortInfo const* si) {
-	auto compare = [&](auto& a1, auto& a2) {
+	auto compare = [&](Row const& r1, Row const& r2) {
+		auto& a1 = r1.Data;
+		auto& a2 = r2.Data;
 		switch (GetColumnManager(m_List)->GetColumnTag<ColumnType>(si->SortColumn)) {
 			case ColumnType::Planet1: return SortHelper::Sort(a1.Planet1.Planet, a2.Planet1.Planet, si->SortAscending);
 			case ColumnType::Planet2: return SortHelper::Sort(a1.Planet2.Planet, a2.Planet2.Planet, si->SortAscending);
@@ -41,7 +72,7 @@ void CAspectListView::DoSort(SortInfo const* si) {
 		}
 		return false;
 	};
-	std::ranges::sort(m_Aspects, compare);
+	std::ranges::sort(m_Rows, compare);
 }
 
 DWORD CAspectListView::OnPrePaint(int, LPNMCUSTOMDRAW) noexcept {
@@ -55,7 +86,8 @@ DWORD CAspectListView::OnItemPrePaint(int, LPNMCUSTOMDRAW) noexcept {
 DWORD CAspectListView::OnSubItemPrePaint(int, LPNMCUSTOMDRAW cd) const noexcept {
 	auto lv = (LPNMLVCUSTOMDRAW)cd;
 	auto col = GetColumnManager(m_List)->GetColumnTag<ColumnType>(lv->iSubItem);
-	auto& aspect = m_Aspects[(int)cd->dwItemSpec];
+	auto& row = m_Rows[(int)cd->dwItemSpec];
+	auto& aspect = row.Data;
 
 	// every column is fully custom-painted (never leaving anything to the control's own
 	// default draw) so behavior - in particular, whether hovering highlights a row - is
@@ -63,10 +95,10 @@ DWORD CAspectListView::OnSubItemPrePaint(int, LPNMCUSTOMDRAW cd) const noexcept 
 	// while others are custom-drawn is what caused the inconsistent hover look
 	switch (col) {
 		case ColumnType::Planet1:
-			DrawGlyphAndName(cd, DefaultFont::Get().GetPlanetGlyphAsString(aspect.Planet1.Planet), Helpers::GetPlanetName(aspect.Planet1.Planet));
+			DrawGlyphAndName(cd, DefaultFont::Get().GetPlanetGlyphAsString(aspect.Planet1.Planet), PlanetLabel(row, true));
 			break;
 		case ColumnType::Planet2:
-			DrawGlyphAndName(cd, DefaultFont::Get().GetPlanetGlyphAsString(aspect.Planet2.Planet), Helpers::GetPlanetName(aspect.Planet2.Planet));
+			DrawGlyphAndName(cd, DefaultFont::Get().GetPlanetGlyphAsString(aspect.Planet2.Planet), PlanetLabel(row, false));
 			break;
 		case ColumnType::Aspect:
 			DrawGlyphAndName(cd, DefaultFont::Get().GetAspectGlyphAsString(aspect.Type), Helpers::GetAspectName(aspect.Type));
@@ -176,12 +208,35 @@ COLORREF CAspectListView::GetElementColor(ZodiacSign sign) {
 }
 
 void CAspectListView::SetAspects(std::vector<AspectData> aspects) noexcept {
-	m_Aspects = std::move(aspects);
+	m_Natal = std::move(aspects);
+}
+
+void CAspectListView::SetOverlayAspects(std::vector<AspectData> aspects, std::wstring label, std::wstring baseLabel) {
+	m_OverlayAspects = std::move(aspects);
+	m_OverlayLabel = std::move(label);
+	m_BaseLabel = std::move(baseLabel);
+	m_HasOverlay = true;
+}
+
+void CAspectListView::ClearOverlayAspects() {
+	m_OverlayAspects.clear();
+	m_OverlayLabel.clear();
+	m_BaseLabel.clear();
+	m_HasOverlay = false;
 }
 
 void CAspectListView::Refresh() {
+	m_Rows.clear();
+	if (m_HasOverlay) {
+		for (auto const& aspect : m_OverlayAspects)
+			m_Rows.push_back({ aspect, true });
+	}
+	else {
+		for (auto const& aspect : m_Natal)
+			m_Rows.push_back({ aspect, false });
+	}
 	Sort(GetSortInfo(m_List));
-	m_List.SetItemCountEx((int)m_Aspects.size(), LVSICF_NOSCROLL);
+	m_List.SetItemCountEx((int)m_Rows.size(), LVSICF_NOSCROLL);
 	if (m_List.GetItemCount() > 0)
 		m_List.RedrawItems(0, m_List.GetItemCount() - 1);
 }
@@ -197,14 +252,15 @@ LRESULT CAspectListView::OnCreate(UINT, WPARAM, LPARAM, BOOL&) {
 	m_Font.CreateFontIndirect(&lf);
 
 	auto cm = GetColumnManager(m_List);
-	cm->AddColumn(L"P1", LVCFMT_LEFT, 90, ColumnType::Planet1);
+	cm->AddColumn(L"P1", LVCFMT_LEFT, 120, ColumnType::Planet1);
 	cm->AddColumn(L"P1 Pos", LVCFMT_LEFT, 100, ColumnType::Planet1Pos);
-	cm->AddColumn(L"P2", LVCFMT_LEFT, 90, ColumnType::Planet2);
+	cm->AddColumn(L"P2", LVCFMT_LEFT, 120, ColumnType::Planet2);
 	cm->AddColumn(L"P2 Pos", LVCFMT_LEFT, 100, ColumnType::Planet2Pos);
 	cm->AddColumn(L"Aspect", LVCFMT_LEFT, 110, ColumnType::Aspect);
 	cm->AddColumn(L"Orb", LVCFMT_RIGHT | LVCFMT_FIXED_WIDTH, 60, ColumnType::Orb);
 	cm->AddColumn(L"A/S", LVCFMT_CENTER | LVCFMT_FIXED_WIDTH, 50, ColumnType::Applying);
 	cm->UpdateColumns();
+	ApplyTextFont();
 
 	DarkMode::setDarkWndNotifySafe(m_hWnd);
 

@@ -278,6 +278,7 @@ LRESULT CMainFrame::OnFont(WORD, WORD, HWND, BOOL&) {
 	dlg.GetCurrentFont(&chosen);
 	chosen.lfHeight = std::clamp(dlg.GetSize(), 70, 180);
 	AppSettings::Get().TextFont(chosen);
+	D2DResources::Get().TextFontFamily(chosen.lfFaceName);
 	for (int i = 0; i < m_view.GetPageCount(); i++)
 		if (auto view = ViewOfPage(i))
 			view->TextFontChanged();

@@ -17,8 +17,10 @@ HRESULT AspectGridDrawing::Draw(ID2D1RenderTarget* rt) {
 	if (FAILED(hr))
 		return hr;
 
+	// the planets along the top (the chart's) and down the side (the chart's, or the overlay's)
 	auto const& planets = m_data->AllPlanets();
-	int n = (int)planets.size();
+	auto const& rowPlanets = m_overlay ? m_overlay->Data.AllPlanets() : planets;
+	int columns = (int)planets.size() + 1, rows = (int)rowPlanets.size() + 1;
 	int cell = m_params.CellSize;
 
 	rt->Clear(m_params.BackColor);
@@ -40,7 +42,13 @@ HRESULT AspectGridDrawing::Draw(ID2D1RenderTarget* rt) {
 	// AspectCalculator::Calculate's iteration order
 	//
 	std::map<std::pair<Planet, Planet>, AspectData const*> lookup;
-	if (m_aspects) {
+	if (m_overlay) {
+		// the overlay's planet is Planet1 and the chart's Planet2; the same planet on both sides is a pair like any other, so
+		// the order is kept
+		for (auto const& a : m_overlay->Aspects)
+			lookup[{a.Planet1.Planet, a.Planet2.Planet}] = &a;
+	}
+	else if (m_aspects) {
 		for (auto const& a : *m_aspects) {
 			auto p1 = a.Planet1.Planet, p2 = a.Planet2.Planet;
 			if (p1 > p2)
@@ -53,27 +61,32 @@ HRESULT AspectGridDrawing::Draw(ID2D1RenderTarget* rt) {
 	// exactly one pixel row/column; this also keeps the outer border inside the target
 	const float margin = 0.5f;
 
-	int size = n + 1;
-	for (int row = 0; row < size; row++) {
-		for (int col = 0; col < size; col++) {
+	for (int row = 0; row < rows; row++) {
+		for (int col = 0; col < columns; col++) {
 			D2D1_RECT_F rc = D2D1::RectF(margin + col * cell, margin + row * cell, margin + (col + 1) * cell, margin + (row + 1) * cell);
 			rt->DrawRectangle(rc, use(m_params.GridLineColor), 1);
 
-			if (row == 0 && col == 0)
+			if (row == 0 && col == 0) {
+				// with an overlay the corner says what the rows are
+				if (m_overlay && !m_overlay->Label.empty())
+					drawText(m_overlay->Label.c_str(), (UINT32)m_overlay->Label.size(), m_labelFormat,
+						D2D1::Point2F(margin + cell / 2.0f, margin + cell / 2.0f), m_params.OverlayColor);
 				continue;
+			}
 
 			D2D1_POINT_2F center = D2D1::Point2F(margin + col * cell + cell / 2.0f, margin + row * cell + cell / 2.0f);
 
 			if (row == 0 || col == 0) {
-				WCHAR glyph = DefaultFont::Get().GetPlanetGlyph(planets[(row == 0 ? col : row) - 1].Planet);
-				drawText(&glyph, 1, m_glyphFormat, center, m_params.AspectColor);
+				bool side = col == 0;		// the planets down the side may be the overlay's, in its colour
+				WCHAR glyph = DefaultFont::Get().GetPlanetGlyph((side ? rowPlanets[row - 1] : planets[col - 1]).Planet);
+				drawText(&glyph, 1, m_glyphFormat, center, side && m_overlay ? m_params.OverlayColor : m_params.AspectColor);
 				continue;
 			}
-			if (row == col)
+			if (!m_overlay && row == col)
 				continue;	// no self-aspect; the mirrored pair is drawn on both sides of the diagonal
 
-			auto p1 = planets[row - 1].Planet, p2 = planets[col - 1].Planet;
-			auto key = p1 < p2 ? std::make_pair(p1, p2) : std::make_pair(p2, p1);
+			auto p1 = rowPlanets[row - 1].Planet, p2 = planets[col - 1].Planet;
+			auto key = m_overlay || p1 < p2 ? std::make_pair(p1, p2) : std::make_pair(p2, p1);
 			auto it = lookup.find(key);
 			if (it == lookup.end())
 				continue;
@@ -104,11 +117,11 @@ HRESULT AspectGridDrawing::EnsureFormats() {
 	auto hr = resources.Ensure();
 	if (FAILED(hr))
 		return hr;
-	if (m_glyphFormat && m_infoFormat && m_formatCellSize == m_params.CellSize)
+	if (m_glyphFormat && m_infoFormat && m_labelFormat && m_formatCellSize == m_params.CellSize && m_formatFamily == resources.TextFontFamily())
 		return S_OK;
 
 	// 0.375 and 0.22 of the cell size in points, in DIPs at 96 DPI
-	CComPtr<IDWriteTextFormat> glyphFormat, infoFormat;
+	CComPtr<IDWriteTextFormat> glyphFormat, infoFormat, labelFormat;
 	hr = resources.CreateGlyphFormat(m_params.CellSize * 0.375f * 96 / 72, &glyphFormat);
 	if (FAILED(hr))
 		return hr;
@@ -116,9 +129,15 @@ HRESULT AspectGridDrawing::EnsureFormats() {
 	if (FAILED(hr))
 		return hr;
 
+	hr = resources.CreateTextFormat(m_params.CellSize * 0.15f * 96 / 72, &labelFormat);
+	if (FAILED(hr))
+		return hr;
+
 	m_glyphFormat = glyphFormat;
 	m_infoFormat = infoFormat;
+	m_labelFormat = labelFormat;
 	m_formatCellSize = m_params.CellSize;
+	m_formatFamily = resources.TextFontFamily();
 	return S_OK;
 }
 
@@ -149,7 +168,13 @@ AspectGridDrawing& AspectGridDrawing::Aspects(std::vector<AspectData>* aspects) 
 	return *this;
 }
 
-int AspectGridDrawing::GridSize() const {
-	int n = m_data ? (int)m_data->AllPlanets().size() : 0;
-	return (n + 1) * m_params.CellSize + 1;	// +1 for the last grid line
+AspectGridDrawing& AspectGridDrawing::Overlay(ChartOverlay const* overlay) {
+	m_overlay = overlay;
+	return *this;
+}
+
+SIZE AspectGridDrawing::GridSize() const {
+	int columns = m_data ? (int)m_data->AllPlanets().size() : 0;
+	int rows = m_overlay ? (int)m_overlay->Data.AllPlanets().size() : columns;
+	return { (columns + 1) * m_params.CellSize + 1, (rows + 1) * m_params.CellSize + 1 };	// +1 for the last grid line
 }

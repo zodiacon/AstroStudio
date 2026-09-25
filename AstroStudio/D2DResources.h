@@ -40,6 +40,13 @@ public:
 	// centered text formats of arbitrary size (in DIPs), for the embedded glyph font or for ordinary text
 	HRESULT CreateGlyphFormat(float size, IDWriteTextFormat** format) const;
 	HRESULT CreateTextFormat(float size, IDWriteTextFormat** format) const;
+	// the family CreateTextFormat makes text in: Segoe UI, or the font the user chose with Options > Font
+	std::wstring const& TextFontFamily() const noexcept {
+		return m_textFamily;
+	}
+	void TextFontFamily(std::wstring family) {
+		m_textFamily = family.empty() ? L"Segoe UI" : std::move(family);
+	}
 
 private:
 	HRESULT CreateFormat(PCWSTR family, IDWriteFontCollection* collection, float size, IDWriteTextFormat** format) const;
@@ -51,6 +58,7 @@ private:
 	CComPtr<IDWriteInMemoryFontFileLoader> m_fontLoader;
 	CComPtr<IDWriteFontCollection1> m_fontCollection;
 	std::wstring m_glyphFamily;
+	std::wstring m_textFamily{ L"Segoe UI" };
 	CComPtr<IDWriteTextFormat> m_glyphFormat;
 	CComPtr<IDWriteTextFormat> m_planetFormat;
 };

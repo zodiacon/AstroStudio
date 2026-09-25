@@ -45,6 +45,14 @@ void CChartView::UpdateAspects() {
 
 void CChartView::WheelOptionsChanged() {
 	m_ChartDrawing.Refresh();
+	m_AspectGrid.Refresh();		// (its colours are the wheel's)
+}
+
+void CChartView::TextFontChanged() {
+	m_DetailsView.ApplyTextFont();
+	m_AspectList.ApplyTextFont();
+	m_AspectGrid.Refresh();		// (its text is in the same family)
+	m_ChartDrawing.Refresh();
 }
 
 void CChartView::AspectSettingsChanged() {
@@ -654,6 +662,11 @@ void CChartView::UpdateOverlayUI() {
 void CChartView::UpdateOverlay() {
 	if (!m_Overlay) {
 		m_ChartDrawing.ClearOverlay();
+		m_AspectList.ClearOverlayAspects();
+		m_AspectList.Refresh();
+		m_AspectGrid.SetOverlay(nullptr);
+		m_AspectGrid.Refresh();
+		UpdateAspectGridScrollSize();
 		return;
 	}
 
@@ -705,6 +718,11 @@ void CChartView::UpdateOverlay() {
 	AspectCalculator calc(AspectOptions::Current().Transit);
 	overlay.Aspects = calc.CalcBetween(overlay.Data.AllPlanets(), m_Data.AllPlanets());
 
+	m_AspectList.SetOverlayAspects(overlay.Aspects, overlay.Label, overlay.BaseLabel);
+	m_AspectList.Refresh();
+	m_AspectGrid.SetOverlay(&overlay);
+	m_AspectGrid.Refresh();
+	UpdateAspectGridScrollSize();
 	m_ChartDrawing.SetOverlay(&overlay);
 	m_ChartDrawing.Refresh();
 }
@@ -943,7 +961,7 @@ LRESULT CChartView::OnThemeChanged(UINT, WPARAM, LPARAM, BOOL&) {
 
 void CChartView::UpdateAspectGridScrollSize() {
 	auto size = m_AspectGrid.NaturalSize();
-	m_AspectGridScroll.SetScrollSize(size, size);
+	m_AspectGridScroll.SetScrollSize(size.cx, size.cy);
 	m_AspectGridScroll.UpdateLayout();
 }
 

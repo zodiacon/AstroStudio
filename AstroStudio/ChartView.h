@@ -39,6 +39,7 @@ public:
 	bool CanClose() override;
 	void AspectSettingsChanged() override;
 	void WheelOptionsChanged() override;
+	void TextFontChanged() override;
 	bool GetChart(OpenChart& chart) const override;
 	bool ShowMoment(DateTime const& ut, MomentKind kind) override;
 

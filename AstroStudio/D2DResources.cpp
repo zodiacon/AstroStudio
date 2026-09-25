@@ -84,7 +84,7 @@ HRESULT D2DResources::CreateGlyphFormat(float size, IDWriteTextFormat** format) 
 }
 
 HRESULT D2DResources::CreateTextFormat(float size, IDWriteTextFormat** format) const {
-	return CreateFormat(L"Segoe UI", nullptr, size, format);	// nullptr: the system font collection
+	return CreateFormat(m_textFamily.c_str(), nullptr, size, format);	// nullptr: the system font collection
 }
 
 HRESULT D2DResources::CreateFormat(PCWSTR family, IDWriteFontCollection* collection, float size, IDWriteTextFormat** format) const {

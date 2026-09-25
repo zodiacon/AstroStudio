@@ -44,6 +44,12 @@ struct Helpers abstract final {
 	// Writes text as UTF-8 with a byte order mark (which is how Excel knows it is UTF-8: the degree signs need it). On failure says
 	// so in a message box - "<what> could not be saved to <path>: <reason>" - and returns false.
 	static bool SaveTextFileUtf8(HWND owner, PCWSTR path, CString const& text, PCWSTR what);
+	// The text font the user chose with Options > Font (AppSettings::TextFont), as a font of a size in tenths of a point (0: the
+	// size they chose, or 9 points if that wasn't given). False, with nothing made, if they have not chosen one - the views then
+	// keep the fonts they have.
+	static bool UserTextFont(CFont& font, int deciPoints = 0, int* size = nullptr);
+	// sets a column's width even if it is a fixed width one (which the control otherwise leaves as it is)
+	static void SetColumnWidth(CListViewCtrl& list, int column, int width);
 	static COLORREF Darken(COLORREF color, int offset);
 	static COLORREF Lighten(COLORREF color, int offset);
 };

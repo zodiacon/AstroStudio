@@ -3,6 +3,7 @@
 #include "StringHelper.h"
 #include "DateTime.h"
 #include "Aspects.h"
+#include "AppSettings.h"
 #include <cmath>
 
 bool Helpers::LoadAstroFont(UINT id) {
@@ -189,6 +190,33 @@ ChartData Helpers::CreateChartData(ChartInfo info, HouseSystem houseSystem) {
 	data.AddPlanets(GetStandardPlanets());
 	data.AddPlanets({ Planet::Chiron, Planet::TrueNode, Planet::Lilith });
 	return data;
+}
+
+void Helpers::SetColumnWidth(CListViewCtrl& list, int column, int width) {
+	LVCOLUMN info{ LVCF_FMT };
+	if (!list.GetColumn(column, &info))
+		return;
+	int format = info.fmt;
+	info.fmt &= ~LVCFMT_FIXED_WIDTH;
+	list.SetColumn(column, &info);
+	list.SetColumnWidth(column, width);
+	info.fmt = format;
+	list.SetColumn(column, &info);
+}
+
+bool Helpers::UserTextFont(CFont& font, int deciPoints, int* size) {
+	LOGFONT lf = AppSettings::Get().TextFont();
+	if (lf.lfFaceName[0] == 0)
+		return false;
+	if (deciPoints <= 0)
+		deciPoints = lf.lfHeight > 0 ? lf.lfHeight : 90;
+	lf.lfHeight = deciPoints;
+	if (font)
+		font.DeleteObject();
+	font.CreatePointFontIndirect(&lf);
+	if (size)
+		*size = deciPoints;
+	return font != nullptr;
 }
 
 COLORREF Helpers::Darken(COLORREF color, int offset) {

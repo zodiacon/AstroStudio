@@ -12,7 +12,9 @@ public:
 	void SetChartData(ChartData* data) noexcept;
 	void SetAspects(std::vector<AspectData> aspects) noexcept;
 	void Refresh();
-	int NaturalSize() const noexcept;
+	// the overlay's planets go down the side (null: the chart's own); the overlay must outlive its use here
+	void SetOverlay(ChartOverlay const* overlay) noexcept;
+	SIZE NaturalSize() const noexcept;
 
 	BEGIN_MSG_MAP(CAspectGridWnd)
 		MESSAGE_HANDLER(WM_ERASEBKGND, OnEraseBkgnd)
@@ -33,4 +35,5 @@ private:
 	AspectGridDrawing m_Drawing;
 	ChartData* m_ChartData{ nullptr };
 	std::vector<AspectData> m_Aspects;
+	ChartOverlay const* m_Overlay{ nullptr };
 };
