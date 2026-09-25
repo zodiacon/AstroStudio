@@ -33,6 +33,8 @@ struct AspectData {
 	PlanetPosition Planet1;
 	PlanetPosition Planet2;
 	bool Applying;
+	// the widest orb the settings allowed for this pair of planets and this aspect: Orb / MaxOrb says how loose it is
+	float MaxOrb{ 0 };
 
 	bool IsMajor() const noexcept;
 	bool IsSoft() const noexcept;
@@ -83,7 +85,7 @@ public:
 	AspectCalculator& Settings(AspectSettings const& settings);
 	AspectSettings const& Settings() const;
 
-	AspectType GetAspectType(Planet p1, Planet p2, float diff, float& dist) const;
+	AspectType GetAspectType(Planet p1, Planet p2, float diff, float& dist, float* maxOrb = nullptr) const;
 	static bool IsApplying(PlanetPosition p1, PlanetPosition p2, double angle, double exact) noexcept;
 
 private:

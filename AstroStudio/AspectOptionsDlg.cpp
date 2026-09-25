@@ -43,7 +43,7 @@ LRESULT CAspectOptionsDlg::OnInitDialog(UINT, WPARAM, LPARAM, BOOL&) {
 
 	m_SetCombo = GetDlgItem(IDC_ASP_SET);
 	m_SetCombo.AddString(L"Chart aspects");
-	m_SetCombo.AddString(L"Transit aspects");
+	m_SetCombo.AddString(L"Transit / overlay aspects");
 	m_SetCombo.SetCurSel(0);
 
 	m_Aspects = GetDlgItem(IDC_ASP_ASPECTS);

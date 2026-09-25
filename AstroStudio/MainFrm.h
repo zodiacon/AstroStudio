@@ -76,6 +76,7 @@ private:
 	ChartInfo& DefaultChartInfo() override;
 	IView* NewChartWithDialog(ChartInfo const* initial = nullptr) override;
 	bool IsLocationPending() const override;
+	std::vector<OpenChart> OpenCharts(IView* except = nullptr) override;
 
 	// Handler prototypes (uncomment arguments if needed):
 	//	LRESULT MessageHandler(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, BOOL& /*bHandled*/)

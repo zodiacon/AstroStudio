@@ -5,6 +5,12 @@
 struct IView;
 struct ChartInfo;
 
+// a chart open in a tab, as a copy
+struct OpenChart {
+	CString Name;
+	ChartData Data;
+};
+
 struct IMainFrame abstract {
 	virtual HWND GetHwnd() const = 0;
 	virtual BOOL TrackPopupMenu(HMENU hMenu, DWORD flags, int x, int y) = 0;
@@ -27,6 +33,9 @@ struct IMainFrame abstract {
 	// True while the startup geolocation lookup is still running, so a new
 	// "chart for now" knows its location is a placeholder.
 	virtual bool IsLocationPending() const = 0;
+
+	// Copies of the charts open in tabs, in tab order, leaving out `except` (the asker).
+	virtual std::vector<OpenChart> OpenCharts(IView* except = nullptr) = 0;
 };
 
 struct IView {
@@ -46,6 +55,10 @@ struct IView {
 	// the file the view's document lives in, or null
 	virtual PCWSTR FilePath() const {
 		return nullptr;
+	}
+	// The chart the view shows, as a copy with its name (the tab's text), if it is a chart.
+	virtual bool GetChart(OpenChart& chart) const {
+		return false;
 	}
 };
 

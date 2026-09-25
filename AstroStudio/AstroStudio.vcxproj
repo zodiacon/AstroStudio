@@ -309,6 +309,7 @@
     <Image Include="res\Globe.ico" />
     <Image Include="res\glyph.ico" />
     <Image Include="res\grid.ico" />
+    <Image Include="res\Hourglass.ico" />
     <Image Include="res\Open.ico" />
     <Image Include="res\pin.ico" />
     <Image Include="res\play.ico" />
@@ -317,6 +318,7 @@
     <Image Include="res\Save.ico" />
     <Image Include="res\Saveas.ico" />
     <Image Include="res\stop.ico" />
+    <Image Include="res\time-update.ico" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\AstroCore\AstroCore.vcxproj">

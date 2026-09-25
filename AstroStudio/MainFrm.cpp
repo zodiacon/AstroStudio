@@ -75,7 +75,7 @@ LRESULT CMainFrame::OnCreate(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/
 		{ 0 },
 		{ ID_TOOL_EPHEMERIS, IDI_EPHEMERIS },
 		{ 0 },
-		{ ID_NEW_CHART, IDI_CHART, 0, L"New Chart" },
+		{ ID_NEW_CHART, IDI_CHART, 0, L"New" },
 		{ ID_NEW_CHARTFORNOW, IDI_CHARTNOW, 0, L"Now" },
 	};
 	CreateSimpleReBar(ATL_SIMPLE_REBAR_NOBORDER_STYLE);
@@ -87,7 +87,7 @@ LRESULT CMainFrame::OnCreate(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/
 
 	//m_view.m_bTabCloseButton = FALSE;
 	m_hWndClient = m_view.Create(m_hWnd, rcDefault, nullptr, 
-		WS_CHILD | WS_VISIBLE | WS_CLIPSIBLINGS | WS_CLIPCHILDREN);
+		WS_CHILD | WS_VISIBLE | WS_CLIPSIBLINGS | WS_CLIPCHILDREN | WS_BORDER);
 	if (AppSettings::Get().AlwaysOnTop()) {
 		SetWindowPos(HWND_TOPMOST, 0, 0, 0, 0, SWP_NOMOVE | SWP_NOSIZE | SWP_NOACTIVATE);
 		UISetCheck(ID_OPTIONS_ALWAYSONTOP, 1);
@@ -103,6 +103,11 @@ LRESULT CMainFrame::OnCreate(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/
 	UIEnable(ID_CHART_AUTOSTEP, FALSE);
 	UIEnable(ID_CHART_LIVE, FALSE);
 	UIEnable(ID_CHART_TRANSITS, FALSE);
+	UIEnable(ID_CHART_OVERLAY, FALSE);
+	UIEnable(ID_CHART_OVERLAY_NONE, FALSE);
+	UIEnable(ID_CHART_OVERLAY_PROGRESSED, FALSE);
+	UIEnable(ID_CHART_OVERLAY_SOLARARC, FALSE);
+	UIEnable(ID_CHART_OVERLAY_SYNASTRY, FALSE);
 	UIEnable(ID_FILE_SAVE, FALSE);
 	UIEnable(ID_FILE_SAVE_AS, FALSE);
 	UIEnable(ID_FILE_EXPORT, FALSE);
@@ -450,6 +455,15 @@ void CMainFrame::ActivatePage(int page) {
 	nmhdr.code = TBVN_PAGEACTIVATED;
 	BOOL handled = TRUE;
 	OnPageActivated(0, &nmhdr, handled);
+}
+
+std::vector<OpenChart> CMainFrame::OpenCharts(IView* except) {
+	std::vector<OpenChart> charts;
+	for (int i = 0; i < m_view.GetPageCount(); i++)
+		if (auto view = ViewOfPage(i); view && view != except)
+			if (OpenChart chart; view->GetChart(chart))
+				charts.push_back(std::move(chart));
+	return charts;
 }
 
 void CMainFrame::SetViewTitle(IView* view, PCWSTR title) {

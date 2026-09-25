@@ -367,8 +367,9 @@ HRESULT D2DChartDrawing::DrawOverlay(ID2D1RenderTarget* rt) {
 			else
 				color = m_params.MinorAspectColor;
 
-			// the tighter the orb, the thicker the line
-			float width = std::clamp(4.0f - aspect.Orb / 2, 0.75f, 3.0f);
+			// the closer to exact compared to the widest orb allowed for it, the thicker the line
+			float strength = aspect.MaxOrb > 0 ? std::clamp(1 - aspect.Orb / aspect.MaxOrb, 0.0f, 1.0f) : 1.0f;
+			float width = 0.5f + 2.0f * strength;
 			auto middle = D2D1::Point2F((pt1.x + pt2.x) / 2, (pt1.y + pt2.y) / 2);
 			m_overlayLines.push_back({ pt1, pt2, middle, index });
 

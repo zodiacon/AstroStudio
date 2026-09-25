@@ -289,3 +289,21 @@ TEST_CASE("A planet can have extra orb", "[Aspects]") {
 	CHECK(calc.CalcAspect(At(Planet::Mars, 0), At(Planet::Saturn, 8.5)).Type == AspectType::Conjunction);
 	CHECK(calc.CalcAspect(At(Planet::Venus, 0), At(Planet::Saturn, 8.5)).Type == AspectType::None);
 }
+
+TEST_CASE("An aspect knows the widest orb that was allowed for it", "[Aspects]") {
+	AspectCalculator calc;
+	// a trine by the general major orb
+	auto trine = calc.CalcAspect(At(Planet::Mars, 0), At(Planet::Jupiter, 122));
+	REQUIRE(trine.Type == AspectType::Trine);
+	CHECK(trine.MaxOrb == Approx(AspectSettings().OrbFor(AspectType::Trine)));
+	CHECK(trine.Orb < trine.MaxOrb);
+
+	// an orb of its own, and a planet's extra orb, are part of it
+	AspectSettings settings;
+	settings.AspectOrb[(int)AspectType::Square] = 3;
+	settings.PlanetOrbAdd[(int)Planet::Mars] = 1.5f;
+	AspectCalculator custom(settings);
+	auto square = custom.CalcAspect(At(Planet::Mars, 0), At(Planet::Jupiter, 92));
+	REQUIRE(square.Type == AspectType::Square);
+	CHECK(square.MaxOrb == Approx(4.5));
+}

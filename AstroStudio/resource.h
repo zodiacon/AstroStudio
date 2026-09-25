@@ -11,8 +11,6 @@
 #define ID_FONT_SIZE_DEFAULT            105
 #define ID_VIEW_GRIDLINES               106
 #define IDD_NEWCHART                    107
-#define IDD_EPHEMERISOPTIONS            232
-#define IDD_ASPECTOPTIONS               233
 #define IDR_MAINFRAME                   128
 #define IDS_TITLE                       129
 #define IDR_FONT                        201
@@ -45,6 +43,11 @@
 #define IDI_ICON4                       230
 #define IDI_SAVE                        230
 #define IDI_SAVEAS                      231
+#define IDD_EPHEMERISOPTIONS            232
+#define IDD_ASPECTOPTIONS               233
+#define IDI_HOURGLASS                   234
+#define IDI_ICON3                       235
+#define IDI_CLOCK_REFRESH               235
 #define IDC_HOUSESYSTEM                 1000
 #define IDC_PLANETS                     1001
 #define IDC_DATE                        1002
@@ -82,6 +85,8 @@
 #define IDC_STEPCOUNT                   1035
 #define IDC_STEPUNIT                    1036
 #define IDC_STEPINTERVAL                1037
+#define IDC_SYSLINK1                    1038
+#define IDC_LINK                        1038
 #define IDC_EPH_TODAY                   1040
 #define IDC_EPH_STEP                    1041
 #define IDC_EPH_BODIES                  1042
@@ -100,8 +105,6 @@
 #define IDC_ASP_LOAD                    1055
 #define IDC_ASP_SAVE                    1056
 #define IDC_ASP_DEFAULTS                1057
-#define IDC_SYSLINK1                    1038
-#define IDC_LINK                        1038
 #define ID_WINDOW_CLOSE                 32772
 #define ID_WINDOW_CLOSE_ALL             32773
 #define ID_OPTIONS_ALWAYSONTOP          32775
@@ -125,13 +128,18 @@
 #define ID_CHART_TRANSITS               32793
 #define ID_EPHEMERIS_OPTIONS            32794
 #define ID_OPTIONS_ASPECTS              32795
+#define ID_CHART_OVERLAY_NONE           32796
+#define ID_CHART_OVERLAY_PROGRESSED     32797
+#define ID_CHART_OVERLAY_SOLARARC       32798
+#define ID_CHART_OVERLAY_SYNASTRY       32799
+#define ID_CHART_OVERLAY                32800
 
 // Next default values for new objects
 // 
 #ifdef APSTUDIO_INVOKED
 #ifndef APSTUDIO_READONLY_SYMBOLS
-#define _APS_NEXT_RESOURCE_VALUE        234
-#define _APS_NEXT_COMMAND_VALUE         32796
+#define _APS_NEXT_RESOURCE_VALUE        236
+#define _APS_NEXT_COMMAND_VALUE         32801
 #define _APS_NEXT_CONTROL_VALUE         1058
 #define _APS_NEXT_SYMED_VALUE           108
 #endif

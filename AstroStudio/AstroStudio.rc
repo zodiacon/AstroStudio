@@ -94,7 +94,14 @@ BEGIN
         MENUITEM "&Auto Step",                  ID_CHART_AUTOSTEP
         MENUITEM "&Live",                       ID_CHART_LIVE
         MENUITEM SEPARATOR
-        MENUITEM "Show &Transits",              ID_CHART_TRANSITS
+        POPUP "&Overlay"
+        BEGIN
+            MENUITEM "&None",                       ID_CHART_OVERLAY_NONE
+            MENUITEM "&Transits",                   ID_CHART_TRANSITS
+            MENUITEM "&Secondary Progressions",     ID_CHART_OVERLAY_PROGRESSED
+            MENUITEM "Solar &Arc Directions",       ID_CHART_OVERLAY_SOLARARC
+            MENUITEM "S&ynastry...",                ID_CHART_OVERLAY_SYNASTRY
+        END
     END
     POPUP "&Tools"
     BEGIN
@@ -190,6 +197,10 @@ IDI_PRINT               ICON                    "res\\Print.ico"
 IDI_SAVE                ICON                    "res\\Save.ico"
 
 IDI_SAVEAS              ICON                    "res\\Saveas.ico"
+
+IDI_HOURGLASS           ICON                    "res\\Hourglass.ico"
+
+IDI_CLOCK_REFRESH       ICON                    "res\\time-update.ico"
 
 
 /////////////////////////////////////////////////////////////////////////////
@@ -501,6 +512,17 @@ BEGIN
     ID_CHART_TRANSITS       "Show the planets of another moment around the chart\nTransits"
     ID_EPHEMERIS_OPTIONS    "Choose the start date, the step and the bodies of the ephemeris\nOptions"
     ID_OPTIONS_ASPECTS      "Choose the aspects, the planets and the orbs used for them\nAspects"
+    ID_CHART_OVERLAY_NONE   "Show the chart alone"
+    ID_CHART_OVERLAY_PROGRESSED 
+                            "Show the chart's secondary progressions (a day for a year) around it"
+    ID_CHART_OVERLAY_SOLARARC 
+                            "Show the chart's planets moved by the solar arc around it"
+    ID_CHART_OVERLAY_SYNASTRY "Show another open chart around this one"
+END
+
+STRINGTABLE
+BEGIN
+    ID_CHART_OVERLAY        "Choose what to show around the chart \nOverlay"
 END
 
 STRINGTABLE

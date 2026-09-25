@@ -316,6 +316,12 @@
     <Image Include="res\Open.ico">
       <Filter>Resource Files\Icons</Filter>
     </Image>
+    <Image Include="res\Hourglass.ico">
+      <Filter>Resource Files\Icons</Filter>
+    </Image>
+    <Image Include="res\time-update.ico">
+      <Filter>Resource Files\Icons</Filter>
+    </Image>
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="AstroStudio.rc">

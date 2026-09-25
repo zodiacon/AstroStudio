@@ -35,6 +35,7 @@ public:
 	// asks whether to save unsaved changes
 	bool CanClose() override;
 	void AspectSettingsChanged() override;
+	bool GetChart(OpenChart& chart) const override;
 
 	BEGIN_MSG_MAP(CChartView)
 		MESSAGE_HANDLER(WM_RECALC, OnRecalc)
@@ -47,7 +48,12 @@ public:
 		COMMAND_ID_HANDLER(ID_CHART_STEP_FORWARD, OnStep)
 		COMMAND_ID_HANDLER(ID_CHART_AUTOSTEP, OnAutoStep)
 		COMMAND_ID_HANDLER(ID_CHART_LIVE, OnLive)
-		COMMAND_ID_HANDLER(ID_CHART_TRANSITS, OnTransits)
+		COMMAND_ID_HANDLER(ID_CHART_TRANSITS, OnOverlay)
+		COMMAND_ID_HANDLER(ID_CHART_OVERLAY_NONE, OnOverlay)
+		COMMAND_ID_HANDLER(ID_CHART_OVERLAY_PROGRESSED, OnOverlay)
+		COMMAND_ID_HANDLER(ID_CHART_OVERLAY_SOLARARC, OnOverlay)
+		COMMAND_ID_HANDLER(ID_CHART_OVERLAY_SYNASTRY, OnOverlay)
+		NOTIFY_CODE_HANDLER(TBN_DROPDOWN, OnOverlayDropDown)
 		COMMAND_HANDLER(IDC_STEPCOUNT, CBN_SELCHANGE, OnStepSettingChanged)
 		COMMAND_HANDLER(IDC_STEPUNIT, CBN_SELCHANGE, OnStepSettingChanged)
 		COMMAND_HANDLER(IDC_STEPINTERVAL, CBN_SELCHANGE, OnIntervalChanged)
@@ -59,7 +65,11 @@ public:
 		COMMAND_ID_HANDLER(ID_CHART_STEP_FORWARD, OnStep)
 		COMMAND_ID_HANDLER(ID_CHART_AUTOSTEP, OnAutoStep)
 		COMMAND_ID_HANDLER(ID_CHART_LIVE, OnLive)
-		COMMAND_ID_HANDLER(ID_CHART_TRANSITS, OnTransits)
+		COMMAND_ID_HANDLER(ID_CHART_TRANSITS, OnOverlay)
+		COMMAND_ID_HANDLER(ID_CHART_OVERLAY_NONE, OnOverlay)
+		COMMAND_ID_HANDLER(ID_CHART_OVERLAY_PROGRESSED, OnOverlay)
+		COMMAND_ID_HANDLER(ID_CHART_OVERLAY_SOLARARC, OnOverlay)
+		COMMAND_ID_HANDLER(ID_CHART_OVERLAY_SYNASTRY, OnOverlay)
 		COMMAND_ID_HANDLER(ID_FILE_SAVE, OnSave)
 		COMMAND_ID_HANDLER(ID_FILE_SAVE_AS, OnSave)
 		COMMAND_ID_HANDLER(ID_FILE_EXPORT, OnExport)
@@ -89,12 +99,24 @@ private:
 	void UpdateStepUI();
 	LRESULT OnLive(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/);
 
-	// Overlay: the wheel shows a second set of planets around the chart, with their aspects to it. For now only transits: the
-	// planets of a second moment (m_Overlay->Data, at first the current time). The chart keeps its own time; what moves the
-	// time - Step, Auto, Live - moves the overlay's while it is shown.
-	void SetTransits(bool on);
+	// Overlay: the wheel shows a second set of planets around the chart, with their aspects to it: the planets of a second
+	// moment (transits), the chart progressed to a moment, or another open chart (synastry). A moment starts as the current
+	// time. The chart keeps its own time; what moves the time - Step, Auto, Live - moves the overlay's while it is shown, unless
+	// it is a synastry overlay, which has no time of its own.
+	// Shows an overlay of a kind (a progressed one by the method); false if there was nothing to show (no other chart).
+	bool ShowOverlay(OverlayKind kind, ProgressionMethod method = ProgressionMethod::Secondary);
+	void HideOverlay();
+	// works the overlay's planets (unless it is a synastry overlay's), aspects and caption out again and shows it
 	void UpdateOverlay();
-	LRESULT OnTransits(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/);
+	// the overlay's time is what Step, Auto and Live move (rather than the chart's)
+	bool OverlayHasTime() const {
+		return m_Overlay && m_Overlay->FollowsTime();
+	}
+	// the menu's and the toolbar's marks for the overlay shown
+	void UpdateOverlayUI();
+	LRESULT OnOverlay(WORD /*wNotifyCode*/, WORD wID, HWND /*hWndCtl*/, BOOL& /*bHandled*/);
+	// the toolbar's Overlay button: a menu of the same choices as the Chart menu's, under the button
+	LRESULT OnOverlayDropDown(int /*idCtrl*/, LPNMHDR pnmh, BOOL& bHandled);
 	LRESULT OnStep(WORD /*wNotifyCode*/, WORD wID, HWND /*hWndCtl*/, BOOL& /*bHandled*/);
 	LRESULT OnAutoStep(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/);
 	LRESULT OnIntervalChanged(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/);

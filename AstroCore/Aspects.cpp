@@ -72,7 +72,7 @@ float AspectCalculator::GetAspectAngle(AspectType type) {
     return aspectAngles[(int)type];
 }
 
-AspectType AspectCalculator::GetAspectType(Planet p1, Planet p2, float diff, float& dist) const {
+AspectType AspectCalculator::GetAspectType(Planet p1, Planet p2, float diff, float& dist, float* maxOrb) const {
     int count = m_settings.MajorOnly ? 5 : _countof(aspectAngles);
     dist = -1;
     if (!m_settings.IsEnabled(p1) || !m_settings.IsEnabled(p2))
@@ -93,6 +93,8 @@ AspectType AspectCalculator::GetAspectType(Planet p1, Planet p2, float diff, flo
 
         dist = fabs(diff - aspectAngles[i]);
         if (dist <= orb) {
+            if (maxOrb)
+                *maxOrb = orb;
             //
             // aspect found!
             //
@@ -110,7 +112,7 @@ AspectData AspectCalculator::CalcAspect(PlanetPosition p1, PlanetPosition p2) co
     data.Planet1 = p1;
     data.Planet2 = p2;
     data.Angle = (float)diff;
-    data.Type = GetAspectType(p1.Planet, p2.Planet, (float)diff, data.Orb);
+    data.Type = GetAspectType(p1.Planet, p2.Planet, (float)diff, data.Orb, &data.MaxOrb);
     if (data.Type != AspectType::None) {
         data.Applying = IsApplying(p1, p2, GetAspectAngle(data.Type), GetAspectAngle(data.Type));
     }

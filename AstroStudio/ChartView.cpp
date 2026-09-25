@@ -141,7 +141,8 @@ void CChartView::PageActivated(bool active) {
 	ui.UIEnable(ID_CHART_STEP_FORWARD, active && !m_AutoStep && !m_Live);
 	ui.UIEnable(ID_CHART_AUTOSTEP, active);
 	ui.UIEnable(ID_CHART_LIVE, active);
-	ui.UIEnable(ID_CHART_TRANSITS, active);
+	for (UINT id : { ID_CHART_OVERLAY, ID_CHART_TRANSITS, ID_CHART_OVERLAY_NONE, ID_CHART_OVERLAY_PROGRESSED, ID_CHART_OVERLAY_SOLARARC, ID_CHART_OVERLAY_SYNASTRY })
+		ui.UIEnable(id, active);
 	ui.UIEnable(ID_FILE_SAVE, active);
 	ui.UIEnable(ID_FILE_SAVE_AS, active);
 	ui.UIEnable(ID_FILE_EXPORT, active);
@@ -149,8 +150,8 @@ void CChartView::PageActivated(bool active) {
 		// the menu and toolbars are shared; show this chart's state
 		ui.UISetCheck(ID_CHART_AUTOSTEP, m_AutoStep);
 		ui.UISetCheck(ID_CHART_LIVE, m_Live);
-		ui.UISetCheck(ID_CHART_TRANSITS, m_Overlay.has_value());
 	}
+	UpdateOverlayUI();
 	UpdateAutoStepTimer();
 }
 
@@ -270,8 +271,9 @@ void CChartView::CreateStepToolBar() {
 
 	// and Live, which keeps the chart at the current time
 	tb.AddSeparator(px(10));
-	tb.AddButton(ID_CHART_LIVE, BTNS_CHECK | BTNS_SHOWTEXT, TBSTATE_ENABLED, images.AddIcon(AtlLoadIconImage(IDI_CHARTNOW, 0, 24, 24)), L"Live", 0);
-	tb.AddButton(ID_CHART_TRANSITS, BTNS_CHECK | BTNS_SHOWTEXT, TBSTATE_ENABLED, images.AddIcon(AtlLoadIconImage(IDI_CHART, 0, 24, 24)), L"Transits", 0);
+	tb.AddButton(ID_CHART_LIVE, BTNS_CHECK | BTNS_SHOWTEXT, TBSTATE_ENABLED, images.AddIcon(AtlLoadIconImage(IDI_CLOCK_REFRESH, 0, 24, 24)), L"Live", 0);
+	// (checked while an overlay is shown; the drop-down is the same choice as the Chart > Overlay menu)
+	tb.AddButton(ID_CHART_OVERLAY, BTNS_CHECK | BTNS_WHOLEDROPDOWN | BTNS_SHOWTEXT, TBSTATE_ENABLED, images.AddIcon(AtlLoadIconImage(IDI_HOURGLASS, 0, 24, 24)), L"Overlay", 0);
 
 	AddSimpleReBarBand(tb);
 	Frame()->AddToolBarToUI(tb);
@@ -380,47 +382,109 @@ void CChartView::SetLive(bool on) {
 		TickLive();		// no waiting for the first tick
 }
 
+namespace {
+	// a moment (UT) at the current time, and the zone it is shown in with the offset in effect now
+	void SetToNow(DateTime& time, TimeZoneInfo& zone) {
+		time = DateTime::Now();
+		int offset = zone.OffsetUT;
+		TimeZones::UtToLocal(time, zone, &offset);
+		zone.OffsetUT = offset;
+	}
+}
+
 void CChartView::TickLive() {
 	if (m_Data.AllPlanets().empty())
 		return;
-	auto& info = m_Overlay ? m_Overlay->Data.Info() : m_Data.Info();
-	info.Time = DateTime::Now();
-	int offset = info.TimeZone.OffsetUT;
-	TimeZones::UtToLocal(info.Time, info.TimeZone, &offset);
-	info.TimeZone.OffsetUT = offset;
-
-	if (m_Overlay) {
+	if (OverlayHasTime()) {
+		SetToNow(m_Overlay->When, m_Overlay->Zone);
 		UpdateOverlay();
 		return;
 	}
+	auto& info = m_Data.Info();
+	SetToNow(info.Time, info.TimeZone);
 	m_NotModifying++;		// following the clock isn't an edit
 	SendMessage(WM_RECALC, static_cast<WPARAM>(Recalc::All));
 	m_NotModifying--;
 	m_DetailsView.UpdateControls();
 }
 
-void CChartView::SetTransits(bool on) {
-	if (on) {
-		// the same planets as the chart's, at the current time (in the chart's zone), with the chart's place
-		m_Overlay.emplace();
-		m_Overlay->Kind = OverlayKind::Transit;
-		m_Overlay->Label = ChartOverlay::DefaultLabel(OverlayKind::Transit);
-		std::vector<Planet> planets;
-		for (auto const& p : m_Data.AllPlanets())
-			planets.push_back(p.Planet);
-		m_Overlay->Data.AddPlanets(planets);
-		auto& info = m_Overlay->Data.Info();
-		info = m_Data.Info();
-		info.Time = DateTime::Now();
-		int offset = info.TimeZone.OffsetUT;
-		TimeZones::UtToLocal(info.Time, info.TimeZone, &offset);
-		info.TimeZone.OffsetUT = offset;
+bool CChartView::GetChart(OpenChart& chart) const {
+	if (m_Data.AllPlanets().empty())
+		return false;
+	chart.Name = m_Title.IsEmpty() ? CString(L"Chart") : m_Title;
+	chart.Data = m_Data;
+	return true;
+}
+
+bool CChartView::ShowOverlay(OverlayKind kind, ProgressionMethod method) {
+	ChartOverlay overlay;
+	overlay.Kind = kind;
+	overlay.Method = method;
+	overlay.Label = ChartOverlay::DefaultLabel(kind);
+	if (kind == OverlayKind::Progressed && method == ProgressionMethod::SolarArc)
+		overlay.Label = L"Directed";
+
+	if (kind == OverlayKind::Synastry) {
+		auto charts = Frame()->OpenCharts(this);
+		if (charts.empty()) {
+			AtlMessageBox(m_hWnd, L"Open another chart first: a synastry overlay shows one chart around another.", L"Synastry", MB_ICONINFORMATION);
+			return false;
+		}
+		size_t chosen = 0;
+		if (charts.size() > 1) {
+			CMenu menu;
+			menu.CreatePopupMenu();
+			for (size_t i = 0; i < charts.size(); i++)
+				menu.AppendMenu(MF_STRING, i + 1, charts[i].Name);
+			POINT pt;
+			::GetCursorPos(&pt);
+			auto choice = menu.TrackPopupMenu(TPM_RETURNCMD | TPM_NONOTIFY | TPM_LEFTALIGN | TPM_TOPALIGN, pt.x, pt.y, m_hWnd);
+			if (choice <= 0)
+				return false;
+			chosen = choice - 1;
+		}
+		// a copy: it shows the other chart as it is now, and stays that way if the other one is changed or closed
+		overlay.Data = std::move(charts[chosen].Data);
+		overlay.Label = charts[chosen].Name;
+		overlay.BaseLabel = m_Title.IsEmpty() ? L"chart" : (PCWSTR)m_Title;
 	}
-	if (!on)
-		m_Overlay.reset();
-	if (m_PageActive)
-		Frame()->GetUI().UISetCheck(ID_CHART_TRANSITS, on);
+	else {
+		// at the current time, in the chart's zone
+		overlay.Zone = m_Data.Info().TimeZone;
+		SetToNow(overlay.When, overlay.Zone);
+		if (kind == OverlayKind::Transit) {
+			// the same planets as the chart's, with the chart's place
+			std::vector<Planet> planets;
+			for (auto const& p : m_Data.AllPlanets())
+				planets.push_back(p.Planet);
+			overlay.Data.AddPlanets(planets);
+			overlay.Data.Info() = m_Data.Info();
+		}
+	}
+	m_Overlay = std::move(overlay);
+	UpdateOverlayUI();
 	UpdateOverlay();
+	return true;
+}
+
+void CChartView::HideOverlay() {
+	m_Overlay.reset();
+	UpdateOverlayUI();
+	UpdateOverlay();
+}
+
+void CChartView::UpdateOverlayUI() {
+	if (!m_PageActive)
+		return;
+	auto& ui = Frame()->GetUI();
+	auto kind = m_Overlay ? std::optional(m_Overlay->Kind) : std::nullopt;
+	bool solarArc = m_Overlay && m_Overlay->Method == ProgressionMethod::SolarArc;
+	ui.UISetCheck(ID_CHART_OVERLAY, m_Overlay.has_value());
+	ui.UISetCheck(ID_CHART_OVERLAY_NONE, !m_Overlay);
+	ui.UISetCheck(ID_CHART_TRANSITS, kind == OverlayKind::Transit);
+	ui.UISetCheck(ID_CHART_OVERLAY_PROGRESSED, kind == OverlayKind::Progressed && !solarArc);
+	ui.UISetCheck(ID_CHART_OVERLAY_SOLARARC, kind == OverlayKind::Progressed && solarArc);
+	ui.UISetCheck(ID_CHART_OVERLAY_SYNASTRY, kind == OverlayKind::Synastry);
 }
 
 void CChartView::UpdateOverlay() {
@@ -429,30 +493,116 @@ void CChartView::UpdateOverlay() {
 		return;
 	}
 
-	auto& data = m_Overlay->Data;
-	data.Harmonic(m_Data.Harmonic());
-	data.CalcPlanets(m_Calc);
-
-	// (for transits by default with tight orbs and the major aspects only)
-	AspectCalculator calc(AspectOptions::Current().Transit);
-	m_Overlay->Aspects = calc.CalcBetween(data.AllPlanets(), m_Data.AllPlanets());
-
-	// when: in the chart's zone, as its own time is shown
-	auto const& info = data.Info();
-	int offset = info.TimeZone.OffsetUT;
-	auto local = TimeZones::UtToLocal(info.Time, info.TimeZone, &offset);
+	auto& overlay = *m_Overlay;
 	CString caption;
-	caption.Format(L"%s  %04ld/%02ld/%02ld  %02ld:%02ld:%02ld  (UTC%s)", L"Transits", local.Year, local.Month, local.Day, local.Hour, local.Minute,
-		local.Second, (PCWSTR)TimeZones::FormatOffset(offset));
-	m_Overlay->Caption = caption;
+	// the moment, as the chart's own time is shown: in its zone
+	auto when = [&] {
+		int offset = overlay.Zone.OffsetUT;
+		auto local = TimeZones::UtToLocal(overlay.When, overlay.Zone, &offset);
+		CString text;
+		text.Format(L"%04ld/%02ld/%02ld  %02ld:%02ld:%02ld  (UTC%s)", local.Year, local.Month, local.Day, local.Hour, local.Minute,
+			local.Second, (PCWSTR)TimeZones::FormatOffset(offset));
+		return text;
+	};
 
-	m_ChartDrawing.SetOverlay(&*m_Overlay);
+	switch (overlay.Kind) {
+		case OverlayKind::Transit: {
+			auto& info = overlay.Data.Info();
+			info.Time = overlay.When;
+			info.TimeZone = overlay.Zone;
+			overlay.Data.Harmonic(m_Data.Harmonic());
+			overlay.Data.CalcPlanets(m_Calc);
+			caption = L"Transits  " + when();
+			break;
+		}
+		case OverlayKind::Progressed: {
+			ProgressionOptions options;
+			options.Method = overlay.Method;
+			overlay.Data = DerivedCharts::Progress(m_Calc, m_Data, overlay.When, options);
+			if (overlay.Method == ProgressionMethod::SolarArc) {
+				CString arc;
+				arc.Format(L"  arc %.2f\u00b0", DerivedCharts::Arc(m_Calc, m_Data, overlay.When, ArcKey::Actual));
+				caption = L"Solar arc directions to  " + when() + arc;
+			}
+			else {
+				CString age;
+				age.Format(L"  age %.2f", DerivedCharts::YearsBetween(m_Data.Info().Time, overlay.When));
+				caption = L"Secondary progressions to  " + when() + age;
+			}
+			break;
+		}
+		case OverlayKind::Synastry:
+			caption = (overlay.Label + L" around " + overlay.BaseLabel).c_str();
+			break;
+	}
+	overlay.Caption = caption;
+
+	// (by default with tight orbs and the major aspects only)
+	AspectCalculator calc(AspectOptions::Current().Transit);
+	overlay.Aspects = calc.CalcBetween(overlay.Data.AllPlanets(), m_Data.AllPlanets());
+
+	m_ChartDrawing.SetOverlay(&overlay);
 	m_ChartDrawing.Refresh();
 }
 
-LRESULT CChartView::OnTransits(WORD, WORD, HWND, BOOL&) {
-	SetTransits(!m_Overlay);
+LRESULT CChartView::OnOverlay(WORD, WORD id, HWND, BOOL&) {
+	switch (id) {
+		// choosing what is already shown changes nothing (it would only take the moment back to now)
+		case ID_CHART_TRANSITS:
+			if (!m_Overlay || m_Overlay->Kind != OverlayKind::Transit)
+				ShowOverlay(OverlayKind::Transit);
+			break;
+		case ID_CHART_OVERLAY_PROGRESSED:
+			if (!m_Overlay || m_Overlay->Kind != OverlayKind::Progressed || m_Overlay->Method != ProgressionMethod::Secondary)
+				ShowOverlay(OverlayKind::Progressed, ProgressionMethod::Secondary);
+			break;
+		case ID_CHART_OVERLAY_SOLARARC:
+			if (!m_Overlay || m_Overlay->Kind != OverlayKind::Progressed || m_Overlay->Method != ProgressionMethod::SolarArc)
+				ShowOverlay(OverlayKind::Progressed, ProgressionMethod::SolarArc);
+			break;
+		case ID_CHART_OVERLAY_SYNASTRY:
+			ShowOverlay(OverlayKind::Synastry);
+			break;
+		default:
+			HideOverlay();
+			break;
+	}
+	UpdateOverlayUI();		// (also puts the marks back if nothing was chosen)
 	return 0;
+}
+
+LRESULT CChartView::OnOverlayDropDown(int, LPNMHDR pnmh, BOOL& handled) {
+	auto nmtb = reinterpret_cast<NMTOOLBAR*>(pnmh);
+	if (nmtb->iItem != ID_CHART_OVERLAY) {
+		handled = FALSE;
+		return 0;
+	}
+
+	// the same choices as the Chart menu's, marked the same way
+	struct Choice {
+		UINT Id;
+		PCWSTR Text;
+		bool Checked;
+	};
+	auto kind = m_Overlay ? std::optional(m_Overlay->Kind) : std::nullopt;
+	bool solarArc = m_Overlay && m_Overlay->Method == ProgressionMethod::SolarArc;
+	Choice choices[] = {
+		{ ID_CHART_OVERLAY_NONE, L"None", !m_Overlay },
+		{ ID_CHART_TRANSITS, L"Transits", kind == OverlayKind::Transit },
+		{ ID_CHART_OVERLAY_PROGRESSED, L"Secondary Progressions", kind == OverlayKind::Progressed && !solarArc },
+		{ ID_CHART_OVERLAY_SOLARARC, L"Solar Arc Directions", kind == OverlayKind::Progressed && solarArc },
+		{ ID_CHART_OVERLAY_SYNASTRY, L"Synastry...", kind == OverlayKind::Synastry },
+	};
+	CMenu menu;
+	menu.CreatePopupMenu();
+	for (auto const& choice : choices)
+		menu.AppendMenu(MF_STRING | (choice.Checked ? MF_CHECKED : 0), choice.Id, choice.Text);
+
+	// under the button; the choice comes back as a command, like one from the menu bar
+	CPoint pt(nmtb->rcButton.left, nmtb->rcButton.bottom);
+	::ClientToScreen(nmtb->hdr.hwndFrom, &pt);
+	Frame()->TrackPopupMenu(menu, TPM_LEFTALIGN | TPM_TOPALIGN, pt.x, pt.y);
+	return TBDDRET_DEFAULT;
 }
 
 LRESULT CChartView::OnLive(WORD, WORD, HWND, BOOL&) {
@@ -513,17 +663,20 @@ bool CChartView::StepTime(int direction) {
 	int unitIndex = m_StepUnit.GetCurSel();
 	auto unit = unitIndex < 0 ? StepUnit::Day : (StepUnit)m_StepUnit.GetItemData(unitIndex);
 
-	auto& info = m_Overlay ? m_Overlay->Data.Info() : m_Data.Info();
-	DateTime ut = info.Time;
-	TimeZoneInfo tz = info.TimeZone;
+	// the overlay's moment if it has one, otherwise the chart's own
+	bool overlay = OverlayHasTime();
+	DateTime& time = overlay ? m_Overlay->When : m_Data.Info().Time;
+	TimeZoneInfo& zone = overlay ? m_Overlay->Zone : m_Data.Info().TimeZone;
+	DateTime ut = time;
+	TimeZoneInfo tz = zone;
 	if (!TimeStep::Step(ut, tz, unit, direction * count)) {
 		::MessageBeep(MB_ICONWARNING);		// past the years the ephemeris covers
 		return false;
 	}
-	info.Time = ut;
-	info.TimeZone = tz;
+	time = ut;
+	zone = tz;
 
-	if (m_Overlay) {
+	if (overlay) {
 		UpdateOverlay();
 		return true;
 	}
