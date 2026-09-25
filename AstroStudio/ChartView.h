@@ -50,6 +50,7 @@ public:
 	void PartOfFortuneChanged() override;
 	void TextFontChanged() override;
 	bool GetChart(OpenChart& chart) const override;
+	bool GetStatusInfo(StatusInfo& info) const override;
 	bool ShowMoment(DateTime const& ut, MomentKind kind) override;
 
 	BEGIN_MSG_MAP(CChartView)

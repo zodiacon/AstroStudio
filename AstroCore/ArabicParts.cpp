@@ -15,20 +15,48 @@ namespace {
 	PartDefinition FromTo(PCWSTR name, PartPoint from, PartPoint to) {
 		return { name, PartPoint::Asc(), to, from, PartReversal::AtNight };
 	}
+
+	// the same by day and by night
+	PartDefinition FromToFixed(PCWSTR name, PartPoint from, PartPoint to) {
+		return { name, PartPoint::Asc(), to, from, PartReversal::Never };
+	}
+
+	const wchar_t* const SignNames[] = { L"Aries", L"Taurus", L"Gemini", L"Cancer", L"Leo", L"Virgo", L"Libra", L"Scorpio", L"Sagittarius", L"Capricorn", L"Aquarius", L"Pisces" };
 }
 
 std::vector<PartDefinition> const& ArabicParts::Standard() {
 	static const std::vector<PartDefinition> parts = {
+		// the seven Hermetic lots (Fortune must stay first)
 		FromTo(L"Fortune", PartPoint::Of(Planet::Sun), PartPoint::Of(Planet::Moon)),
 		FromTo(L"Spirit", PartPoint::Of(Planet::Moon), PartPoint::Of(Planet::Sun)),
 		FromTo(L"Eros", PartPoint::OtherPart(L"Spirit"), PartPoint::Of(Planet::Venus)),
-		FromTo(L"Courage", PartPoint::OtherPart(L"Fortune"), PartPoint::Of(Planet::Mars)),
+		FromTo(L"Necessity", PartPoint::Of(Planet::Mercury), PartPoint::OtherPart(L"Fortune")),
+		FromTo(L"Courage", PartPoint::Of(Planet::Mars), PartPoint::OtherPart(L"Fortune")),
 		FromTo(L"Victory", PartPoint::OtherPart(L"Spirit"), PartPoint::Of(Planet::Jupiter)),
-		FromTo(L"Nemesis", PartPoint::OtherPart(L"Fortune"), PartPoint::Of(Planet::Saturn)),
+		FromTo(L"Nemesis", PartPoint::Of(Planet::Saturn), PartPoint::OtherPart(L"Fortune")),
+		// Valens: the Sun's exaltation (19 Aries) by day, the Moon's (3 Taurus) by night
+		{ L"Exaltation", PartPoint::Asc(), PartPoint::At(19), PartPoint::Of(Planet::Sun), PartReversal::Replaced, PartPoint::At(33), PartPoint::Of(Planet::Moon) },
+		// family
 		FromTo(L"Father", PartPoint::Of(Planet::Sun), PartPoint::Of(Planet::Saturn)),
-		FromTo(L"Mother", PartPoint::Of(Planet::Moon), PartPoint::Of(Planet::Venus)),
+		FromTo(L"Mother", PartPoint::Of(Planet::Venus), PartPoint::Of(Planet::Moon)),
+		FromToFixed(L"Brethren", PartPoint::Of(Planet::Saturn), PartPoint::Of(Planet::Jupiter)),
+		FromToFixed(L"Children", PartPoint::Of(Planet::Jupiter), PartPoint::Of(Planet::Saturn)),
+		FromToFixed(L"Sons", PartPoint::Of(Planet::Jupiter), PartPoint::Of(Planet::Mercury)),
+		FromToFixed(L"Daughters", PartPoint::Of(Planet::Jupiter), PartPoint::Of(Planet::Venus)),
+		FromToFixed(L"Marriage (men)", PartPoint::Of(Planet::Saturn), PartPoint::Of(Planet::Venus)),
+		FromToFixed(L"Marriage (women)", PartPoint::Of(Planet::Venus), PartPoint::Of(Planet::Saturn)),
 		{ L"Marriage", PartPoint::Asc(), PartPoint::Cusp(7), PartPoint::Of(Planet::Venus), PartReversal::Never },
 		{ L"Death", PartPoint::Asc(), PartPoint::Cusp(8), PartPoint::Of(Planet::Moon), PartReversal::Never },
+		// misfortune and health
+		FromTo(L"Affliction", PartPoint::Of(Planet::Saturn), PartPoint::Of(Planet::Mars)),
+		FromTo(L"Destroyer", PartPoint::RulerOfCusp(1), PartPoint::Of(Planet::Moon)),
+		FromToFixed(L"Sickness", PartPoint::Of(Planet::Saturn), PartPoint::Of(Planet::Mars)),
+		FromToFixed(L"Debt", PartPoint::Of(Planet::Mercury), PartPoint::Of(Planet::Saturn)),
+		FromToFixed(L"Discord", PartPoint::Of(Planet::Mars), PartPoint::Of(Planet::Jupiter)),
+		// everyday matters
+		FromToFixed(L"Servants", PartPoint::Of(Planet::Mercury), PartPoint::Of(Planet::Moon)),
+		FromToFixed(L"Merchandise", PartPoint::OtherPart(L"Spirit"), PartPoint::OtherPart(L"Fortune")),
+		FromToFixed(L"Travel", PartPoint::RulerOfCusp(9), PartPoint::Cusp(9)),
 	};
 	return parts;
 }
@@ -95,6 +123,8 @@ std::optional<AstroPoint> ArabicParts::Position(PartPoint const& point, ChartDat
 				return std::nullopt;
 			return it->Longitude;
 		}
+		case PartPointKind::Longitude:
+			return AstroPoint(point.Degrees).Normalize();
 	}
 	return std::nullopt;
 }
@@ -102,20 +132,24 @@ std::optional<AstroPoint> ArabicParts::Position(PartPoint const& point, ChartDat
 std::optional<PartData> ArabicParts::Calculate(ChartData const& chart, PartDefinition const& definition, PartOptions const& options,
 	std::vector<PartData> const& parts) {
 	auto base = Position(definition.Base, chart, options, parts);
-	auto plus = Position(definition.Plus, chart, options, parts);
-	auto minus = Position(definition.Minus, chart, options, parts);
+	bool night;
+	switch (options.Sect) {
+		case SectMode::Day: night = false; break;
+		case SectMode::Night: night = true; break;
+		default: night = !IsDayChart(chart).value_or(true); break;
+	}
+	bool turned = night && options.ReverseAtNight && definition.Reversal != PartReversal::Never;
+	bool replaced = turned && definition.Reversal == PartReversal::Replaced;
+	auto plus = Position(replaced ? definition.NightPlus : definition.Plus, chart, options, parts);
+	auto minus = Position(replaced ? definition.NightMinus : definition.Minus, chart, options, parts);
 	if (!base || !plus || !minus)
 		return std::nullopt;
 
 	PartData data;
 	data.Name = definition.Name;
-	switch (options.Sect) {
-		case SectMode::Day: data.Night = false; break;
-		case SectMode::Night: data.Night = true; break;
-		default: data.Night = !IsDayChart(chart).value_or(true); break;
-	}
-	data.Reversed = data.Night && options.ReverseAtNight && definition.Reversal == PartReversal::AtNight;
-	if (data.Reversed)
+	data.Night = night;
+	data.Reversed = turned;
+	if (turned && !replaced)
 		std::swap(plus, minus);
 	data.Longitude = AstroPoint(base->Value + plus->Value - minus->Value).Normalize();
 	data.House = DerivedCharts::HouseOf(chart.Houses(), data.Longitude);
@@ -145,13 +179,19 @@ std::wstring ArabicParts::Describe(PartPoint const& point) {
 		case PartPointKind::Cusp: return L"cusp " + std::to_wstring(point.Number);
 		case PartPointKind::RulerOfCusp: return L"ruler of " + std::to_wstring(point.Number);
 		case PartPointKind::Part: return point.Part;
+		case PartPointKind::Longitude: {
+			auto sign = std::clamp(static_cast<int>(point.Degrees / 30), 0, 11);
+			return std::to_wstring(static_cast<int>(point.Degrees - sign * 30)) + L" " + SignNames[sign];
+		}
 	}
 	return L"";
 }
 
 std::wstring ArabicParts::Describe(PartDefinition const& definition, bool reversed) {
-	auto const& plus = reversed ? definition.Minus : definition.Plus;
-	auto const& minus = reversed ? definition.Plus : definition.Minus;
+	bool replaced = reversed && definition.Reversal == PartReversal::Replaced;
+	bool swapped = reversed && definition.Reversal == PartReversal::AtNight;
+	auto const& plus = replaced ? definition.NightPlus : swapped ? definition.Minus : definition.Plus;
+	auto const& minus = replaced ? definition.NightMinus : swapped ? definition.Plus : definition.Minus;
 	return Describe(definition.Base) + L" + " + Describe(plus) + L" - " + Describe(minus);
 }
 

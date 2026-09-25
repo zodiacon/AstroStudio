@@ -528,6 +528,46 @@ bool CChartView::GetChart(OpenChart& chart) const {
 	return true;
 }
 
+bool CChartView::GetStatusInfo(StatusInfo& status) const {
+	if (m_Data.AllPlanets().empty())
+		return false;
+	auto& info = m_Data.Info();
+	status.Name = m_Title.IsEmpty() ? CString(L"Chart") : m_Title;
+
+	// the moment as the chart's own zone shows it
+	int offset = info.TimeZone.OffsetUT;
+	auto local = TimeZones::UtToLocal(info.Time, info.TimeZone, &offset);
+	status.Time.Format(L"%04ld/%02ld/%02ld  %02ld:%02ld:%02ld  (UTC%s)", local.Year, local.Month, local.Day, local.Hour, local.Minute, local.Second,
+		(PCWSTR)TimeZones::FormatOffset(offset));
+
+	CString place;
+	for (auto const* part : { &info.City, &info.Country })
+		if (!part->empty())
+			place += (place.IsEmpty() ? L"" : L", ") + CString(part->c_str());
+	status.Place.Format(L"%s%s%.2f%c%c  %.2f%c%c", (PCWSTR)place, place.IsEmpty() ? L"" : L"   ", std::fabs(info.Latitude), 0xb0, info.Latitude >= 0 ? L'N' : L'S',
+		std::fabs(info.Longitude), 0xb0, info.Longitude >= 0 ? L'E' : L'W');
+
+	status.Details = StringHelper::HouseSystemToString(m_Data.GetHouseSystem());
+	auto add = [&](PCWSTR text) {
+		status.Details += L"  |  ";
+		status.Details += text;
+	};
+	if (m_Data.Harmonic() > 1) {
+		CString harmonic;
+		harmonic.Format(L"Harmonic %d", m_Data.Harmonic());
+		add(harmonic);
+	}
+	if (m_ReadOnly)
+		add(L"Read-only");
+	if (m_Live)
+		add(L"Live");
+	else if (m_AutoStep)
+		add(L"Auto");
+	if (m_Overlay)
+		add(m_Overlay->Caption.c_str());
+	return true;
+}
+
 bool CChartView::ShowMoment(DateTime const& ut, MomentKind kind) {
 	if (m_Data.AllPlanets().empty())
 		return false;

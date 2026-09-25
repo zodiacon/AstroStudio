@@ -48,6 +48,7 @@ protected:
 		COMMAND_RANGE_HANDLER(ID_PROJECT_NEW, ID_PROJECT_AUTOOPEN, OnProjectCommand)
 		COMMAND_RANGE_HANDLER(ID_PROJECT_MRU_FIRST, ID_PROJECT_MRU_LAST, OnProjectRecent)
 		MESSAGE_HANDLER(WM_OPEN_LAST_PROJECT, OnOpenLastProject)
+		MESSAGE_HANDLER(WM_TIMER, OnTimer)
 		COMMAND_ID_HANDLER(ID_OPTIONS_DARKMODE, OnToggleDarkMode)
 		COMMAND_ID_HANDLER(ID_OPTIONS_ASPECTS, OnAspectOptions)
 		COMMAND_ID_HANDLER(ID_OPTIONS_WHEEL, OnWheelOptions)
@@ -177,6 +178,14 @@ private:
 	std::unique_ptr<Project> m_Project;
 	CRecentProjectList m_RecentProjects;
 	bool m_PaneVisible{ false };
+	// ---- the status bar's panes: the active tab's name, moment, place and details (IView::GetStatusInfo), refreshed by a timer
+	static constexpr UINT_PTR StatusTimer = 1;
+	LRESULT OnTimer(UINT, WPARAM, LPARAM, BOOL&);
+	void UpdateStatusPanes();
+	void SetStatusPane(int id, CString const& text, int minWidth);
+	CMultiPaneStatusBarCtrl m_Status;
+	CString m_PaneText[4];
+
 	CNativeCustomTabView m_view;
 	int m_CurrentPage{ -1 };
 	bool m_LocationPending{ false };

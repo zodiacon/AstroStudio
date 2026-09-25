@@ -17,6 +17,14 @@ struct OpenChart {
 	bool Active{ false };		// that tab is the one showing
 };
 
+// what a tab has to say in the frame's status bar panes (empty text = nothing in that pane)
+struct StatusInfo {
+	CString Name;		// the chart or analysis
+	CString Time;		// its moment (or range), in its own zone
+	CString Place;
+	CString Details;	// house system, harmonic, Live/Auto, the overlay ...
+};
+
 struct IMainFrame abstract {
 	virtual HWND GetHwnd() const = 0;
 	virtual BOOL TrackPopupMenu(HMENU hMenu, DWORD flags, int x, int y) = 0;
@@ -86,6 +94,11 @@ struct IView {
 	}
 	// The chart the view shows, as a copy with its name (the tab's text), if it is a chart.
 	virtual bool GetChart(OpenChart& chart) const {
+		return false;
+	}
+	// What the status bar's panes show while this view's tab is the active one; false (the default) leaves them empty. The frame asks
+	// a few times a second, so it should be cheap and reflect the view's current state.
+	virtual bool GetStatusInfo(StatusInfo& info) const {
 		return false;
 	}
 };

@@ -89,8 +89,15 @@ LRESULT CMainFrame::OnCreate(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/
 	auto tb = ToolbarHelper::CreateAndInitToolBar(m_hWnd, buttons, _countof(buttons));
 	UIAddToolBar(tb);
 	AddSimpleReBarBand(tb);
-
 	CreateSimpleStatusBar();
+
+	// the status bar: the message pane (menu help, stretched) and one for each thing the active tab tells
+	m_Status.SubclassWindow(m_hWndStatusBar);
+	int panes[] = { ID_DEFAULT_PANE, ID_PANE_NAME, ID_PANE_TIME, ID_PANE_PLACE, ID_PANE_DETAILS };
+	m_Status.SetPanes(panes, _countof(panes), false);
+	for (int id : { ID_PANE_NAME, ID_PANE_TIME, ID_PANE_PLACE, ID_PANE_DETAILS })
+		m_Status.SetPaneWidth(id, 0);
+	SetTimer(StatusTimer, 250);
 
 	//m_view.m_bTabCloseButton = FALSE;
 	// the tabs, with the pane of the project on their left (shown only while a project is open)
@@ -574,6 +581,47 @@ LRESULT CMainFrame::OnWindowActivate(WORD /*wNotifyCode*/, WORD wID, HWND /*hWnd
 	return 0;
 }
 
+LRESULT CMainFrame::OnTimer(UINT, WPARAM id, LPARAM, BOOL& handled) {
+	if (id != StatusTimer) {
+		handled = FALSE;
+		return 0;
+	}
+	UpdateStatusPanes();
+	return 0;
+}
+
+void CMainFrame::SetStatusPane(int id, CString const& text, int minWidth) {
+	auto& current = m_PaneText[id - ID_PANE_NAME];
+	if (current == text)
+		return;
+	current = text;
+	int width = 0;
+	if (!text.IsEmpty()) {
+		CClientDC dc(m_Status);
+		CFontHandle font = m_Status.GetFont();
+		auto old = dc.SelectFont(font.m_hFont ? font.m_hFont : (HFONT)::GetStockObject(DEFAULT_GUI_FONT));
+		CSize size;
+		dc.GetTextExtent(text, text.GetLength(), &size);
+		dc.SelectFont(old);
+		width = std::max(minWidth, static_cast<int>(size.cx) + 14);
+	}
+	m_Status.SetPaneWidth(id, width);
+	m_Status.SetPaneText(id, text);
+}
+
+// what the active tab says about itself goes into the panes (nothing for a tab that says nothing: they close up)
+void CMainFrame::UpdateStatusPanes() {
+	if (!m_Status.IsWindow() || !m_Status.IsWindowVisible())
+		return;
+	StatusInfo info;
+	if (auto view = ViewOfPage(m_view.GetActivePage()))
+		view->GetStatusInfo(info);
+	SetStatusPane(ID_PANE_NAME, info.Name, 60);
+	SetStatusPane(ID_PANE_TIME, info.Time, 60);
+	SetStatusPane(ID_PANE_PLACE, info.Place, 60);
+	SetStatusPane(ID_PANE_DETAILS, info.Details, 60);
+}
+
 LRESULT CMainFrame::OnPageActivated(int, LPNMHDR hdr, BOOL&) {
 	auto page = static_cast<int>(hdr->idFrom);
 	if (auto previous = ViewOfPage(m_CurrentPage))
@@ -582,6 +630,7 @@ LRESULT CMainFrame::OnPageActivated(int, LPNMHDR hdr, BOOL&) {
 		view->PageActivated(true);
 	m_CurrentPage = page;
 	UpdateProjectUI();
+	UpdateStatusPanes();
 
 	return 0;
 }

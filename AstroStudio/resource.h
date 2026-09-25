@@ -216,6 +216,10 @@
 #define ID_PROJECT_AUTOOPEN             32832
 #define ID_PROJECT_MRU_FIRST            32840
 #define ID_PROJECT_MRU_LAST             32847
+#define ID_PANE_NAME                    32848
+#define ID_PANE_TIME                    32849
+#define ID_PANE_PLACE                   32850
+#define ID_PANE_DETAILS                 32851
 #define IDD_PROJECTITEM                 242
 #define IDC_PI_NAME                     1100
 #define IDC_PI_PATH                     1101
@@ -231,7 +235,7 @@
 #ifdef APSTUDIO_INVOKED
 #ifndef APSTUDIO_READONLY_SYMBOLS
 #define _APS_NEXT_RESOURCE_VALUE        243
-#define _APS_NEXT_COMMAND_VALUE         32848
+#define _APS_NEXT_COMMAND_VALUE         32852
 #define _APS_NEXT_CONTROL_VALUE         1108
 #define _APS_NEXT_SYMED_VALUE           108
 #endif

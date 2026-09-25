@@ -111,17 +111,17 @@ TEST_CASE("Parts that use other parts", "[ArabicParts]") {
 		auto parts = ArabicParts::Calculate(Chart(300));
 		// Eros: from Spirit (350) to Venus (25): 100 + 25 - 350 = -225
 		CHECK(Part(parts, L"Eros").Longitude.Value == Approx(135));
-		// Courage: from Fortune (210) to Mars (200); Victory: from Spirit to Jupiter (330); Nemesis: from Fortune to Saturn (170)
-		CHECK(Part(parts, L"Courage").Longitude.Value == Approx(AstroPoint(100 + 200 - 210).Value));
+		// Courage: from Mars (200) to Fortune (210); Victory: from Spirit to Jupiter (330); Nemesis: from Saturn (170) to Fortune
+		CHECK(Part(parts, L"Courage").Longitude.Value == Approx(AstroPoint(100 + 210 - 200).Value));
 		CHECK(Part(parts, L"Victory").Longitude.Value == Approx(AstroPoint(100 + 330 - 350).Value));
-		CHECK(Part(parts, L"Nemesis").Longitude.Value == Approx(AstroPoint(100 + 170 - 210).Value));
+		CHECK(Part(parts, L"Nemesis").Longitude.Value == Approx(AstroPoint(100 + 210 - 170).Value));
 	}
 	SECTION("by night they use the turned parts, and turn round themselves") {
 		auto parts = ArabicParts::Calculate(Chart(250));
 		// Spirit is 260 now; Eros turns round: 100 + Spirit - Venus
 		CHECK(Part(parts, L"Eros").Longitude.Value == Approx(AstroPoint(100 + 260 - 25).Value));
-		// Fortune is 300; Courage: 100 + Fortune - Mars
-		CHECK(Part(parts, L"Courage").Longitude.Value == Approx(AstroPoint(100 + 300 - 200).Value));
+		// Fortune is 300; Courage turns round: 100 + Mars - Fortune
+		CHECK(Part(parts, L"Courage").Longitude.Value == Approx(AstroPoint(100 + 200 - 300).Value).margin(1e-9));
 	}
 	SECTION("a part that comes before the one it uses is not calculated") {
 		std::vector<PartDefinition> definitions{
@@ -144,6 +144,88 @@ TEST_CASE("Parts that stay the same at night", "[ArabicParts]") {
 		CHECK(Part(parts, L"Marriage").Formula == L"Asc + cusp 7 - Venus");
 		CHECK(Part(parts, L"Death").Longitude.Value == Approx(0).margin(1e-9));
 	}
+}
+
+namespace {
+	// the test chart with Mercury at 150, so that the parts that need it can be made
+	ChartData WithMercury(double sun) {
+		auto chart = Chart(sun);
+		chart.AddPlanets({ At(Planet::Mercury, 150) });
+		return chart;
+	}
+
+	// what a part comes to by day (the Sun at 300: Fortune 210, Spirit 350) and by night (the Sun at 250: Fortune 300, Spirit 260)
+	void CheckPart(PCWSTR name, double byDay, double byNight, PCWSTR dayFormula = nullptr, PCWSTR nightFormula = nullptr) {
+		std::string label;
+		for (auto c = name; *c; ++c)
+			label += static_cast<char>(*c);
+		INFO(label);
+		auto day = ArabicParts::Calculate(WithMercury(300));
+		auto night = ArabicParts::Calculate(WithMercury(250));
+		CHECK(Diff(Part(day, name).Longitude.Value, byDay) < 1e-9);
+		CHECK(Diff(Part(night, name).Longitude.Value, byNight) < 1e-9);
+		if (dayFormula)
+			CHECK(Part(day, name).Formula == dayFormula);
+		if (nightFormula)
+			CHECK(Part(night, name).Formula == nightFormula);
+	}
+}
+
+// The formulas as the sources give them (Wikipedia's table of the Hermetic lots; Paulus Alexandrinus, Valens, Dorotheus as
+// given by Seven Stars Astrology and astrology-x-files.com; Lilly and al-Biruni for the medieval ones). Here Asc = 100, Moon 50,
+// Venus 25, Mars 200, Jupiter 330, Saturn 170, Mercury 150.
+TEST_CASE("The Hermetic lots", "[ArabicParts]") {
+	// Necessity by day: Asc + Fortune - Mercury = 100 + 210 - 150; by night: Asc + Mercury - Fortune = 100 + 150 - 300
+	CheckPart(L"Necessity", 160, 310, L"Asc + Fortune - Mercury", L"Asc + Mercury - Fortune");
+	// Courage: Asc + Fortune - Mars by day, Asc + Mars - Fortune by night
+	CheckPart(L"Courage", 110, 0, L"Asc + Fortune - Mars", L"Asc + Mars - Fortune");
+	// Nemesis: Asc + Fortune - Saturn by day, Asc + Saturn - Fortune by night
+	CheckPart(L"Nemesis", 140, 330, L"Asc + Fortune - Saturn", L"Asc + Saturn - Fortune");
+	// Eros: Asc + Venus - Spirit by day (100 + 25 - 350), Asc + Spirit - Venus by night (100 + 260 - 25)
+	CheckPart(L"Eros", 135, 335, L"Asc + Venus - Spirit", L"Asc + Spirit - Venus");
+	// Victory: Asc + Jupiter - Spirit by day, Asc + Spirit - Jupiter by night
+	CheckPart(L"Victory", 80, 30, L"Asc + Jupiter - Spirit", L"Asc + Spirit - Jupiter");
+}
+
+TEST_CASE("Exaltation uses the Sun by day and the Moon by night", "[ArabicParts]") {
+	// Valens: Asc + 19 Aries - Sun by day (100 + 19 - 300), Asc + 3 Taurus - Moon by night (100 + 33 - 50)
+	CheckPart(L"Exaltation", 179, 83, L"Asc + 19 Aries - Sun", L"Asc + 3 Taurus - Moon");
+	// with the turn switched off it stays the day form
+	auto same = ArabicParts::Calculate(WithMercury(250), PartOptions{ .ReverseAtNight = false });
+	CHECK(Part(same, L"Exaltation").Formula == L"Asc + 19 Aries - Sun");
+	CHECK_FALSE(Part(same, L"Exaltation").Reversed);
+	CHECK(ArabicParts::Position(PartPoint::At(33), Chart(300))->Value == Approx(33));
+	CHECK(ArabicParts::Describe(PartPoint::At(33)) == L"3 Taurus");
+	CHECK(ArabicParts::Describe(PartPoint::At(359)) == L"29 Pisces");
+}
+
+TEST_CASE("Family parts", "[ArabicParts]") {
+	// Father: from the Sun to Saturn, reversed at night; Mother: from Venus to the Moon, reversed at night
+	CheckPart(L"Father", 330, 180, L"Asc + Saturn - Sun", L"Asc + Sun - Saturn");
+	CheckPart(L"Mother", 125, 75, L"Asc + Moon - Venus", L"Asc + Venus - Moon");
+	// Paulus does not turn these round: Brethren from Saturn to Jupiter, Children from Jupiter to Saturn, Sons from Jupiter to
+	// Mercury, Daughters from Jupiter to Venus, and Marriage from Saturn to Venus for men, Venus to Saturn for women
+	CheckPart(L"Brethren", 260, 260, L"Asc + Jupiter - Saturn", L"Asc + Jupiter - Saturn");
+	CheckPart(L"Children", 300, 300, L"Asc + Saturn - Jupiter", L"Asc + Saturn - Jupiter");
+	CheckPart(L"Sons", 280, 280, L"Asc + Mercury - Jupiter");
+	CheckPart(L"Daughters", 155, 155, L"Asc + Venus - Jupiter");
+	CheckPart(L"Marriage (men)", 315, 315, L"Asc + Venus - Saturn");
+	CheckPart(L"Marriage (women)", 245, 245, L"Asc + Saturn - Venus");
+}
+
+TEST_CASE("Parts of misfortune, health and everyday matters", "[ArabicParts]") {
+	// Affliction: from Saturn to Mars by day, Mars to Saturn by night; Sickness: the same both ways
+	CheckPart(L"Affliction", 130, 70, L"Asc + Mars - Saturn", L"Asc + Saturn - Mars");
+	CheckPart(L"Sickness", 130, 130);
+	CheckPart(L"Debt", 120, 120, L"Asc + Saturn - Mercury");
+	CheckPart(L"Discord", 230, 230, L"Asc + Jupiter - Mars");
+	CheckPart(L"Servants", 0, 0, L"Asc + Moon - Mercury");
+	// Merchandise: Asc + Fortune - Spirit (100 + 210 - 350); at night Fortune and Spirit are 300 and 260
+	CheckPart(L"Merchandise", 320, 140, L"Asc + Fortune - Spirit");
+	// Travel: Asc + 9th cusp (340) - the ruler of the 9th (Pisces: Jupiter, 330)
+	CheckPart(L"Travel", 110, 110, L"Asc + cusp 9 - ruler of 9");
+	// Destroyer: from the ruler of the Ascendant (the Moon, for Cancer) to the Moon
+	CheckPart(L"Destroyer", 100, 100, L"Asc + Moon - ruler of 1", L"Asc + ruler of 1 - Moon");
 }
 
 TEST_CASE("Points a part can be made of", "[ArabicParts]") {
@@ -228,7 +310,7 @@ TEST_CASE("Parts a chart can't have are left out", "[ArabicParts]") {
 	CHECK_FALSE(has(L"Fortune"));
 	REQUIRE(has(L"Mother"));
 	CHECK_FALSE(Part(parts, L"Mother").Night);
-	CHECK(Part(parts, L"Mother").Longitude.Value == Approx(75));		// 100 + 25 - 50
+	CHECK(Part(parts, L"Mother").Longitude.Value == Approx(125));		// 100 + 50 - 25 (from Venus to the Moon)
 
 	CHECK(ArabicParts::Calculate(ChartData{}).empty());
 }
@@ -244,7 +326,8 @@ TEST_CASE("Describing a formula", "[ArabicParts]") {
 
 TEST_CASE("The standard parts", "[ArabicParts]") {
 	auto const& standard = ArabicParts::Standard();
-	CHECK(standard.size() == 10);
+	CHECK(standard.size() == 26);
+	CHECK(standard[0].Name == L"Fortune");
 	// names are unique, and a part only builds on ones before it (so the standard list can be calculated in order)
 	for (size_t i = 0; i < standard.size(); i++) {
 		for (size_t j = 0; j < i; j++)
@@ -256,7 +339,8 @@ TEST_CASE("The standard parts", "[ArabicParts]") {
 			CHECK(earlier);
 		}
 	}
-	CHECK(ArabicParts::Calculate(Chart(300)).size() == 10);
+	// the test chart has no Mercury: Necessity, Sons, Debt and Servants can't be made
+	CHECK(ArabicParts::Calculate(Chart(300)).size() == 22);
 }
 
 TEST_CASE("Parts of a real chart", "[ArabicParts]") {
@@ -280,7 +364,7 @@ TEST_CASE("Parts of a real chart", "[ArabicParts]") {
 		CHECK(ArabicParts::IsDayChart(chart).value() == (sunHouse >= 7));
 
 		auto parts = ArabicParts::Calculate(chart);
-		REQUIRE(parts.size() == 10);
+		REQUIRE(parts.size() == ArabicParts::Standard().size());		// (all seven traditional planets: every part can be made)
 		auto& fortune = Part(parts, L"Fortune");
 		auto& spirit = Part(parts, L"Spirit");
 		bool day = sunHouse >= 7;

@@ -20,6 +20,7 @@ enum class PartPointKind {
 	Cusp,			// the cusp of house Number (1-12)
 	RulerOfCusp,	// the planet that rules the sign on the cusp of house Number (1-12): where that planet is in the chart
 	Part,			// another part, by name: it must come earlier in the list being calculated
+	Longitude,		// a fixed place in the zodiac, Degrees (0-360) from 0 Aries
 };
 
 struct PartPoint {
@@ -27,6 +28,7 @@ struct PartPoint {
 	Planet Body{ Planet::Sun };
 	int Number{ 0 };
 	std::wstring Part;
+	double Degrees{ 0 };
 
 	static PartPoint Of(Planet planet) {
 		return { PartPointKind::Planet, planet };
@@ -52,17 +54,23 @@ struct PartPoint {
 	static PartPoint OtherPart(std::wstring name) {
 		return { PartPointKind::Part, Planet::Sun, 0, std::move(name) };
 	}
+	// a fixed longitude, e.g. At(19) is 19 Aries and At(33) 3 Taurus
+	static PartPoint At(double degrees) {
+		return { PartPointKind::Longitude, Planet::Sun, 0, {}, degrees };
+	}
 };
 
 enum class PartReversal {
 	Never,			// the same by day and by night
 	AtNight,		// Plus and Minus change places at night
+	Replaced,		// at night NightPlus and NightMinus are used instead of Plus and Minus (Exaltation: the Sun by day, the Moon by night)
 };
 
 struct PartDefinition {
 	std::wstring Name;
 	PartPoint Base, Plus, Minus;
 	PartReversal Reversal{ PartReversal::AtNight };
+	PartPoint NightPlus, NightMinus;		// for PartReversal::Replaced
 };
 
 // Whether the chart is a day chart or a night chart.
@@ -101,11 +109,20 @@ struct PartAspect {
 
 class ArabicParts final {
 public:
-	// A starting set, from Hellenistic tradition (each "from X to Y" is Asc + Y - X, reversed at night): Fortune, Spirit,
-	// Eros (Spirit to Venus), Courage (Fortune to Mars), Victory (Spirit to Jupiter), Nemesis (Fortune to Saturn),
-	// Father (Sun to Saturn), Mother (Moon to Venus), and two from Lilly that do not turn round: Marriage (Asc + 7th cusp -
-	// Venus) and Death (Asc + 8th cusp - Moon). The parts that build on Fortune and Spirit come after them. Sources differ on
-	// many of these: the list is a set of definitions to use as is, change or add to.
+	// A starting set (each "from X to Y" is Asc + Y - X by day, turned round at night unless said otherwise); the sources differ
+	// on many of these, so it is a set of definitions to use as is, change or add to. The formulas were checked against
+	// Wikipedia ("Arabic parts": the seven Hermetic lots), Paulus Alexandrinus as given by Seven Stars Astrology and
+	// astrology-x-files.com, Astrolium, and, for the medieval parts, al-Biruni and Lilly as collected by Sarah's Astrology.
+	//   Hermetic lots (Paulus): Fortune (Sun to Moon), Spirit (Moon to Sun), Eros (Spirit to Venus), Necessity (Mercury to Fortune),
+	//   Courage (Mars to Fortune), Victory (Spirit to Jupiter), Nemesis (Saturn to Fortune); Exaltation (Valens: Asc + 19 Aries -
+	//   Sun by day, Asc + 3 Taurus - Moon by night).
+	//   Family: Father (Sun to Saturn), Mother (Venus to Moon), Affliction (Saturn to Mars), Destroyer (the ruler of the Ascendant to
+	//   the Moon) - and, not turned round, Brethren (Saturn to Jupiter), Children (Jupiter to Saturn), Sons (Jupiter to Mercury),
+	//   Daughters (Jupiter to Venus), Marriage for men (Saturn to Venus) and for women (Venus to Saturn) as Paulus has them.
+	//   Medieval, not turned round: Marriage (Asc + 7th cusp - Venus), Death (Asc + 8th cusp - Moon), Sickness (Saturn to Mars),
+	//   Servants (Mercury to Moon), Debt (Mercury to Saturn), Discord (Mars to Jupiter), Merchandise (Spirit to Fortune), Travel
+	//   (the ruler of the 9th cusp to the 9th cusp).
+	// The parts that build on Fortune and Spirit come after them.
 	static std::vector<PartDefinition> const& Standard();
 
 	// true if the Sun is above the horizon: from the Descendant forward to the Ascendant (the houses 7 to 12)

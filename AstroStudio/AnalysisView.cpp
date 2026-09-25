@@ -436,6 +436,17 @@ void CAnalysisView::UpdateTitle() {
 	Frame()->SetViewTitle(this, title);
 }
 
+bool CAnalysisView::GetStatusInfo(StatusInfo& info) const {
+	info.Name = m_Chart.Name;
+	// the range, in the chart's zone (the last day is inclusive, as the dialog has it)
+	auto const& zone = m_Chart.Data.Info().TimeZone;
+	auto from = TimeZones::UtToLocal(m_Settings.From, zone);
+	auto to = TimeZones::UtToLocal(m_Settings.To, zone);
+	info.Time.Format(L"%04ld/%02ld/%02ld - %04ld/%02ld/%02ld", from.Year, from.Month, from.Day, to.Year, to.Month, to.Day);
+	info.Details.Format(L"%d events", static_cast<int>(m_Events.size()));
+	return true;
+}
+
 AnalysisEvent const* CAnalysisView::EventAt(int row) const {
 	if (row < 0 || row >= static_cast<int>(m_Shown.size()))
 		return nullptr;

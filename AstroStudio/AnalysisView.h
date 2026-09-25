@@ -40,6 +40,7 @@ public:
 	void DoSort(SortInfo const* si);
 
 	void PageActivated(bool active) override;
+	bool GetStatusInfo(StatusInfo& info) const override;
 	void TextFontChanged() override;
 	// the aspect settings (orbs) changed: what the tab shows was found with the old ones
 	void AspectSettingsChanged() override;

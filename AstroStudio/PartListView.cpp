@@ -208,7 +208,7 @@ LRESULT CPartListView::OnCreate(UINT, WPARAM, LPARAM, BOOL&) {
 	m_Font.CreateFontIndirect(&lf);
 
 	auto cm = GetColumnManager(m_List);
-	cm->AddColumn(L"Part", LVCFMT_LEFT, 90, ColumnType::Part);
+	cm->AddColumn(L"Part", LVCFMT_LEFT, 130, ColumnType::Part);
 	cm->AddColumn(L"Position", LVCFMT_LEFT, 110, ColumnType::Position);
 	cm->AddColumn(L"H", LVCFMT_RIGHT | LVCFMT_FIXED_WIDTH, 40, ColumnType::House);
 	cm->AddColumn(L"Formula", LVCFMT_LEFT, 170, ColumnType::Formula);
