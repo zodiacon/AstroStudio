@@ -3,6 +3,7 @@
 #include "ChartData.h"
 #include "Aspects.h"
 #include "ChartOverlay.h"
+#include "WheelOptions.h"
 #include "D2DResources.h"
 #include <array>
 #include <optional>
@@ -34,8 +35,8 @@ struct ChartDrawingParameters {
 	bool DrawAspects{ true };
 	bool FillZodiacBelts{ true };
 	bool DrawHouseLines{ true };
-	bool DrawVeryMinorAspects{ true };
-	bool DrawNonStandardPlanetAspects{ false };
+	// what is left out (the picture is not the calculation)
+	WheelOptions Wheel;
 
 	// the colours for a dark background (the defaults are for a light one)
 	static ChartDrawingParameters Dark() {
@@ -112,6 +113,8 @@ private:
 	HRESULT DrawOverlay(ID2D1RenderTarget* rt);
 	// a point of the chart's own (possibly shrunk) part of the wheel as it is on the wheel
 	D2D1_POINT_2F Map(D2D1_POINT_2F const& pt) const;
+	// the planets the wheel draws, of these
+	std::vector<PlanetPosition> Visible(std::vector<PlanetPosition> const& planets) const;
 	D2D1_POINT_2F PointByAngle(D2D1_POINT_2F const& center, float radius, double angle) const;
 
 	ChartDrawingParameters m_params;

@@ -17,6 +17,8 @@
 #include "NetworkHelper.h"
 #include "AppSettings.h"
 #include "AspectOptionsDlg.h"
+#include "WheelOptionsDlg.h"
+#include "ChartColorsDlg.h"
 #include <WTLHelper.h>
 
 #define WINDOW_MENU_POSITION	6
@@ -104,6 +106,8 @@ LRESULT CMainFrame::OnCreate(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/
 	UIEnable(ID_CHART_LIVE, FALSE);
 	UIEnable(ID_CHART_TRANSITS, FALSE);
 	UIEnable(ID_CHART_OVERLAY, FALSE);
+	for (UINT id : { ID_CHART_DERIVED_SOLARRETURN, ID_CHART_DERIVED_LUNARRETURN, ID_CHART_DERIVED_COMPOSITE, ID_CHART_DERIVED_DAVISON })
+		UIEnable(id, FALSE);
 	UIEnable(ID_CHART_OVERLAY_NONE, FALSE);
 	UIEnable(ID_CHART_OVERLAY_PROGRESSED, FALSE);
 	UIEnable(ID_CHART_OVERLAY_SOLARARC, FALSE);
@@ -249,6 +253,38 @@ LRESULT CMainFrame::OnFont(WORD, WORD, HWND, BOOL&) {
 	return 0;
 }
 
+LRESULT CMainFrame::OnChartColors(WORD, WORD, HWND, BOOL&) {
+	// what the charts show follows Apply; Cancel puts back what was there
+	auto show = [this](ChartColors const& colors) {
+		ChartColors::Current() = colors;
+		for (int i = 0; i < m_view.GetPageCount(); i++)
+			if (auto view = ViewOfPage(i))
+				view->WheelOptionsChanged();
+	};
+	CChartColorsDlg dlg;
+	dlg.Init(ChartColors::Current(), WTLHelper::IsDarkMode(), show);
+	if (dlg.DoModal(m_hWnd) != IDOK)
+		return 0;
+
+	show(dlg.GetColors());
+	ChartColors::StoreInSettings();
+	return 0;
+}
+
+LRESULT CMainFrame::OnWheelOptions(WORD, WORD, HWND, BOOL&) {
+	CWheelOptionsDlg dlg;
+	dlg.SetOptions(WheelOptions::Current());
+	if (dlg.DoModal(m_hWnd) != IDOK)
+		return 0;
+
+	WheelOptions::Current() = dlg.GetOptions();
+	WheelOptions::StoreInSettings();
+	for (int i = 0; i < m_view.GetPageCount(); i++)
+		if (auto view = ViewOfPage(i))
+			view->WheelOptionsChanged();
+	return 0;
+}
+
 LRESULT CMainFrame::OnAspectOptions(WORD, WORD, HWND, BOOL&) {
 	CAspectOptionsDlg dlg;
 	dlg.SetOptions(AspectOptions::Current());
@@ -353,7 +389,16 @@ LRESULT CMainFrame::OnClose(UINT, WPARAM, LPARAM, BOOL& bHandled) {
 	return 0;
 }
 
-IView* CMainFrame::NewChartWithDialog(ChartInfo const* initial) {
+IView* CMainFrame::AddDerivedChartView(ChartData data, PCWSTR title) {
+	auto pView = new CChartView(this);
+	pView->Create(m_view, rcDefault, nullptr, WS_CHILD | WS_VISIBLE | WS_CLIPCHILDREN, 0);
+	m_view.AddPage(pView->m_hWnd, title, 1, pView);
+	pView->DerivedChart(std::move(data));
+	pView->SetFile(title, nullptr);
+	return pView;
+}
+
+IView* CMainFrame::NewChartWithDialog(ChartInfo const* initial, HouseSystem const* houseSystem) {
 	ChartInfo info;
 	if (initial) {
 		info = *initial;
@@ -366,7 +411,7 @@ IView* CMainFrame::NewChartWithDialog(ChartInfo const* initial) {
 
 	CNewChartDlg dlg;
 	dlg.SetChartInfo(info);
-	dlg.SetHouseSystem(static_cast<HouseSystem>(AppSettings::Get().LastHouseSystem()));
+	dlg.SetHouseSystem(houseSystem ? *houseSystem : static_cast<HouseSystem>(AppSettings::Get().LastHouseSystem()));
 	if (dlg.DoModal(m_hWnd) != IDOK)
 		return nullptr;
 	AppSettings::Get().LastHouseSystem(static_cast<int>(dlg.GetHouseSystem()));

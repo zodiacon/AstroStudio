@@ -6,6 +6,8 @@
 #include <WTLHelper.h>
 #include "AppSettings.h"
 #include "AspectOptions.h"
+#include "WheelOptions.h"
+#include "ChartColors.h"
 
 CAppModule _Module;
 AppSettings g_Settings;
@@ -49,6 +51,8 @@ int WINAPI _tWinMain(HINSTANCE hInstance, HINSTANCE /*hPrevInstance*/, LPTSTR lp
 
 	AppSettings::Get().Load(AppSettings::RegistryKey);
 	AspectOptions::LoadFromSettings();
+	WheelOptions::LoadFromSettings();
+	ChartColors::LoadFromSettings();
 	// dark or not as the user last chose, and as the system is until then
 	int dark = AppSettings::Get().DarkMode();
 	if (dark < 0)

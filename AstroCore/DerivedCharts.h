@@ -81,6 +81,12 @@ struct DerivedCharts abstract final {
 	// midpoint of the two birth places, at the midpoint of the two times. The planets are those both charts have.
 	static ChartData Composite(AstroCalculator& calc, ChartData const& a, ChartData const& b, CompositeHouses method = CompositeHouses::MidpointMC);
 
+	// The Davison relationship chart: an ordinary chart cast for the midpoint of the two births in time and in place (the
+	// planets are where they really were then). It has the first chart's house system, harmonic and planets.
+	static ChartData Davison(AstroCalculator& calc, ChartData const& a, ChartData const& b);
+	// the midpoint of two charts' times and places, as chart details (no names, no time zone)
+	static ChartInfo MidpointInfo(ChartInfo const& a, ChartInfo const& b);
+
 	// --- helpers
 
 	// the houses that have this ecliptic longitude at the Midheaven, at a latitude and (for the obliquity) a moment

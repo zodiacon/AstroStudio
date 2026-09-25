@@ -189,6 +189,36 @@ std::optional<DateTime> DerivedCharts::FindReturn(AstroCalculator const& calc, C
 	return FindLongitude(calc, planet, longitude, from, search);
 }
 
+ChartInfo DerivedCharts::MidpointInfo(ChartInfo const& a, ChartInfo const& b) {
+	ChartInfo info = a;
+	info.FirstName.clear();
+	info.MiddleName.clear();
+	info.LastName.clear();
+	info.City.clear();
+	info.State.clear();
+	info.Country.clear();
+	info.Type = InfoType::Event;
+	info.Time = FromJulian((a.Time.Julian() + b.Time.Julian()) / 2);
+	info.Latitude = (a.Latitude + b.Latitude) / 2;
+	info.Longitude = MidLongitude(a.Longitude, b.Longitude);
+	info.Elevation = (a.Elevation + b.Elevation) / 2;
+	info.TimeZone = TimeZoneInfo{};		// a chart of the two has no time zone of its own
+	return info;
+}
+
+ChartData DerivedCharts::Davison(AstroCalculator& calc, ChartData const& a, ChartData const& b) {
+	ChartData chart;
+	chart.SetHouseSystem(a.GetHouseSystem());
+	chart.Harmonic(a.Harmonic());
+	std::vector<Planet> planets;
+	for (auto const& p : a.AllPlanets())
+		planets.push_back(p.Planet);
+	chart.AddPlanets(planets);
+	chart.Info() = MidpointInfo(a.Info(), b.Info());
+	calc.Calculate(chart);
+	return chart;
+}
+
 ChartData DerivedCharts::Composite(AstroCalculator& calc, ChartData const& a, ChartData const& b, CompositeHouses method) {
 	ChartData chart;
 	chart.SetHouseSystem(a.GetHouseSystem());
@@ -212,22 +242,8 @@ ChartData DerivedCharts::Composite(AstroCalculator& calc, ChartData const& a, Ch
 	}
 
 	// the midpoint of the two births, in time and in place
-	auto const& ia = a.Info();
-	auto const& ib = b.Info();
 	auto& info = chart.Info();
-	info = ia;
-	info.FirstName.clear();
-	info.MiddleName.clear();
-	info.LastName.clear();
-	info.City.clear();
-	info.State.clear();
-	info.Country.clear();
-	info.Type = InfoType::Event;
-	info.Time = FromJulian((ia.Time.Julian() + ib.Time.Julian()) / 2);
-	info.Latitude = (ia.Latitude + ib.Latitude) / 2;
-	info.Longitude = MidLongitude(ia.Longitude, ib.Longitude);
-	info.Elevation = (ia.Elevation + ib.Elevation) / 2;
-	info.TimeZone = TimeZoneInfo{};		// a composite has no time zone of its own
+	info = MidpointInfo(a.Info(), b.Info());
 
 	if (method == CompositeHouses::MidpointMC) {
 		double mc = AstroPoint::MidPoint(a.Houses().MC, b.Houses().MC).Value;

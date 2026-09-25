@@ -44,6 +44,8 @@
 #define IDI_SAVE                        230
 #define IDI_SAVEAS                      231
 #define IDD_EPHEMERISOPTIONS            232
+#define IDD_WHEELOPTIONS                236
+#define IDD_CHARTCOLORS                 237
 #define IDD_ASPECTOPTIONS               233
 #define IDI_HOURGLASS                   234
 #define IDI_ICON3                       235
@@ -94,6 +96,21 @@
 #define IDC_EPH_VOID                    1044
 #define IDC_EPH_STANDARD                1045
 #define IDC_EPH_ALL                     1046
+#define IDC_WHEEL_PLANETS               1058
+#define IDC_WHEEL_ASPECTS               1059
+#define IDC_WHEEL_PLANETS_ALL           1060
+#define IDC_WHEEL_PLANETS_NONE          1061
+#define IDC_WHEEL_ASPECTS_ALL           1062
+#define IDC_WHEEL_ASPECTS_NONE          1063
+#define IDC_WHEEL_BEYOND                1064
+#define IDC_COLOR_MODE                  1065
+#define IDC_COLOR_LIST                  1066
+#define IDC_COLOR_CHANGE                1067
+#define IDC_COLOR_RESET                 1068
+#define IDC_COLOR_RESETALL              1069
+#define IDC_COLOR_APPLY                 1070
+#define IDC_COLOR_LOAD                  1071
+#define IDC_COLOR_SAVE                  1072
 #define IDC_ASP_SET                     1047
 #define IDC_ASP_MAJORORB                1048
 #define IDC_ASP_MINORORB                1049
@@ -133,14 +150,20 @@
 #define ID_CHART_OVERLAY_SOLARARC       32798
 #define ID_CHART_OVERLAY_SYNASTRY       32799
 #define ID_CHART_OVERLAY                32800
+#define ID_CHART_DERIVED_SOLARRETURN    32801
+#define ID_CHART_DERIVED_LUNARRETURN    32802
+#define ID_CHART_DERIVED_COMPOSITE      32803
+#define ID_CHART_DERIVED_DAVISON        32804
+#define ID_OPTIONS_WHEEL                32805
+#define ID_OPTIONS_COLORS               32806
 
 // Next default values for new objects
 // 
 #ifdef APSTUDIO_INVOKED
 #ifndef APSTUDIO_READONLY_SYMBOLS
-#define _APS_NEXT_RESOURCE_VALUE        236
-#define _APS_NEXT_COMMAND_VALUE         32801
-#define _APS_NEXT_CONTROL_VALUE         1058
+#define _APS_NEXT_RESOURCE_VALUE        238
+#define _APS_NEXT_COMMAND_VALUE         32807
+#define _APS_NEXT_CONTROL_VALUE         1073
 #define _APS_NEXT_SYMED_VALUE           108
 #endif
 #endif

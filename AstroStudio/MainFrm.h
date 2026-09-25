@@ -37,6 +37,8 @@ protected:
 		COMMAND_RANGE_HANDLER(ID_FILE_MRU_FIRST, ID_FILE_MRU_LAST, OnFileRecent)
 		COMMAND_ID_HANDLER(ID_OPTIONS_DARKMODE, OnToggleDarkMode)
 		COMMAND_ID_HANDLER(ID_OPTIONS_ASPECTS, OnAspectOptions)
+		COMMAND_ID_HANDLER(ID_OPTIONS_WHEEL, OnWheelOptions)
+		COMMAND_ID_HANDLER(ID_OPTIONS_COLORS, OnChartColors)
 		COMMAND_ID_HANDLER(ID_OPTIONS_ALWAYSONTOP, OnAlwaysOnTop)
 		COMMAND_ID_HANDLER(ID_OPTIONS_FONT, OnFont)
 		MESSAGE_HANDLER(WM_GETMINMAXINFO, OnGetMinMaxInfo)
@@ -74,7 +76,8 @@ private:
 	void SetViewTitle(IView* view, PCWSTR title) override;
 	void ActivateView(IView* view) override;
 	ChartInfo& DefaultChartInfo() override;
-	IView* NewChartWithDialog(ChartInfo const* initial = nullptr) override;
+	IView* NewChartWithDialog(ChartInfo const* initial = nullptr, HouseSystem const* houseSystem = nullptr) override;
+	IView* AddDerivedChartView(ChartData data, PCWSTR title) override;
 	bool IsLocationPending() const override;
 	std::vector<OpenChart> OpenCharts(IView* except = nullptr) override;
 
@@ -101,6 +104,8 @@ private:
 	LRESULT OnNewChartNow(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/);
 	LRESULT OnToggleDarkMode(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/);
 	LRESULT OnAspectOptions(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/);
+	LRESULT OnWheelOptions(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/);
+	LRESULT OnChartColors(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/);
 	LRESULT OnAlwaysOnTop(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/);
 	LRESULT OnFont(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/);
 	LRESULT OnLocationReady(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, BOOL& /*bHandled*/);

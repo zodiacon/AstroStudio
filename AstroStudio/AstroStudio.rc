@@ -102,6 +102,14 @@ BEGIN
             MENUITEM "Solar &Arc Directions",       ID_CHART_OVERLAY_SOLARARC
             MENUITEM "S&ynastry...",                ID_CHART_OVERLAY_SYNASTRY
         END
+        POPUP "New &Derived Chart"
+        BEGIN
+            MENUITEM "&Solar Return",               ID_CHART_DERIVED_SOLARRETURN
+            MENUITEM "&Lunar Return",               ID_CHART_DERIVED_LUNARRETURN
+            MENUITEM SEPARATOR
+            MENUITEM "&Composite...",               ID_CHART_DERIVED_COMPOSITE
+            MENUITEM "&Davison...",                 ID_CHART_DERIVED_DAVISON
+        END
     END
     POPUP "&Tools"
     BEGIN
@@ -110,6 +118,8 @@ BEGIN
     POPUP "&Options"
     BEGIN
         MENUITEM "&Aspects...",                 ID_OPTIONS_ASPECTS
+        MENUITEM "Chart &Wheel...",             ID_OPTIONS_WHEEL
+        MENUITEM "Chart &Colors...",            ID_OPTIONS_COLORS
         MENUITEM SEPARATOR
         MENUITEM "&Always On Top",              ID_OPTIONS_ALWAYSONTOP
         MENUITEM "&Font...",                    ID_OPTIONS_FONT
@@ -236,14 +246,14 @@ BEGIN
     LTEXT           "Time zone:",IDC_STATIC,7,68,38,8
     COMBOBOX        IDC_TIMEZONE,48,65,210,150,CBS_DROPDOWNLIST | WS_VSCROLL | WS_TABSTOP
     CONTROL         "Manual UT offset:",IDC_MANUALTZ,"Button",BS_AUTOCHECKBOX | WS_TABSTOP,266,67,74,10
-    EDITTEXT        IDC_TZOFFSET,342,65,36,14,ES_AUTOHSCROLL
+    EDITTEXT        IDC_TZOFFSET,338,65,36,14,ES_AUTOHSCROLL
     LTEXT           "Harmonic:",IDC_STATIC,294,98,32,8
     EDITTEXT        IDC_HARMONIC,329,94,33,14,ES_AUTOHSCROLL | ES_NUMBER
     CONTROL         "",IDC_HARMONICUD,"msctls_updown32",UDS_SETBUDDYINT | UDS_ALIGNRIGHT | UDS_AUTOBUDDY | UDS_ARROWKEYS,361,94,10,14
     LTEXT           "Planets",IDC_STATIC,7,85,23,8
-    CONTROL         "",IDC_PLANETS,"SysListView32",LVS_REPORT | LVS_ALIGNLEFT | LVS_OWNERDATA | WS_BORDER | WS_TABSTOP,7,98,181,199
+    CONTROL         "",IDC_PLANETS,"SysListView32",LVS_REPORT | LVS_ALIGNLEFT | LVS_OWNERDATA | WS_BORDER | WS_TABSTOP,7,98,181,215
     LTEXT           "Houses",IDC_STATIC,197,85,23,8
-    CONTROL         "",IDC_HOUSES,"SysListView32",LVS_REPORT | LVS_ALIGNLEFT | LVS_OWNERDATA | LVS_NOSORTHEADER | WS_BORDER | WS_TABSTOP,194,98,93,199
+    CONTROL         "",IDC_HOUSES,"SysListView32",LVS_REPORT | LVS_ALIGNLEFT | LVS_OWNERDATA | LVS_NOSORTHEADER | WS_BORDER | WS_TABSTOP,194,98,93,214
     LTEXT           "Name:",IDC_STATIC,7,9,21,8
     LTEXT           "Location:",IDC_STATIC,150,9,30,8
     EDITTEXT        IDC_LOCATION,186,7,130,14,ES_AUTOHSCROLL | NOT WS_BORDER,WS_EX_CLIENTEDGE
@@ -262,14 +272,13 @@ BEGIN
     CONTROL         "W",IDC_WEST,"Button",BS_AUTORADIOBUTTON,222,34,18,10
     EDITTEXT        IDC_LONMIN,241,26,26,14,ES_AUTOHSCROLL | ES_NUMBER
     CONTROL         "",IDC_LONMINUD,"msctls_updown32",UDS_SETBUDDYINT | UDS_ALIGNRIGHT | UDS_AUTOBUDDY | UDS_ARROWKEYS,267,26,10,14
-    PUSHBUTTON      "Here",IDC_HERE,318,26,41,14
+    PUSHBUTTON      "Here",IDC_HERE,319,26,41,14
     PUSHBUTTON      "Now",IDC_NOW,376,46,41,14
     PUSHBUTTON      "Lookup",IDC_LOOKUP,319,7,47,14
-    DEFPUSHBUTTON   "Apply",IDC_APPLY,7,303,63,14
 END
 
 IDD_NEWCHART DIALOGEX 0, 0, 335, 176
-STYLE DS_SETFONT | DS_MODALFRAME | DS_FIXEDSYS | DS_CENTER | WS_POPUP | WS_CAPTION | WS_SYSMENU
+STYLE DS_SETFONT | DS_MODALFRAME | DS_CENTER | WS_POPUP | WS_CAPTION | WS_SYSMENU
 CAPTION "New Chart"
 FONT 9, "Segoe UI", 400, 0, 0x0
 BEGIN
@@ -308,8 +317,8 @@ BEGIN
     EDITTEXT        IDC_TZOFFSET,122,106,40,14,ES_AUTOHSCROLL
     LTEXT           "House System:",IDC_STATIC,7,131,49,8
     COMBOBOX        IDC_HOUSESYSTEM,60,128,90,109,CBS_DROPDOWNLIST | CBS_SORT | WS_VSCROLL | WS_TABSTOP
-    DEFPUSHBUTTON   "OK",IDOK,222,155,50,14
-    PUSHBUTTON      "Cancel",IDCANCEL,278,155,50,14
+    DEFPUSHBUTTON   "OK",IDOK,109,155,50,14
+    PUSHBUTTON      "Cancel",IDCANCEL,175,155,50,14
 END
 
 IDD_ASPECTOPTIONS DIALOGEX 0, 0, 302, 235
@@ -339,8 +348,8 @@ BEGIN
     PUSHBUTTON      "Cancel",IDCANCEL,245,214,50,14
 END
 
-IDD_EPHEMERISOPTIONS DIALOGEX 0, 0, 246, 226
-STYLE DS_SETFONT | DS_MODALFRAME | DS_FIXEDSYS | DS_CENTER | WS_POPUP | WS_CAPTION | WS_SYSMENU
+IDD_EPHEMERISOPTIONS DIALOGEX 0, 0, 246, 237
+STYLE DS_SETFONT | DS_MODALFRAME | DS_CENTER | WS_POPUP | WS_CAPTION | WS_SYSMENU
 CAPTION "Ephemeris Options"
 FONT 9, "Segoe UI", 400, 0, 0x0
 BEGIN
@@ -353,15 +362,54 @@ BEGIN
     EDITTEXT        IDC_EPH_STEP,52,27,32,14,ES_AUTOHSCROLL | ES_NUMBER
     LTEXT           "days between rows (1 to 366)",IDC_STATIC,90,29,140,8
     LTEXT           "Bodies:",IDC_STATIC,7,51,38,8
-    CONTROL         "",IDC_EPH_BODIES,"SysListView32",LVS_REPORT | LVS_SINGLESEL | LVS_SHOWSELALWAYS | LVS_NOCOLUMNHEADER | WS_BORDER | WS_TABSTOP,52,49,110,104
+    CONTROL         "",IDC_EPH_BODIES,"SysListView32",LVS_REPORT | LVS_SINGLESEL | LVS_SHOWSELALWAYS | LVS_NOCOLUMNHEADER | WS_BORDER | WS_TABSTOP,52,49,110,108
     PUSHBUTTON      "Standard",IDC_EPH_STANDARD,170,49,50,14
     PUSHBUTTON      "All",IDC_EPH_ALL,170,67,50,14
     LTEXT           "Also show:",IDC_STATIC,7,163,45,8
     CONTROL         "Eclipses (in Phenomena)",IDC_EPH_ECLIPSES,"Button",BS_AUTOCHECKBOX | WS_TABSTOP,52,162,100,10
     CONTROL         "Moon void of course",IDC_EPH_VOID,"Button",BS_AUTOCHECKBOX | WS_TABSTOP,52,176,100,10
-    LTEXT           "They need a step of up to 31 days (eclipses) or 7 days (void of course).",IDC_STATIC,52,192,187,16
-    DEFPUSHBUTTON   "OK",IDOK,133,205,50,14
-    PUSHBUTTON      "Cancel",IDCANCEL,189,205,50,14
+    LTEXT           "They need a step of up to 31 days (eclipses) or 7 days (void of course).",IDC_STATIC,16,192,223,13
+    DEFPUSHBUTTON   "OK",IDOK,65,216,50,14
+    PUSHBUTTON      "Cancel",IDCANCEL,131,216,50,14
+END
+
+IDD_WHEELOPTIONS DIALOGEX 0, 0, 250, 217
+STYLE DS_SETFONT | DS_MODALFRAME | DS_CENTER | WS_POPUP | WS_CAPTION | WS_SYSMENU
+CAPTION "Chart Wheel"
+FONT 9, "Segoe UI", 400, 0, 0x0
+BEGIN
+    LTEXT           "Planets to draw:",IDC_STATIC,7,7,110,8
+    CONTROL         "",IDC_WHEEL_PLANETS,"SysListView32",LVS_REPORT | LVS_SINGLESEL | LVS_SHOWSELALWAYS | LVS_NOCOLUMNHEADER | WS_BORDER | WS_TABSTOP,7,18,112,112
+    PUSHBUTTON      "All",IDC_WHEEL_PLANETS_ALL,7,140,54,14
+    PUSHBUTTON      "None",IDC_WHEEL_PLANETS_NONE,65,140,54,14
+    LTEXT           "Aspect lines to draw:",IDC_STATIC,131,7,110,8
+    CONTROL         "",IDC_WHEEL_ASPECTS,"SysListView32",LVS_REPORT | LVS_SINGLESEL | LVS_SHOWSELALWAYS | LVS_NOCOLUMNHEADER | WS_BORDER | WS_TABSTOP,131,18,112,113
+    PUSHBUTTON      "All",IDC_WHEEL_ASPECTS_ALL,131,140,54,14
+    PUSHBUTTON      "None",IDC_WHEEL_ASPECTS_NONE,189,140,54,14
+    CONTROL         "Also draw aspect lines to Chiron, the nodes, Lilith and the asteroids",IDC_WHEEL_BEYOND,
+                    "Button",BS_AUTOCHECKBOX | WS_TABSTOP,7,161,236,10
+    LTEXT           "This is only about the picture: the aspect list, the grid and the tooltips are not affected. Conjunctions have no line.",IDC_STATIC,7,174,180,16
+    DEFPUSHBUTTON   "OK",IDOK,67,196,50,14
+    PUSHBUTTON      "Cancel",IDCANCEL,133,196,50,14
+END
+
+IDD_CHARTCOLORS DIALOGEX 0, 0, 350, 230
+STYLE DS_SETFONT | DS_MODALFRAME | DS_FIXEDSYS | DS_CENTER | WS_POPUP | WS_CAPTION | WS_SYSMENU
+CAPTION "Chart Colors"
+FONT 9, "Segoe UI", 400, 0, 0x0
+BEGIN
+    LTEXT           "Colours for:",IDC_STATIC,7,9,42,8
+    COMBOBOX        IDC_COLOR_MODE,52,7,80,60,CBS_DROPDOWNLIST | WS_VSCROLL | WS_TABSTOP
+    CONTROL         "",IDC_COLOR_LIST,"SysListView32",LVS_REPORT | LVS_SINGLESEL | LVS_SHOWSELALWAYS | WS_BORDER | WS_TABSTOP,7,26,266,168
+    PUSHBUTTON      "Change...",IDC_COLOR_CHANGE,279,26,64,14
+    PUSHBUTTON      "Default",IDC_COLOR_RESET,279,44,64,14
+    PUSHBUTTON      "All Default",IDC_COLOR_RESETALL,279,62,64,14
+    PUSHBUTTON      "Load...",IDC_COLOR_LOAD,279,90,64,14
+    PUSHBUTTON      "Save...",IDC_COLOR_SAVE,279,108,64,14
+    LTEXT           "Double-click an element to change its colour. Dark mode and light mode have colours of their own; a file holds both.",IDC_STATIC,7,200,160,24
+    PUSHBUTTON      "Apply",IDC_COLOR_APPLY,172,206,50,14
+    DEFPUSHBUTTON   "OK",IDOK,228,206,58,14
+    PUSHBUTTON      "Cancel",IDCANCEL,290,206,53,14
 END
 
 
@@ -387,6 +435,20 @@ BEGIN
         RIGHTMARGIN, 433
         TOPMARGIN, 7
         BOTTOMMARGIN, 320
+    END
+
+    IDD_NEWCHART, DIALOG
+    BEGIN
+    END
+
+    IDD_EPHEMERISOPTIONS, DIALOG
+    BEGIN
+        BOTTOMMARGIN, 226
+    END
+
+    IDD_WHEELOPTIONS, DIALOG
+    BEGIN
+        BOTTOMMARGIN, 186
     END
 END
 #endif    // APSTUDIO_INVOKED
@@ -480,6 +542,21 @@ BEGIN
     0
 END
 
+IDD_WHEELOPTIONS AFX_DIALOG_LAYOUT
+BEGIN
+    0
+END
+
+IDD_EPHEMERISOPTIONS AFX_DIALOG_LAYOUT
+BEGIN
+    0
+END
+
+IDD_NEWCHART AFX_DIALOG_LAYOUT
+BEGIN
+    0
+END
+
 
 /////////////////////////////////////////////////////////////////////////////
 //
@@ -523,6 +600,16 @@ END
 STRINGTABLE
 BEGIN
     ID_CHART_OVERLAY        "Choose what to show around the chart \nOverlay"
+    ID_CHART_DERIVED_SOLARRETURN 
+                            "Open the chart for the Sun's return to its place in this chart, for a date near the moment shown \nSolar Return"
+    ID_CHART_DERIVED_LUNARRETURN 
+                            "Open the chart for the Moon's return to its place in this chart, for a date near the moment shown \nLunar Return"
+    ID_CHART_DERIVED_COMPOSITE 
+                            "Open the composite (midpoints) of this chart and another open chart \nComposite"
+    ID_CHART_DERIVED_DAVISON 
+                            "Open the chart for the midpoint in time and place of this chart and another open chart \nDavison"
+    ID_OPTIONS_WHEEL        "Choose the planets and the aspect lines the chart wheel draws\nChart Wheel"
+    ID_OPTIONS_COLORS       "Choose the colours of the chart wheel\nChart Colors"
 END
 
 STRINGTABLE

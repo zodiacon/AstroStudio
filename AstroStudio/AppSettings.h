@@ -31,6 +31,8 @@ struct AppSettings : Settings {
 		SETTING(EphemerisEclipses, 0, SettingType::Bool);
 		SETTING(EphemerisVoid, 0, SettingType::Bool);
 		SETTING_STRING(AspectSets, L"");		// the aspect settings (AspectOptions), as INI text; empty: the defaults
+		SETTING_STRING(WheelOptions, L"");		// what the chart wheel draws (WheelOptions), as text; empty: everything
+		SETTING_STRING(ChartColors, L"");		// the user's colours for the chart wheel (ChartColors), as text; empty: the defaults
 		SETTING_STRING(EphemerisBodies, L"");		// the numbers of the bodies (Planet), comma separated; empty: the usual ones
 	END_SETTINGS
 
@@ -52,4 +54,6 @@ struct AppSettings : Settings {
 	DEF_SETTING(EphemerisVoid, int)
 	DEF_SETTING_STRING(AspectSets)
 	DEF_SETTING_STRING(EphemerisBodies)
+	DEF_SETTING_STRING(ChartColors)
+	DEF_SETTING_STRING(WheelOptions)
 };

@@ -159,6 +159,20 @@ void CChartDetailsView::UpdateControls(Recalc type) {
 		Sort(GetSortInfo(m_ctlPlanets));
 		m_ctlPlanets.SetItemCountEx((int)m_Planets.size(), LVSICF_NOSCROLL);
 	}
+	DisableEditors();		// (setting the time enables the zone controls again)
+}
+
+void CChartDetailsView::SetReadOnly() {
+	m_ReadOnly = true;
+	DisableEditors();
+}
+
+void CChartDetailsView::DisableEditors() {
+	if (!m_ReadOnly)
+		return;
+	for (HWND child = GetWindow(GW_CHILD); child; child = ::GetWindow(child, GW_HWNDNEXT))
+		if (child != m_ctlPlanets && child != m_ctlHouses)
+			::EnableWindow(child, FALSE);
 }
 
 // The chart page forwards keyboard messages here (see CChartView::OnForwardMsg) so the dialog gets its

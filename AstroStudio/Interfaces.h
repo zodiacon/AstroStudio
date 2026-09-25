@@ -27,7 +27,11 @@ struct IMainFrame abstract {
 
 	// Asks for the details of a new chart (the dialog opens with `initial`, or with the current time and
 	// the default location if null) and opens it. Returns null if the dialog was cancelled.
-	virtual IView* NewChartWithDialog(ChartInfo const* initial = nullptr) = 0;
+	// The house system the dialog starts with is the last one used, unless one is given.
+	virtual IView* NewChartWithDialog(ChartInfo const* initial = nullptr, HouseSystem const* houseSystem = nullptr) = 0;
+	// Opens a chart worked out from others (a composite, a Davison chart) in a new tab, read-only: its details are shown but
+	// can't be edited, the planets are kept as they are (never recalculated) and it can't be saved. Returns the new view.
+	virtual IView* AddDerivedChartView(ChartData data, PCWSTR title) = 0;
 	virtual BOOL AddToolBarToUI(HWND) = 0;
 
 	// True while the startup geolocation lookup is still running, so a new
@@ -52,6 +56,8 @@ struct IView {
 	virtual void TextFontChanged() {}
 	// The aspect settings (AspectOptions::Current) changed: a view that shows aspects works them out again.
 	virtual void AspectSettingsChanged() {}
+	// what the chart wheel draws (WheelOptions::Current) or the colours it draws in (ChartColors::Current) changed
+	virtual void WheelOptionsChanged() {}
 	// the file the view's document lives in, or null
 	virtual PCWSTR FilePath() const {
 		return nullptr;

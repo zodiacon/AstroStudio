@@ -32,6 +32,8 @@ public:
 	bool IsLocationEdited() const;
 
 	void UpdateControls(Recalc type = Recalc::All);
+	// Turns every field and button off (the two lists stay usable). For good: a read-only chart stays read-only.
+	void SetReadOnly();
 
 	CString GetColumnText(HWND, int row, int col) const;
 	void DoSort(SortInfo const* si);
@@ -81,6 +83,7 @@ private:
 	};
 
 	void UpdateLocationControls();
+	void DisableEditors();
 	// reads the date, time and zone controls into the chart and recalculates
 	void ApplyTimeFromControls();
 
@@ -110,5 +113,6 @@ private:
 	CTimeControls m_Time;
 	bool m_LocationPending{ false };
 	bool m_LocationEdited{ false };
+	bool m_ReadOnly{ false };
 };
 

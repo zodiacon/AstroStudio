@@ -227,6 +227,10 @@
     <ClCompile Include="ChartFile.cpp" />
     <ClCompile Include="NewChartDlg.cpp" />
     <ClCompile Include="ChartView.cpp" />
+    <ClCompile Include="WheelOptions.cpp" />
+    <ClCompile Include="ChartColors.cpp" />
+    <ClCompile Include="ChartColorsDlg.cpp" />
+    <ClCompile Include="WheelOptionsDlg.cpp" />
     <ClCompile Include="DefaultFont.cpp" />
     <ClCompile Include="EphemerisView.cpp" />
     <ClCompile Include="GraphicChartView.cpp" />
@@ -272,6 +276,10 @@
     <ClInclude Include="AspectOptionsDlg.h" />
     <ClInclude Include="ChartImage.h" />
     <ClInclude Include="ChartOverlay.h" />
+    <ClInclude Include="WheelOptions.h" />
+    <ClInclude Include="ChartColors.h" />
+    <ClInclude Include="ChartColorsDlg.h" />
+    <ClInclude Include="WheelOptionsDlg.h" />
     <ClInclude Include="EphemerisOptionsDlg.h" />
     <ClInclude Include="Helpers.h" />
     <ClInclude Include="Interfaces.h" />

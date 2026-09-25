@@ -1,6 +1,7 @@
 #include "pch.h"
 #include "GraphicChartView.h"
 #include "Helpers.h"
+#include "ChartColors.h"
 #include "DerivedCharts.h"
 #include <DarkMode/DarkModeSubclass.h>
 #include <numbers>
@@ -77,7 +78,10 @@ LRESULT CGraphicChartView::OnThemeChanged(UINT, WPARAM, LPARAM, BOOL& handled) {
 
 void CGraphicChartView::ApplyState() {
 	// the pictures (Export, Copy) follow the mode as well: they are what is on the screen
-	m_Drawing.DrawingParameters(WTLHelper::IsDarkMode() ? ChartDrawingParameters::Dark() : ChartDrawingParameters());
+	auto params = WTLHelper::IsDarkMode() ? ChartDrawingParameters::Dark() : ChartDrawingParameters();
+	params.Wheel = WheelOptions::Current();
+	ChartColors::Current().Apply(params, WTLHelper::IsDarkMode());
+	m_Drawing.DrawingParameters(params);
 	m_Drawing.Rotation(m_Rotation).Highlight(m_Selected);
 	m_Drawing.Overlay(m_Overlay);
 }

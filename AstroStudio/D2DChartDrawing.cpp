@@ -51,6 +51,14 @@ namespace {
 	constexpr float OverlayDotRadius = 441, OverlayGlyphRadius = 468;
 }
 
+std::vector<PlanetPosition> D2DChartDrawing::Visible(std::vector<PlanetPosition> const& planets) const {
+	std::vector<PlanetPosition> visible;
+	for (auto const& planet : planets)
+		if (m_params.Wheel.ShowsPlanet(planet.Planet))
+			visible.push_back(planet);
+	return visible;
+}
+
 D2D1_POINT_2F D2DChartDrawing::Map(D2D1_POINT_2F const& pt) const {
 	auto center = D2DChartDrawing::Center;
 	return D2D1::Point2F(center.x + m_scale * (pt.x - center.x), center.y + m_scale * (pt.y - center.y));
@@ -167,10 +175,10 @@ HRESULT D2DChartDrawing::DrawNatal(ID2D1RenderTarget* rt) {
 	// draw planets
 	//
 	float r = 420;
-	PlanetSpacer spacer(m_data->AllPlanets());
-	spacer.Space();
-
 	auto const& planets = m_data->AllPlanets();
+	auto visible = Visible(planets);
+	PlanetSpacer spacer(visible);
+	spacer.Space();
 	for (auto& pp : spacer.NewPositions()) {
 		auto pt = PointByAngle(center, r, pp.Longitude);
 		drawGlyph(DefaultFont::Get().GetPlanetGlyph(pp.Planet), resources.PlanetFormat(), pt);
@@ -181,7 +189,7 @@ HRESULT D2DChartDrawing::DrawNatal(ID2D1RenderTarget* rt) {
 	}
 
 	r = 395;
-	for (auto& pp : planets) {
+	for (auto& pp : visible) {
 		auto pt = PointByAngle(center, r, pp.Longitude);
 		bool highlighted = m_highlight && !m_highlight->Overlay && m_highlight->Planet == pp.Planet;
 		rt->FillEllipse(D2D1::Ellipse(pt, highlighted ? 6.f : 3.f, highlighted ? 6.f : 3.f), use(highlighted ? D2D1::ColorF(D2D1::ColorF::DarkOrange) : m_params.DotColor));
@@ -196,11 +204,7 @@ HRESULT D2DChartDrawing::DrawNatal(ID2D1RenderTarget* rt) {
 			if (aspect.Type == AspectType::Conjunction)
 				continue;
 
-			if (!m_params.DrawVeryMinorAspects && (aspect.Type == AspectType::Septile || aspect.Type == AspectType::BiSeptile ||
-				aspect.Type == AspectType::Quintile || aspect.Type == AspectType::BiQuintile))
-				continue;
-
-			if (!m_params.DrawNonStandardPlanetAspects && (aspect.Planet1.Planet > Planet::Pluto || aspect.Planet2.Planet > Planet::Pluto))
+			if (!m_params.Wheel.ShowsLine(aspect))
 				continue;
 
 			auto pt1 = PointByAngle(center, r, aspect.Planet1.Longitude);
@@ -326,7 +330,8 @@ HRESULT D2DChartDrawing::DrawOverlay(ID2D1RenderTarget* rt) {
 	//
 	// the overlay's planets: a dot at their place on the edge of the chart, and the glyph out in the band
 	//
-	PlanetSpacer spacer(planets);
+	auto visible = Visible(planets);
+	PlanetSpacer spacer(visible);
 	spacer.Space();
 	for (auto& pp : spacer.NewPositions()) {
 		auto pt = PointByAngle(center, OverlayGlyphRadius, pp.Longitude);
@@ -339,7 +344,7 @@ HRESULT D2DChartDrawing::DrawOverlay(ID2D1RenderTarget* rt) {
 		if (m_highlight && m_highlight->Overlay && m_highlight->Planet == pp.Planet)
 			rt->DrawEllipse(D2D1::Ellipse(pt, 22, 22), use(D2D1::ColorF(D2D1::ColorF::DarkOrange)), 3);
 	}
-	for (auto& pp : planets) {
+	for (auto& pp : visible) {
 		bool highlighted = m_highlight && m_highlight->Overlay && m_highlight->Planet == pp.Planet;
 		rt->FillEllipse(D2D1::Ellipse(PointByAngle(center, OverlayDotRadius, pp.Longitude), highlighted ? 6.f : 3.5f, highlighted ? 6.f : 3.5f),
 			use(highlighted ? D2D1::ColorF(D2D1::ColorF::DarkOrange) : m_params.OverlayColor));
@@ -354,7 +359,7 @@ HRESULT D2DChartDrawing::DrawOverlay(ID2D1RenderTarget* rt) {
 			auto const& aspect = m_overlay->Aspects[index];
 			if (aspect.Type == AspectType::Conjunction)
 				continue;
-			if (!m_params.DrawNonStandardPlanetAspects && (aspect.Planet1.Planet > Planet::Pluto || aspect.Planet2.Planet > Planet::Pluto))
+			if (!m_params.Wheel.ShowsLine(aspect))
 				continue;
 
 			auto pt1 = PointByAngle(center, OverlayDotRadius, aspect.Planet1.Longitude);

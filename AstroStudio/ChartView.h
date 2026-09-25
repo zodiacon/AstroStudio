@@ -24,6 +24,8 @@ class CChartView :
 public:
 	CChartView(IMainFrame* frame);
 	void Chart(ChartData data);
+	// A chart worked out from others (see IMainFrame::AddDerivedChartView): shown as it is, never recalculated, read-only.
+	void DerivedChart(ChartData data);
 	void ChartForNow();
 	ChartData const& Chart() const;
 
@@ -35,6 +37,7 @@ public:
 	// asks whether to save unsaved changes
 	bool CanClose() override;
 	void AspectSettingsChanged() override;
+	void WheelOptionsChanged() override;
 	bool GetChart(OpenChart& chart) const override;
 
 	BEGIN_MSG_MAP(CChartView)
@@ -54,6 +57,10 @@ public:
 		COMMAND_ID_HANDLER(ID_CHART_OVERLAY_SOLARARC, OnOverlay)
 		COMMAND_ID_HANDLER(ID_CHART_OVERLAY_SYNASTRY, OnOverlay)
 		NOTIFY_CODE_HANDLER(TBN_DROPDOWN, OnOverlayDropDown)
+		COMMAND_ID_HANDLER(ID_CHART_DERIVED_SOLARRETURN, OnDerived)
+		COMMAND_ID_HANDLER(ID_CHART_DERIVED_LUNARRETURN, OnDerived)
+		COMMAND_ID_HANDLER(ID_CHART_DERIVED_COMPOSITE, OnDerived)
+		COMMAND_ID_HANDLER(ID_CHART_DERIVED_DAVISON, OnDerived)
 		COMMAND_HANDLER(IDC_STEPCOUNT, CBN_SELCHANGE, OnStepSettingChanged)
 		COMMAND_HANDLER(IDC_STEPUNIT, CBN_SELCHANGE, OnStepSettingChanged)
 		COMMAND_HANDLER(IDC_STEPINTERVAL, CBN_SELCHANGE, OnIntervalChanged)
@@ -70,6 +77,10 @@ public:
 		COMMAND_ID_HANDLER(ID_CHART_OVERLAY_PROGRESSED, OnOverlay)
 		COMMAND_ID_HANDLER(ID_CHART_OVERLAY_SOLARARC, OnOverlay)
 		COMMAND_ID_HANDLER(ID_CHART_OVERLAY_SYNASTRY, OnOverlay)
+		COMMAND_ID_HANDLER(ID_CHART_DERIVED_SOLARRETURN, OnDerived)
+		COMMAND_ID_HANDLER(ID_CHART_DERIVED_LUNARRETURN, OnDerived)
+		COMMAND_ID_HANDLER(ID_CHART_DERIVED_COMPOSITE, OnDerived)
+		COMMAND_ID_HANDLER(ID_CHART_DERIVED_DAVISON, OnDerived)
 		COMMAND_ID_HANDLER(ID_FILE_SAVE, OnSave)
 		COMMAND_ID_HANDLER(ID_FILE_SAVE_AS, OnSave)
 		COMMAND_ID_HANDLER(ID_FILE_EXPORT, OnExport)
@@ -112,8 +123,20 @@ private:
 	bool OverlayHasTime() const {
 		return m_Overlay && m_Overlay->FollowsTime();
 	}
+	// What Step, Auto and Live move: the chart's time - which a read-only chart doesn't have to change - or an overlay's.
+	bool CanMoveTime() const {
+		return !m_ReadOnly || OverlayHasTime();
+	}
+	// asks which of the other open charts to use (a popup at the cursor if several); false if there is none or the user cancelled
+	bool PickOtherChart(OpenChart& chart, PCWSTR what);
+	// New Derived Chart: the chart of the return of the Sun or the Moon to its natal place, opened by the New Chart dialog
+	void NewReturnChart(Planet planet);
+	// ...and a composite or Davison chart of this and another open chart
+	void NewPairChart(bool davison);
+	LRESULT OnDerived(WORD /*wNotifyCode*/, WORD wID, HWND /*hWndCtl*/, BOOL& /*bHandled*/);
 	// the menu's and the toolbar's marks for the overlay shown
 	void UpdateOverlayUI();
+	void StopTimeIfFixed();
 	LRESULT OnOverlay(WORD /*wNotifyCode*/, WORD wID, HWND /*hWndCtl*/, BOOL& /*bHandled*/);
 	// the toolbar's Overlay button: a menu of the same choices as the Chart menu's, under the button
 	LRESULT OnOverlayDropDown(int /*idCtrl*/, LPNMHDR pnmh, BOOL& bHandled);
@@ -156,6 +179,7 @@ private:
 	CComboBox m_StepCount, m_StepUnit, m_StepInterval;
 	bool m_AutoStep{ false };
 	bool m_Live{ false };
+	bool m_ReadOnly{ false };
 	std::optional<ChartOverlay> m_Overlay;
 	CString m_FilePath, m_Title;
 	bool m_Modified{ false };

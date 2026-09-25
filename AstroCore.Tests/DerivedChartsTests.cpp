@@ -427,3 +427,32 @@ TEST_CASE("Houses from the Midheaven", "[Derived]") {
 	CHECK(Diff(houses.Asc, natal.Houses().Asc) < MicroDegree);
 	CHECK(Diff(houses.Armc, natal.Houses().Armc) < 1e-3);
 }
+
+TEST_CASE("Davison chart is a real chart for the midpoint in time and place", "[Derived]") {
+	AstroCalculator calc;
+	auto a = Natal(1980, 3, 10, 6, 0, 40, -74);
+	auto b = Natal(1990, 3, 10, 6, 0, 50, -70);
+	auto davison = DerivedCharts::Davison(calc, a, b);
+
+	auto const& info = davison.Info();
+	CHECK(info.Time.Julian() == Approx((a.Info().Time.Julian() + b.Info().Time.Julian()) / 2).margin(1e-9));
+	CHECK(info.Latitude == Approx(45));
+	CHECK(info.Longitude == Approx(-72));
+	CHECK(info.TimeZone.Name.empty());
+	REQUIRE(davison.AllPlanets().size() == a.AllPlanets().size());
+	CHECK(davison.GetHouseSystem() == HouseSystem::Placidus);
+
+	// the planets are where they were at that moment, and the houses are for that place
+	auto sun = calc.CalcPlanet(Planet::Sun, info.Time, 1, true);
+	CHECK(Diff(davison.AllPlanets()[0].Longitude.Value, sun.Longitude.Value) < MicroDegree);
+	auto houses = calc.CalcHouses(info.Time, info.Latitude, info.Longitude, HouseSystem::Placidus);
+	CHECK(Diff(davison.Houses().Asc.Value, houses.Asc.Value) < MicroDegree);
+}
+
+TEST_CASE("Davison longitude takes the short way round the antimeridian", "[Derived]") {
+	AstroCalculator calc;
+	auto a = Natal(2000, 1, 1, 12, 0, 0, 170);
+	auto b = Natal(2000, 1, 1, 12, 0, 0, -170);
+	auto davison = DerivedCharts::Davison(calc, a, b);
+	CHECK(std::fabs(std::fabs(davison.Info().Longitude) - 180) < 1e-6);
+}

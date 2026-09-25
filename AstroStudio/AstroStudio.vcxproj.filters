@@ -158,6 +158,30 @@
     <ClInclude Include="ChartOverlay.h">
       <Filter>Helpers</Filter>
     </ClInclude>
+    <ClInclude Include="WheelOptions.h">
+      <Filter>Helpers</Filter>
+    </ClInclude>
+    <ClInclude Include="ChartColors.h">
+      <Filter>Helpers</Filter>
+    </ClInclude>
+    <ClInclude Include="ChartColorsDlg.h">
+      <Filter>Helpers</Filter>
+    </ClInclude>
+    <ClCompile Include="ChartColors.cpp">
+      <Filter>Helpers</Filter>
+    </ClCompile>
+    <ClCompile Include="ChartColorsDlg.cpp">
+      <Filter>Helpers</Filter>
+    </ClCompile>
+    <ClInclude Include="WheelOptionsDlg.h">
+      <Filter>Helpers</Filter>
+    </ClInclude>
+    <ClCompile Include="WheelOptions.cpp">
+      <Filter>Helpers</Filter>
+    </ClCompile>
+    <ClCompile Include="WheelOptionsDlg.cpp">
+      <Filter>Helpers</Filter>
+    </ClCompile>
     <ClInclude Include="Helpers.h">
       <Filter>Helpers</Filter>
     </ClInclude>

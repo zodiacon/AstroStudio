@@ -42,8 +42,24 @@ void CChartView::UpdateAspects() {
 		UpdateOverlay();		// its aspects are to this chart
 }
 
+void CChartView::WheelOptionsChanged() {
+	m_ChartDrawing.Refresh();
+}
+
 void CChartView::AspectSettingsChanged() {
 	UpdateAspects();
+}
+
+void CChartView::DerivedChart(ChartData data) {
+	m_ReadOnly = true;
+	m_Data = std::move(data);
+	m_DetailsView.SetChartData(&m_Data);
+	m_DetailsView.SetReadOnly();
+	m_ChartDrawing.SetChartData(&m_Data);
+	m_AspectGrid.SetChartData(&m_Data);
+	UpdateAspects();
+	if (m_PageActive)
+		PageActivated(true);		// (the frame did that when the page was added, before this chart was known to be read-only)
 }
 
 void CChartView::ChartForNow() {
@@ -137,14 +153,19 @@ void CChartView::PageActivated(bool active) {
 	m_PageActive = active;
 	auto& ui = Frame()->GetUI();
 	// stepping by hand is off the table while auto step is running
-	ui.UIEnable(ID_CHART_STEP_BACK, active && !m_AutoStep && !m_Live);
-	ui.UIEnable(ID_CHART_STEP_FORWARD, active && !m_AutoStep && !m_Live);
-	ui.UIEnable(ID_CHART_AUTOSTEP, active);
-	ui.UIEnable(ID_CHART_LIVE, active);
-	for (UINT id : { ID_CHART_OVERLAY, ID_CHART_TRANSITS, ID_CHART_OVERLAY_NONE, ID_CHART_OVERLAY_PROGRESSED, ID_CHART_OVERLAY_SOLARARC, ID_CHART_OVERLAY_SYNASTRY })
+	ui.UIEnable(ID_CHART_STEP_BACK, active && CanMoveTime() && !m_AutoStep && !m_Live);
+	ui.UIEnable(ID_CHART_STEP_FORWARD, active && CanMoveTime() && !m_AutoStep && !m_Live);
+	ui.UIEnable(ID_CHART_AUTOSTEP, active && CanMoveTime());
+	ui.UIEnable(ID_CHART_LIVE, active && CanMoveTime());
+	// (charts worked out from others have nothing to progress, return to or combine)
+	ui.UIEnable(ID_CHART_OVERLAY_PROGRESSED, active && !m_ReadOnly);
+	ui.UIEnable(ID_CHART_OVERLAY_SOLARARC, active && !m_ReadOnly);
+	for (UINT id : { ID_CHART_DERIVED_SOLARRETURN, ID_CHART_DERIVED_LUNARRETURN, ID_CHART_DERIVED_COMPOSITE, ID_CHART_DERIVED_DAVISON })
+		ui.UIEnable(id, active && !m_ReadOnly);
+	for (UINT id : { ID_CHART_OVERLAY, ID_CHART_TRANSITS, ID_CHART_OVERLAY_NONE, ID_CHART_OVERLAY_SYNASTRY })
 		ui.UIEnable(id, active);
-	ui.UIEnable(ID_FILE_SAVE, active);
-	ui.UIEnable(ID_FILE_SAVE_AS, active);
+	ui.UIEnable(ID_FILE_SAVE, active && !m_ReadOnly);
+	ui.UIEnable(ID_FILE_SAVE_AS, active && !m_ReadOnly);
 	ui.UIEnable(ID_FILE_EXPORT, active);
 	if (active) {
 		// the menu and toolbars are shared; show this chart's state
@@ -224,6 +245,8 @@ bool CChartView::Save(bool saveAs) {
 }
 
 LRESULT CChartView::OnSave(WORD, WORD wID, HWND, BOOL&) {
+	if (m_ReadOnly)
+		return 0;
 	Save(wID == ID_FILE_SAVE_AS);
 	return 0;
 }
@@ -360,11 +383,16 @@ void CChartView::UpdateStepUI() {
 	auto& ui = Frame()->GetUI();
 	ui.UISetCheck(ID_CHART_AUTOSTEP, m_AutoStep);
 	ui.UISetCheck(ID_CHART_LIVE, m_Live);
-	ui.UIEnable(ID_CHART_STEP_BACK, !m_AutoStep && !m_Live);
-	ui.UIEnable(ID_CHART_STEP_FORWARD, !m_AutoStep && !m_Live);
+	bool canMove = CanMoveTime();
+	ui.UIEnable(ID_CHART_AUTOSTEP, canMove);
+	ui.UIEnable(ID_CHART_LIVE, canMove);
+	ui.UIEnable(ID_CHART_STEP_BACK, canMove && !m_AutoStep && !m_Live);
+	ui.UIEnable(ID_CHART_STEP_FORWARD, canMove && !m_AutoStep && !m_Live);
 }
 
 void CChartView::SetAutoStep(bool on) {
+	if (on && !CanMoveTime())
+		return;
 	if (on)
 		m_Live = false;
 	m_AutoStep = on;
@@ -373,6 +401,8 @@ void CChartView::SetAutoStep(bool on) {
 }
 
 void CChartView::SetLive(bool on) {
+	if (on && !CanMoveTime())
+		return;
 	if (on)
 		m_AutoStep = false;
 	m_Live = on;
@@ -416,6 +446,83 @@ bool CChartView::GetChart(OpenChart& chart) const {
 	return true;
 }
 
+bool CChartView::PickOtherChart(OpenChart& chart, PCWSTR what) {
+	auto charts = Frame()->OpenCharts(this);
+	if (charts.empty()) {
+		CString message;
+		message.Format(L"Open another chart first: %s.", what);
+		AtlMessageBox(m_hWnd, (PCWSTR)message, L"Astro Studio", MB_ICONINFORMATION);
+		return false;
+	}
+	size_t chosen = 0;
+	if (charts.size() > 1) {
+		CMenu menu;
+		menu.CreatePopupMenu();
+		for (size_t i = 0; i < charts.size(); i++)
+			menu.AppendMenu(MF_STRING, i + 1, charts[i].Name);
+		POINT pt;
+		::GetCursorPos(&pt);
+		auto choice = menu.TrackPopupMenu(TPM_RETURNCMD | TPM_NONOTIFY | TPM_LEFTALIGN | TPM_TOPALIGN, pt.x, pt.y, m_hWnd);
+		if (choice <= 0)
+			return false;
+		chosen = choice - 1;
+	}
+	chart = std::move(charts[chosen]);
+	return true;
+}
+
+void CChartView::NewReturnChart(Planet planet) {
+	// a return near the moment shown: the overlay's if it has one, otherwise now
+	DateTime from = OverlayHasTime() ? m_Overlay->When : DateTime::Now();
+	auto found = DerivedCharts::FindReturn(m_Calc, m_Data, planet, from, ReturnSearch::Nearest);
+	if (!found) {
+		AtlMessageBox(m_hWnd, L"No return was found.", L"Astro Studio", MB_ICONWARNING);
+		return;
+	}
+
+	// The dialog opens for that moment at this chart's place and in its zone, to be looked over (or moved: a return can be
+	// cast for where the person is then) before the chart opens.
+	ChartInfo info = m_Data.Info();
+	info.Type = InfoType::Event;
+	info.Time = *found;
+	int offset = info.TimeZone.OffsetUT;
+	auto local = TimeZones::UtToLocal(info.Time, info.TimeZone, &offset);
+	info.TimeZone.OffsetUT = offset;
+	CString name;
+	if (planet == Planet::Sun)
+		name.Format(L"%s Solar Return %04ld", (PCWSTR)m_Title, local.Year);
+	else
+		name.Format(L"%s Lunar Return %04ld/%02ld/%02ld", (PCWSTR)m_Title, local.Year, local.Month, local.Day);
+	info.FirstName = (PCWSTR)name;
+	info.MiddleName.clear();
+	info.LastName.clear();
+
+	auto houses = m_Data.GetHouseSystem();
+	Frame()->NewChartWithDialog(&info, &houses);
+}
+
+void CChartView::NewPairChart(bool davison) {
+	OpenChart other;
+	if (!PickOtherChart(other, davison ? L"a Davison chart is made from two charts" : L"a composite is made from two charts"))
+		return;
+	ChartData chart = davison ? DerivedCharts::Davison(m_Calc, m_Data, other.Data) : DerivedCharts::Composite(m_Calc, m_Data, other.Data);
+	CString title;
+	title.Format(L"%s: %s + %s", davison ? L"Davison" : L"Composite", (PCWSTR)m_Title, (PCWSTR)other.Name);
+	Frame()->AddDerivedChartView(std::move(chart), title);
+}
+
+LRESULT CChartView::OnDerived(WORD, WORD id, HWND, BOOL&) {
+	if (m_ReadOnly || m_Data.AllPlanets().empty())
+		return 0;
+	switch (id) {
+		case ID_CHART_DERIVED_SOLARRETURN: NewReturnChart(Planet::Sun); break;
+		case ID_CHART_DERIVED_LUNARRETURN: NewReturnChart(Planet::Moon); break;
+		case ID_CHART_DERIVED_COMPOSITE: NewPairChart(false); break;
+		case ID_CHART_DERIVED_DAVISON: NewPairChart(true); break;
+	}
+	return 0;
+}
+
 bool CChartView::ShowOverlay(OverlayKind kind, ProgressionMethod method) {
 	ChartOverlay overlay;
 	overlay.Kind = kind;
@@ -424,28 +531,16 @@ bool CChartView::ShowOverlay(OverlayKind kind, ProgressionMethod method) {
 	if (kind == OverlayKind::Progressed && method == ProgressionMethod::SolarArc)
 		overlay.Label = L"Directed";
 
+	if (kind == OverlayKind::Progressed && m_ReadOnly)
+		return false;		// (a chart worked out from others has no birth to progress from)
+
 	if (kind == OverlayKind::Synastry) {
-		auto charts = Frame()->OpenCharts(this);
-		if (charts.empty()) {
-			AtlMessageBox(m_hWnd, L"Open another chart first: a synastry overlay shows one chart around another.", L"Synastry", MB_ICONINFORMATION);
+		OpenChart other;
+		if (!PickOtherChart(other, L"a synastry overlay shows one chart around another"))
 			return false;
-		}
-		size_t chosen = 0;
-		if (charts.size() > 1) {
-			CMenu menu;
-			menu.CreatePopupMenu();
-			for (size_t i = 0; i < charts.size(); i++)
-				menu.AppendMenu(MF_STRING, i + 1, charts[i].Name);
-			POINT pt;
-			::GetCursorPos(&pt);
-			auto choice = menu.TrackPopupMenu(TPM_RETURNCMD | TPM_NONOTIFY | TPM_LEFTALIGN | TPM_TOPALIGN, pt.x, pt.y, m_hWnd);
-			if (choice <= 0)
-				return false;
-			chosen = choice - 1;
-		}
 		// a copy: it shows the other chart as it is now, and stays that way if the other one is changed or closed
-		overlay.Data = std::move(charts[chosen].Data);
-		overlay.Label = charts[chosen].Name;
+		overlay.Data = std::move(other.Data);
+		overlay.Label = other.Name;
 		overlay.BaseLabel = m_Title.IsEmpty() ? L"chart" : (PCWSTR)m_Title;
 	}
 	else {
@@ -462,6 +557,7 @@ bool CChartView::ShowOverlay(OverlayKind kind, ProgressionMethod method) {
 		}
 	}
 	m_Overlay = std::move(overlay);
+	StopTimeIfFixed();
 	UpdateOverlayUI();
 	UpdateOverlay();
 	return true;
@@ -469,8 +565,18 @@ bool CChartView::ShowOverlay(OverlayKind kind, ProgressionMethod method) {
 
 void CChartView::HideOverlay() {
 	m_Overlay.reset();
+	StopTimeIfFixed();
 	UpdateOverlayUI();
 	UpdateOverlay();
+}
+
+void CChartView::StopTimeIfFixed() {
+	// a read-only chart's time only moves through an overlay's: without one, Live and Auto have nothing to move
+	if (!CanMoveTime()) {
+		m_AutoStep = m_Live = false;
+		UpdateAutoStepTimer();
+	}
+	UpdateStepUI();
 }
 
 void CChartView::UpdateOverlayUI() {
@@ -583,20 +689,21 @@ LRESULT CChartView::OnOverlayDropDown(int, LPNMHDR pnmh, BOOL& handled) {
 		UINT Id;
 		PCWSTR Text;
 		bool Checked;
+		bool Enabled{ true };
 	};
 	auto kind = m_Overlay ? std::optional(m_Overlay->Kind) : std::nullopt;
 	bool solarArc = m_Overlay && m_Overlay->Method == ProgressionMethod::SolarArc;
 	Choice choices[] = {
 		{ ID_CHART_OVERLAY_NONE, L"None", !m_Overlay },
 		{ ID_CHART_TRANSITS, L"Transits", kind == OverlayKind::Transit },
-		{ ID_CHART_OVERLAY_PROGRESSED, L"Secondary Progressions", kind == OverlayKind::Progressed && !solarArc },
-		{ ID_CHART_OVERLAY_SOLARARC, L"Solar Arc Directions", kind == OverlayKind::Progressed && solarArc },
+		{ ID_CHART_OVERLAY_PROGRESSED, L"Secondary Progressions", kind == OverlayKind::Progressed && !solarArc, !m_ReadOnly },
+		{ ID_CHART_OVERLAY_SOLARARC, L"Solar Arc Directions", kind == OverlayKind::Progressed && solarArc, !m_ReadOnly },
 		{ ID_CHART_OVERLAY_SYNASTRY, L"Synastry...", kind == OverlayKind::Synastry },
 	};
 	CMenu menu;
 	menu.CreatePopupMenu();
 	for (auto const& choice : choices)
-		menu.AppendMenu(MF_STRING | (choice.Checked ? MF_CHECKED : 0), choice.Id, choice.Text);
+		menu.AppendMenu(MF_STRING | (choice.Checked ? MF_CHECKED : 0) | (choice.Enabled ? 0 : MF_GRAYED), choice.Id, choice.Text);
 
 	// under the button; the choice comes back as a command, like one from the menu bar
 	CPoint pt(nmtb->rcButton.left, nmtb->rcButton.bottom);
@@ -655,8 +762,8 @@ LRESULT CChartView::OnTimer(UINT, WPARAM wParam, LPARAM, BOOL& handled) {
 }
 
 bool CChartView::StepTime(int direction) {
-	if (m_Data.AllPlanets().empty() || m_StepCount.m_hWnd == nullptr)
-		return false;		// no chart loaded yet
+	if (m_Data.AllPlanets().empty() || m_StepCount.m_hWnd == nullptr || !CanMoveTime())
+		return false;		// no chart loaded yet, or a read-only one
 
 	int selected = m_StepCount.GetCurSel();
 	int count = (selected < 0 ? 0 : selected) + 1;
@@ -791,6 +898,11 @@ void CChartView::UpdateAspectGridScrollBarTheme() {
 }
 
 LRESULT CChartView::OnRecalc(UINT, WPARAM wp, LPARAM, BOOL&) {
+	if (m_ReadOnly) {
+		// what a read-only chart shows isn't what the calculator would make of its details
+		UpdateAspects();
+		return 0;
+	}
 	if (m_NotModifying == 0) {
 		SetModified(true);
 		if (m_Live)
