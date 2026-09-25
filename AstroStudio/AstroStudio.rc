@@ -82,9 +82,30 @@ BEGIN
         MENUITEM "&Copy\tCtrl+C",               ID_EDIT_COPY
         MENUITEM "&Paste\tCtrl+V",              ID_EDIT_PASTE
     END
+    POPUP "&Project"
+    BEGIN
+        MENUITEM "&New Project...",             ID_PROJECT_NEW
+        MENUITEM "&Open Project...",            ID_PROJECT_OPEN
+        POPUP "&Recent Projects"
+        BEGIN
+            MENUITEM "(empty)",                     ID_PROJECT_MRU_FIRST
+        END
+        MENUITEM SEPARATOR
+        MENUITEM "&Save Project",               ID_PROJECT_SAVE
+        MENUITEM "Save Project &As...",         ID_PROJECT_SAVEAS
+        MENUITEM "&Close Project",              ID_PROJECT_CLOSE
+        MENUITEM SEPARATOR
+        MENUITEM "Add &Current Tab",            ID_PROJECT_ADDCURRENT
+        MENUITEM "Add &Files...",               ID_PROJECT_ADDFILES
+        MENUITEM "New &Group",                  ID_PROJECT_NEWGROUP
+        MENUITEM SEPARATOR
+        MENUITEM "Project &Explorer",           ID_PROJECT_PANE
+        MENUITEM "Open Last Project at &Start", ID_PROJECT_AUTOOPEN
+    END
     POPUP "&View"
     BEGIN
         MENUITEM "&Status Bar",                 ID_VIEW_STATUS_BAR
+        MENUITEM "&Project Explorer",          ID_PROJECT_PANE
     END
     POPUP "&Chart"
     BEGIN
@@ -442,6 +463,24 @@ BEGIN
     PUSHBUTTON      "Cancel",IDCANCEL,263,100,50,14
 END
 
+IDD_PROJECTITEM DIALOGEX 0, 0, 300, 200
+STYLE DS_SETFONT | DS_MODALFRAME | DS_FIXEDSYS | DS_CENTER | WS_POPUP | WS_CAPTION | WS_SYSMENU
+CAPTION "Properties"
+FONT 9, "Segoe UI", 400, 0, 0x0
+BEGIN
+    LTEXT           "Name:",IDC_STATIC,7,9,30,8
+    EDITTEXT        IDC_PI_NAME,48,7,245,14,ES_AUTOHSCROLL
+    LTEXT           "File:",IDC_PI_PATHLABEL,7,29,30,8
+    EDITTEXT        IDC_PI_PATH,48,27,245,14,ES_AUTOHSCROLL | ES_READONLY
+    LTEXT           "Tags:",IDC_PI_TAGSLABEL,7,49,30,8
+    EDITTEXT        IDC_PI_TAGS,48,47,245,14,ES_AUTOHSCROLL
+    LTEXT           "(separated by commas)",IDC_PI_TAGSHINT,48,63,120,8
+    LTEXT           "Notes:",IDC_PI_NOTESLABEL,7,79,40,8
+    EDITTEXT        IDC_PI_NOTES,48,77,245,90,ES_MULTILINE | ES_AUTOVSCROLL | ES_WANTRETURN | WS_VSCROLL
+    DEFPUSHBUTTON   "OK",IDOK,187,179,50,14
+    PUSHBUTTON      "Cancel",IDCANCEL,243,179,50,14
+END
+
 IDD_ANALYSIS DIALOGEX 0, 0, 396, 292
 STYLE DS_SETFONT | DS_MODALFRAME | DS_FIXEDSYS | DS_CENTER | WS_POPUP | WS_CAPTION | WS_SYSMENU
 CAPTION "Analysis"
@@ -684,7 +723,6 @@ BEGIN
                             "Open the chart for the midpoint in time and place of this chart and another open chart \nDavison"
     ID_OPTIONS_WHEEL        "Choose the planets and the aspect lines the chart wheel draws\nChart Wheel"
     ID_OPTIONS_COLORS       "Choose the colours of the chart wheel\nChart Colors"
-    ID_OPTIONS_FORTUNE      "Show the Part of Fortune among the planets of the charts and on their wheels"
     ID_CHART_DERIVED_SOLARARC 
                             "Open this chart with every point moved by the solar arc to a date you choose \nSolar Arc Chart"
     ID_TOOL_ANALYSIS        "Find when things happen between a chart and the sky, over a range of dates \nAnalysis"
@@ -693,6 +731,21 @@ BEGIN
     ID_CHART_ANALYSIS       "Find when things happen between this chart and the sky, over a range of dates \nAnalysis"
     ID_ANALYSIS_CANCEL      "Stop the analysis that is running \nCancel"
     ID_CHART_OVERLAY_DATE   "Choose the moment the transits or progressions are shown for"
+    ID_OPTIONS_FORTUNE      "Show the Part of Fortune among the planets of the charts and on their wheels"
+    ID_PROJECT_NEW          "Start a project: a set of links to charts and analyses, kept together in one file"
+END
+
+STRINGTABLE
+BEGIN
+    ID_PROJECT_OPEN         "Open a project"
+    ID_PROJECT_SAVE         "Save the project (the links, the groups and what is open)"
+    ID_PROJECT_SAVEAS       "Save the project to another file"
+    ID_PROJECT_CLOSE        "Close the project (the files it links are not touched)"
+    ID_PROJECT_ADDCURRENT   "Link the file of the tab that is showing to the project"
+    ID_PROJECT_ADDFILES     "Link charts, analyses and settings files to the project"
+    ID_PROJECT_NEWGROUP     "Add a group to the project (they exist only in the project)"
+    ID_PROJECT_PANE         "Show or hide the pane with the project"
+    ID_PROJECT_AUTOOPEN     "Open the project that was open when the program was closed, at the start of the next run"
 END
 
 STRINGTABLE

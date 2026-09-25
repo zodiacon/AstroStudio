@@ -196,13 +196,43 @@
 #define ID_CHART_OVERLAY_DATE           32813
 #define ID_OPTIONS_FORTUNE              32814
 
+#define ID_PROJECT_NEW                  32815
+#define ID_PROJECT_OPEN                 32816
+#define ID_PROJECT_SAVE                 32817
+#define ID_PROJECT_SAVEAS               32818
+#define ID_PROJECT_CLOSE                32819
+#define ID_PROJECT_ADDCURRENT           32820
+#define ID_PROJECT_ADDFILES             32821
+#define ID_PROJECT_NEWGROUP             32822
+#define ID_PROJECT_PANE                 32823
+#define ID_PROJECT_OPENITEM             32824
+#define ID_PROJECT_RENAME               32825
+#define ID_PROJECT_PROPERTIES           32826
+#define ID_PROJECT_LOCATE               32827
+#define ID_PROJECT_REMOVE               32828
+#define ID_PROJECT_EXPLORER             32829
+#define ID_PROJECT_REMOVEGROUP          32830
+#define ID_PROJECT_REFRESH              32831
+#define ID_PROJECT_AUTOOPEN             32832
+#define ID_PROJECT_MRU_FIRST            32840
+#define ID_PROJECT_MRU_LAST             32847
+#define IDD_PROJECTITEM                 242
+#define IDC_PI_NAME                     1100
+#define IDC_PI_PATH                     1101
+#define IDC_PI_TAGS                     1102
+#define IDC_PI_NOTES                    1103
+#define IDC_PI_PATHLABEL                1104
+#define IDC_PI_TAGSLABEL                1105
+#define IDC_PI_TAGSHINT                 1106
+#define IDC_PI_NOTESLABEL               1107
+
 // Next default values for new objects
 // 
 #ifdef APSTUDIO_INVOKED
 #ifndef APSTUDIO_READONLY_SYMBOLS
-#define _APS_NEXT_RESOURCE_VALUE        241
-#define _APS_NEXT_COMMAND_VALUE         32815
-#define _APS_NEXT_CONTROL_VALUE         1100
+#define _APS_NEXT_RESOURCE_VALUE        243
+#define _APS_NEXT_COMMAND_VALUE         32848
+#define _APS_NEXT_CONTROL_VALUE         1108
 #define _APS_NEXT_SYMED_VALUE           108
 #endif
 #endif

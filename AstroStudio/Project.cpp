@@ -260,9 +260,12 @@ bool Project::Remove(std::wstring_view id) {
 	if (it == m_Items.end())
 		return false;
 	m_Items.erase(it);
-	std::erase(m_Session.Open, std::wstring(id));
-	if (m_Session.Active == id)
+	if (std::erase(m_Session.Open, std::wstring(id)) > 0)
+		m_SessionDirty = true;
+	if (m_Session.Active == id) {
 		m_Session.Active.clear();
+		m_SessionDirty = true;
+	}
 	m_Dirty = true;
 	return true;
 }
@@ -470,7 +473,7 @@ void Project::Session(ProjectSession session) {
 		session.Active.clear();
 	if (session.Open != m_Session.Open || session.Active != m_Session.Active) {
 		m_Session = std::move(session);
-		m_Dirty = true;
+		m_SessionDirty = true;
 	}
 }
 
@@ -550,6 +553,7 @@ bool Project::Load(fs::path const& path, std::wstring& error) {
 
 	loaded.Refresh();
 	loaded.m_Dirty = false;
+	loaded.m_SessionDirty = false;
 	*this = std::move(loaded);
 	return true;
 }
@@ -613,7 +617,7 @@ bool Project::Save(std::wstring& error) {
 	}
 	if (!Write(m_FilePath, error))
 		return false;
-	m_Dirty = false;
+	m_Dirty = m_SessionDirty = false;
 	return true;
 }
 
@@ -635,6 +639,6 @@ bool Project::SaveAs(fs::path const& path, std::wstring& error) {
 			m_Items[i].Path = StoredPath(full[i]);
 		return false;
 	}
-	m_Dirty = false;
+	m_Dirty = m_SessionDirty = false;
 	return true;
 }

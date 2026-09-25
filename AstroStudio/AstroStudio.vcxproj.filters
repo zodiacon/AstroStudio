@@ -117,6 +117,15 @@
     <ClCompile Include="Project.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="ProjectView.cpp">
+      <Filter>Views</Filter>
+    </ClCompile>
+    <ClCompile Include="ProjectItemDlg.cpp">
+      <Filter>Dialogs</Filter>
+    </ClCompile>
+    <ClCompile Include="MainFrmProject.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
     <ClCompile Include="PartListView.cpp">
       <Filter>Views</Filter>
     </ClCompile>
@@ -283,6 +292,12 @@
     </ClInclude>
     <ClInclude Include="Project.h">
       <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="ProjectView.h">
+      <Filter>Views</Filter>
+    </ClInclude>
+    <ClInclude Include="ProjectItemDlg.h">
+      <Filter>Dialogs</Filter>
     </ClInclude>
     <ClInclude Include="PartListView.h">
       <Filter>Views</Filter>

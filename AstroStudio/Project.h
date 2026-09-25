@@ -79,9 +79,17 @@ public:
 	std::filesystem::path const& FilePath() const noexcept {
 		return m_FilePath;
 	}
-	// changed since it was loaded or saved
+	// changed since it was loaded or saved - in what it holds: the items, their names, groups and so on
 	bool Dirty() const noexcept {
 		return m_Dirty;
+	}
+	// The session (what is open) changed since it was loaded or saved. That is not something to ask the user about, only to save
+	// when the project is closed.
+	bool SessionDirty() const noexcept {
+		return m_SessionDirty;
+	}
+	bool NeedsSave() const noexcept {
+		return m_Dirty || m_SessionDirty;
 	}
 
 	// ---- the files
@@ -151,4 +159,5 @@ private:
 	ProjectSession m_Session;
 	IniDocument m_Extra;							// what the project file had that this program doesn't use, put back when it is saved
 	bool m_Dirty{ false };
+	bool m_SessionDirty{ false };
 };

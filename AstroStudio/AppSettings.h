@@ -17,6 +17,9 @@ struct AppSettings : Settings {
 		SETTING(TextFont, LOGFONT{}, SettingType::Binary);		// the font for text that is not astrological symbols (empty face: Consolas); lfHeight in tenths of a point
 		SETTING(MidpointTreeOrb, 15, SettingType::Int32);		// the midpoint tree's orb, in tenths of a degree
 		SETTING(MidpointTreeAxis, 0, SettingType::Bool);		// the midpoint tree counts only the axis (on and opposite), not the whole 90 degree dial
+		SETTING(ProjectPaneWidth, 240, SettingType::Int32);		// the width of the pane with the project, in pixels
+		SETTING(OpenLastProject, 1, SettingType::Bool);		// open the last project again at the start (its path is kept either way)
+		SETTING_STRING(LastProject, L"");		// the project that was open when the program was closed, opened again at the start
 		SETTING(ShowPartOfFortune, 0, SettingType::Bool);		// the charts have the Part of Fortune among their planets (and on the wheel)
 		SETTING(LastHouseSystem, (int)'K', SettingType::Int32);		// the last one used for a chart (Koch to begin with)
 
@@ -50,6 +53,9 @@ struct AppSettings : Settings {
 	DEF_SETTING(TextFont, LOGFONT)
 	DEF_SETTING(LastHouseSystem, int)
 	DEF_SETTING(ShowPartOfFortune, int)
+	DEF_SETTING(ProjectPaneWidth, int)
+	DEF_SETTING(OpenLastProject, int)
+	DEF_SETTING_STRING(LastProject)
 	DEF_SETTING(MidpointTreeOrb, int)
 	DEF_SETTING(MidpointTreeAxis, int)
 	DEF_SETTING(ChartStepCount, int)

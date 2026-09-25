@@ -40,6 +40,9 @@ public:
 	// Sets the tab text (title, until the chart is saved under a name) and the file the chart lives in, if any.
 	void SetFile(PCWSTR title, PCWSTR filePath);
 	PCWSTR FilePath() const override;
+	bool IsModified() const override {
+		return m_Modified;
+	}
 	// asks whether to save unsaved changes
 	bool CanClose() override;
 	void AspectSettingsChanged() override;

@@ -71,6 +71,10 @@ struct IView {
 	virtual void PartOfFortuneChanged() {}
 	// what the chart wheel draws (WheelOptions::Current) or the colours it draws in (ChartColors::Current) changed
 	virtual void WheelOptionsChanged() {}
+	// changed since it was last saved or opened (what the project pane marks with a *); a view with nothing to save says no
+	virtual bool IsModified() const {
+		return false;
+	}
 	// the file the view's document lives in, or null
 	virtual PCWSTR FilePath() const {
 		return nullptr;

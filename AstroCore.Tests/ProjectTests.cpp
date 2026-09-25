@@ -127,6 +127,35 @@ TEST_CASE("Taking a file out of a project leaves the file", "[Project]") {
 	CHECK(project.Session().Active.empty());
 }
 
+TEST_CASE("What was open is saved with the project but does not make it dirty", "[Project]") {
+	TempFolder folder;
+	auto path = folder / L"p.astroproj";
+	std::wstring error;
+	Project project;
+	auto id = project.Add(folder.Make(L"a.chart"))->Id;
+	REQUIRE(project.SaveAs(path, error));
+	CHECK_FALSE(project.Dirty());
+	CHECK_FALSE(project.SessionDirty());
+	CHECK_FALSE(project.NeedsSave());
+
+	project.Session({ { id }, id });
+	CHECK_FALSE(project.Dirty());
+	CHECK(project.SessionDirty());
+	CHECK(project.NeedsSave());
+	project.Session({ { id }, id });		// (the same again)
+	REQUIRE(project.Save(error));
+	CHECK_FALSE(project.NeedsSave());
+
+	Project loaded;
+	REQUIRE(loaded.Load(path, error));
+	CHECK(loaded.Session().Open == std::vector<std::wstring>{ id });
+	CHECK_FALSE(loaded.NeedsSave());
+	// taking the open item out is a change to what the project holds, and to what it remembers
+	CHECK(loaded.Remove(id));
+	CHECK(loaded.Dirty());
+	CHECK(loaded.SessionDirty());
+}
+
 TEST_CASE("Names, tags, notes and order", "[Project]") {
 	TempFolder folder;
 	Project project;

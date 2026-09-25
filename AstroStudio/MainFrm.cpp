@@ -24,11 +24,13 @@
 #include "AnalysisView.h"
 #include <WTLHelper.h>
 
-#define WINDOW_MENU_POSITION	6
+#define WINDOW_MENU_POSITION	7
 
 namespace {
 	// where the recent files list is kept (under HKEY_CURRENT_USER), and how many it holds
 	constexpr PCWSTR RecentFilesKey = LR"(Software\AstroStudio)";
+	// ... and the projects
+	constexpr PCWSTR RecentProjectsKey = LR"(Software\AstroStudio\Projects)";
 	constexpr int MaxRecentFiles = 8;
 
 	// Owned by the thread pool callback until it is posted to the frame, which
@@ -91,8 +93,15 @@ LRESULT CMainFrame::OnCreate(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/
 	CreateSimpleStatusBar();
 
 	//m_view.m_bTabCloseButton = FALSE;
-	m_hWndClient = m_view.Create(m_hWnd, rcDefault, nullptr, 
-		WS_CHILD | WS_VISIBLE | WS_CLIPSIBLINGS | WS_CLIPCHILDREN | WS_BORDER);
+	// the tabs, with the pane of the project on their left (shown only while a project is open)
+	m_Splitter.Create(m_hWnd, rcDefault, nullptr, WS_CHILD | WS_VISIBLE | WS_CLIPSIBLINGS | WS_CLIPCHILDREN);
+	m_ProjectView.Init(this);
+	m_ProjectView.Create(m_Splitter, rcDefault, nullptr, WS_CHILD | WS_VISIBLE | WS_CLIPSIBLINGS | WS_CLIPCHILDREN);
+	m_view.Create(m_Splitter, rcDefault, nullptr, WS_CHILD | WS_VISIBLE | WS_CLIPSIBLINGS | WS_CLIPCHILDREN | WS_BORDER);
+	m_Splitter.SetSplitterPanes(m_ProjectView, m_view);
+	m_Splitter.SetSplitterPos(std::max(120, AppSettings::Get().ProjectPaneWidth()));
+	m_Splitter.SetSinglePaneMode(SPLIT_PANE_RIGHT);
+	m_hWndClient = m_Splitter;
 	if (AppSettings::Get().AlwaysOnTop()) {
 		SetWindowPos(HWND_TOPMOST, 0, 0, 0, 0, SWP_NOMOVE | SWP_NOSIZE | SWP_NOACTIVATE);
 		UISetCheck(ID_OPTIONS_ALWAYSONTOP, 1);
@@ -157,7 +166,25 @@ LRESULT CMainFrame::OnCreate(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/
 	m_Recent.ReadFromRegistry(RecentFilesKey);
 	UIEnable(ID_FILE_MRU_FIRST, m_Recent.m_arrDocs.GetSize() > 0);
 
+	// the recent projects fill in at the "(empty)" item of the Project menu's Recent Projects submenu
+	m_RecentProjects.SetMaxEntries(MaxRecentFiles);
+	m_RecentProjects.SetMaxItemLength(60);
+	CMenuHandle menuProject = menuMain.GetSubMenu(1);
+	for (int i = 0; i < menuProject.GetMenuItemCount(); i++) {
+		CMenuHandle sub = menuProject.GetSubMenu(i);
+		if (sub.m_hMenu && sub.GetMenuState(ID_PROJECT_MRU_FIRST, MF_BYCOMMAND) != (UINT)-1) {
+			m_RecentProjects.SetMenuHandle(sub);
+			break;
+		}
+	}
+	m_RecentProjects.ReadFromRegistry(RecentProjectsKey);
+	UIEnable(ID_PROJECT_MRU_FIRST, m_RecentProjects.m_arrDocs.GetSize() > 0);
+	UpdateProjectUI();
+
 	PostMessage(WM_COMMAND, ID_TOOL_EPHEMERIS);
+	UISetCheck(ID_PROJECT_AUTOOPEN, AppSettings::Get().OpenLastProject() != 0);
+	if (AppSettings::Get().OpenLastProject() && !AppSettings::Get().LastProject().empty())
+		PostMessage(WM_OPEN_LAST_PROJECT);		// (after the first tab, so that it is under the project's)
 
 	return 0;
 }
@@ -167,6 +194,8 @@ LRESULT CMainFrame::OnDestroy(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*
 	WINDOWPLACEMENT wp{ sizeof(wp) };
 	if (GetWindowPlacement(&wp))
 		AppSettings::Get().MainWindowPlacement(wp);
+	if (m_PaneVisible)
+		AppSettings::Get().ProjectPaneWidth(m_Splitter.GetSplitterPos());
 	AppSettings::Get().Save();
 
 	auto pLoop = _Module.GetMessageLoop();
@@ -434,6 +463,7 @@ bool CMainFrame::OpenChartFile(PCWSTR path) {
 void CMainFrame::AddRecentFile(PCWSTR path) {
 	m_Recent.AddToList(path);
 	RecentFilesChanged();
+	UpdateProjectUI();		// (a file that was saved or opened may be an item of the project)
 }
 
 void CMainFrame::RecentFilesChanged() {
@@ -461,8 +491,8 @@ LRESULT CMainFrame::OnFileRecent(WORD, WORD wID, HWND, BOOL&) {
 }
 
 LRESULT CMainFrame::OnClose(UINT, WPARAM, LPARAM, BOOL& bHandled) {
-	// leaving the program: every chart with unsaved changes gets to ask first
-	bHandled = CanCloseAll() ? FALSE : TRUE;
+	// leaving the program: every chart with unsaved changes gets to ask first, and then the project
+	bHandled = CanCloseAll() && CloseProject(true) ? FALSE : TRUE;
 	return 0;
 }
 
@@ -522,6 +552,7 @@ LRESULT CMainFrame::OnWindowClose(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWn
 		if (auto view = ViewOfPage(nActivePage); view && !view->CanClose())
 			return 0;		// the user cancelled
 		m_view.RemovePage(nActivePage);
+		UpdateProjectUI();
 	}
 	else
 		::MessageBeep((UINT)-1);
@@ -533,6 +564,7 @@ LRESULT CMainFrame::OnWindowCloseAll(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*
 	if (!CanCloseAll())
 		return 0;		// the user cancelled
 	m_view.RemoveAllPages();
+	UpdateProjectUI();
 
 	return 0;
 }
@@ -549,6 +581,7 @@ LRESULT CMainFrame::OnPageActivated(int, LPNMHDR hdr, BOOL&) {
 	if (auto view = ViewOfPage(page))
 		view->PageActivated(true);
 	m_CurrentPage = page;
+	UpdateProjectUI();
 
 	return 0;
 }
@@ -594,6 +627,7 @@ std::vector<OpenChart> CMainFrame::OpenCharts(IView* except) {
 void CMainFrame::SetViewTitle(IView* view, PCWSTR title) {
 	if (int page = PageOfView(view); page >= 0)
 		m_view.SetPageTitle(page, title);
+	UpdateProjectUI();		// (the mark of a chart with unsaved changes is in the title)
 }
 
 void CMainFrame::ActivateView(IView* view) {

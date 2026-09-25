@@ -5,15 +5,23 @@
 #pragma once
 
 #include "Interfaces.h"
+#include "ProjectView.h"
+#include <CustomSplitterWindow.h>
+#include <memory>
 #include <atlmisc.h>
 #include <NativeCustomTabView.h>
 #include <TabViewHelper.h>
 #include "resource.h"
 
+// the projects opened lately, in a submenu of the Project menu (as the recent files are in the File menu's)
+class CRecentProjectList : public CRecentDocumentListBase<CRecentProjectList, MAX_PATH, ID_PROJECT_MRU_FIRST, ID_PROJECT_MRU_LAST> {
+};
+
 class CMainFrame :
 	public CFrameWindowImpl<CMainFrame>,
 	public CAutoUpdateUI<CMainFrame>,
 	public IMainFrame,
+	public IProjectHost,
 	public CMessageFilter, 
 	public CIdleHandler {
 public:
@@ -37,6 +45,9 @@ protected:
 		COMMAND_ID_HANDLER(ID_FILE_OPEN, OnFileOpen)
 		COMMAND_ID_HANDLER(ID_FILE_PRINT_SETUP, OnPrintSetup)
 		COMMAND_RANGE_HANDLER(ID_FILE_MRU_FIRST, ID_FILE_MRU_LAST, OnFileRecent)
+		COMMAND_RANGE_HANDLER(ID_PROJECT_NEW, ID_PROJECT_AUTOOPEN, OnProjectCommand)
+		COMMAND_RANGE_HANDLER(ID_PROJECT_MRU_FIRST, ID_PROJECT_MRU_LAST, OnProjectRecent)
+		MESSAGE_HANDLER(WM_OPEN_LAST_PROJECT, OnOpenLastProject)
 		COMMAND_ID_HANDLER(ID_OPTIONS_DARKMODE, OnToggleDarkMode)
 		COMMAND_ID_HANDLER(ID_OPTIONS_ASPECTS, OnAspectOptions)
 		COMMAND_ID_HANDLER(ID_OPTIONS_WHEEL, OnWheelOptions)
@@ -117,6 +128,55 @@ private:
 	LRESULT OnFont(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/);
 	LRESULT OnLocationReady(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, BOOL& /*bHandled*/);
 
+	// ---- projects (MainFrmProject.cpp): one at a time, shown in the pane on the left of the tabs
+	static constexpr UINT WM_OPEN_LAST_PROJECT = WM_APP + 31;
+	LRESULT OnProjectCommand(WORD /*wNotifyCode*/, WORD wID, HWND /*hWndCtl*/, BOOL& /*bHandled*/);
+	LRESULT OnProjectRecent(WORD /*wNotifyCode*/, WORD wID, HWND /*hWndCtl*/, BOOL& /*bHandled*/);
+	LRESULT OnOpenLastProject(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, BOOL& /*bHandled*/);
+	// runs a command of the Project menu (or of the tree's menu) on a node of the tree
+	void ProjectCommand(UINT id, ProjectNode const& node);
+	void NewProject();
+	void OpenProjectDialog();
+	// Opens a project, closing the one that is open (which may ask to save it); false if that was cancelled or the file is no good.
+	bool OpenProject(PCWSTR path);
+	// Closes the project: asks whether to save what changed in it, remembers what is open, and hides the pane. False if cancelled.
+	// leaving: the program is closing, so the project is the one to open again at the next start.
+	bool CloseProject(bool leaving = false);
+	bool SaveProject();
+	bool SaveProjectAs();
+	void AddCurrentTab(ProjectNode const& node);
+	void AddFilesDialog(ProjectNode const& node);
+	void AddFiles(std::vector<std::filesystem::path> const& files, ProjectNode const& target);
+	void NewGroup(ProjectNode const& node);
+	void ShowProjectProperties(ProjectNode const& node);
+	void LocateItem(std::wstring const& id);
+	void RemoveNode(ProjectNode const& node);
+	// puts the tabs that are open into the project's session, and opens the tabs of the session
+	void CaptureSession();
+	void RestoreSession();
+	// the tab that shows an item's file, or null
+	IView* ViewForItem(ProjectItem const& item) const;
+	void ShowProjectPane(bool show);
+	// what the Project menu allows, the window's title and the marks in the pane
+	void UpdateProjectUI();
+	void ProjectListChanged();
+	static std::wstring GroupOf(Project const& project, ProjectNode const& node);
+
+	// IProjectHost
+	void ProjectOpenItem(std::wstring const& id) override;
+	void ProjectContextMenu(ProjectNode const& node, CPoint screen) override;
+	void ProjectRename(ProjectNode const& node, std::wstring const& text) override;
+	void ProjectDrop(ProjectNode const& moved, ProjectNode const& target) override;
+	void ProjectAddFiles(std::vector<std::filesystem::path> const& files, ProjectNode const& target) override;
+	void ProjectKey(UINT key, ProjectNode const& node) override;
+	bool ProjectItemOpen(std::wstring const& id) const override;
+	bool ProjectItemModified(std::wstring const& id) const override;
+
+	CCustomSplitterWindow m_Splitter;
+	CProjectView m_ProjectView;
+	std::unique_ptr<Project> m_Project;
+	CRecentProjectList m_RecentProjects;
+	bool m_PaneVisible{ false };
 	CNativeCustomTabView m_view;
 	int m_CurrentPage{ -1 };
 	bool m_LocationPending{ false };

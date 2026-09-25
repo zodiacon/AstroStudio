@@ -218,6 +218,9 @@
     <ClCompile Include="MidpointListView.cpp" />
     <ClCompile Include="MidpointTreeView.cpp" />
     <ClCompile Include="PartListView.cpp" />
+    <ClCompile Include="ProjectView.cpp" />
+    <ClCompile Include="ProjectItemDlg.cpp" />
+    <ClCompile Include="MainFrmProject.cpp" />
     <ClCompile Include="Project.cpp">
       <PrecompiledHeader>NotUsing</PrecompiledHeader>
     </ClCompile>
@@ -270,6 +273,8 @@
     <ClInclude Include="MidpointListView.h" />
     <ClInclude Include="MidpointTreeView.h" />
     <ClInclude Include="PartListView.h" />
+    <ClInclude Include="ProjectView.h" />
+    <ClInclude Include="ProjectItemDlg.h" />
     <ClInclude Include="Project.h" />
     <ClInclude Include="Printing.h" />
     <ClInclude Include="AstroFont.h" />
