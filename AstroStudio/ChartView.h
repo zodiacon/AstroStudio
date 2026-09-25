@@ -10,6 +10,8 @@
 #include "GraphicChartView.h"
 #include "AspectGridWnd.h"
 #include "AspectListView.h"
+#include "MidpointListView.h"
+#include "PartListView.h"
 #include "TimeStep.h"
 #include "ChartFile.h"
 #include <CustomSplitterWindow.h>
@@ -184,6 +186,8 @@ private:
 	CScrollContainer m_AspectGridScroll;
 	CAspectGridWnd m_AspectGrid;
 	CAspectListView m_AspectList;
+	CMidpointListView m_MidpointList;
+	CPartListView m_PartList;
 	CGraphicChartView m_ChartDrawing;
 	// the "Step: [count] [unit]" controls, which sit inside the toolbar
 	CStatic m_StepLabel;

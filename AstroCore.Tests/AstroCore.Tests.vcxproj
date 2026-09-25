@@ -102,6 +102,8 @@
     <ClCompile Include="DateTimeTests.cpp" />
     <ClCompile Include="AnalysisTests.cpp" />
     <ClCompile Include="DerivedChartsTests.cpp" />
+    <ClCompile Include="MidpointTests.cpp" />
+    <ClCompile Include="ArabicPartsTests.cpp" />
     <ClCompile Include="PhenomenaTests.cpp" />
   </ItemGroup>
   <ItemGroup>

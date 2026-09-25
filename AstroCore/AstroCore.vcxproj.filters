@@ -30,6 +30,12 @@
     <ClInclude Include="Analysis.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="ArabicParts.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="Midpoints.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
     <ClInclude Include="DerivedCharts.h">
       <Filter>Header Files</Filter>
     </ClInclude>
@@ -54,6 +60,12 @@
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="Analysis.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="ArabicParts.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="Midpoints.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="DerivedCharts.cpp">

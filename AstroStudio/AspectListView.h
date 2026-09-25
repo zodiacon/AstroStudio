@@ -23,6 +23,9 @@ public:
 	// puts the text font the user chose with Options > Font on the list (nothing if they have not chosen one)
 	void ApplyTextFont();
 
+	// the colour for a longitude by its element (fire, earth, air, water), for the cells that show one; the midpoint list uses it too
+	static COLORREF GetElementColor(ZodiacSign sign);
+
 	CString GetColumnText(HWND, int row, int col) const;
 	void DoSort(SortInfo const* si);
 
@@ -46,7 +49,6 @@ private:
 	void GetCellColors(LPNMCUSTOMDRAW cd, COLORREF backColorOverride, COLORREF& backColor, COLORREF& textColor) const;
 	void DrawGlyphAndName(LPNMCUSTOMDRAW cd, PCWSTR glyph, PCWSTR name) const;
 	void DrawCell(LPNMCUSTOMDRAW cd, PCWSTR text, HFONT font, COLORREF backColorOverride = CLR_INVALID) const;
-	static COLORREF GetElementColor(ZodiacSign sign);
 
 	CListViewCtrl m_List;
 	CFont m_Font, m_TextFont;

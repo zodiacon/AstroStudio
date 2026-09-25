@@ -111,6 +111,12 @@
     <ClCompile Include="AspectGridWnd.cpp">
       <Filter>Views</Filter>
     </ClCompile>
+    <ClCompile Include="PartListView.cpp">
+      <Filter>Views</Filter>
+    </ClCompile>
+    <ClCompile Include="MidpointListView.cpp">
+      <Filter>Views</Filter>
+    </ClCompile>
     <ClCompile Include="AspectListView.cpp">
       <Filter>Views</Filter>
     </ClCompile>
@@ -261,6 +267,12 @@
       <Filter>Views</Filter>
     </ClInclude>
     <ClInclude Include="AspectGridWnd.h">
+      <Filter>Views</Filter>
+    </ClInclude>
+    <ClInclude Include="PartListView.h">
+      <Filter>Views</Filter>
+    </ClInclude>
+    <ClInclude Include="MidpointListView.h">
       <Filter>Views</Filter>
     </ClInclude>
     <ClInclude Include="AspectListView.h">

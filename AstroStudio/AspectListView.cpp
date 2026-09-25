@@ -3,7 +3,6 @@
 #include "Helpers.h"
 #include "DefaultFont.h"
 #include "SortHelper.h"
-#include <DarkMode/DmlibColor.h>
 #include <WTLHelper.h>
 #include <algorithm>
 
@@ -144,7 +143,8 @@ void CAspectListView::DrawGlyphAndName(LPNMCUSTOMDRAW cd, PCWSTR glyph, PCWSTR n
 	auto lv = (LPNMLVCUSTOMDRAW)cd;
 	CDCHandle dc(cd->hdc);
 	CRect rc;
-	m_List.GetSubItemRect((int)cd->dwItemSpec, lv->iSubItem, LVIR_BOUNDS, &rc);
+	m_List.GetSubItemRect((int)cd->dwItemSpec, lv->iSubItem, lv->iSubItem == 0 ? LVIR_LABEL : LVIR_BOUNDS, &rc);
+	rc.right -= 2;		// (the last two pixels are the column's line: leave them alone)
 
 	COLORREF backColor, textColor;
 	GetCellColors(cd, CLR_INVALID, backColor, textColor);
@@ -172,7 +172,8 @@ void CAspectListView::DrawCell(LPNMCUSTOMDRAW cd, PCWSTR text, HFONT font, COLOR
 	auto lv = (LPNMLVCUSTOMDRAW)cd;
 	CDCHandle dc(cd->hdc);
 	CRect rc;
-	m_List.GetSubItemRect((int)cd->dwItemSpec, lv->iSubItem, LVIR_BOUNDS, &rc);
+	m_List.GetSubItemRect((int)cd->dwItemSpec, lv->iSubItem, lv->iSubItem == 0 ? LVIR_LABEL : LVIR_BOUNDS, &rc);
+	rc.right -= 2;		// (the last two pixels are the column's line: leave them alone)
 
 	COLORREF backColor, textColor;
 	GetCellColors(cd, backColorOverride, backColor, textColor);
@@ -261,8 +262,6 @@ LRESULT CAspectListView::OnCreate(UINT, WPARAM, LPARAM, BOOL&) {
 	cm->AddColumn(L"A/S", LVCFMT_CENTER | LVCFMT_FIXED_WIDTH, 50, ColumnType::Applying);
 	cm->UpdateColumns();
 	ApplyTextFont();
-
-	DarkMode::setDarkWndNotifySafe(m_hWnd);
 
 	return 0;
 }

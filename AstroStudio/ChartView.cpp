@@ -12,7 +12,7 @@
 #include <DarkMode/DmlibColor.h>
 #include <DarkMode/DarkModeSubclass.h>
 
-CChartView::CChartView(IMainFrame* frame) : CFrameView(frame), m_ChartDrawing(frame), m_AspectGrid(frame), m_AspectList(frame) {
+CChartView::CChartView(IMainFrame* frame) : CFrameView(frame), m_ChartDrawing(frame), m_AspectGrid(frame), m_AspectList(frame), m_MidpointList(frame), m_PartList(frame) {
 }
 
 BOOL CChartView::PreTranslateMessage(MSG* pMsg) {
@@ -32,6 +32,8 @@ void CChartView::Chart(ChartData data) {
 void CChartView::UpdateAspects() {
 	AspectCalculator ac(AspectOptions::Current().Chart);
 	auto aspects = ac.Calculate(m_Data.AllPlanets());
+	m_MidpointList.SetChartData(&m_Data);
+	m_PartList.SetChartData(&m_Data, AspectOptions::Current().Chart);
 	m_AspectList.SetAspects(aspects);
 	m_AspectList.Refresh();
 	m_AspectGrid.SetAspects(aspects);
@@ -51,6 +53,8 @@ void CChartView::WheelOptionsChanged() {
 void CChartView::TextFontChanged() {
 	m_DetailsView.ApplyTextFont();
 	m_AspectList.ApplyTextFont();
+	m_MidpointList.ApplyTextFont();
+	m_PartList.ApplyTextFont();
 	m_AspectGrid.Refresh();		// (its text is in the same family)
 	m_ChartDrawing.Refresh();
 }
@@ -894,9 +898,17 @@ LRESULT CChartView::OnCreate(UINT, WPARAM, LPARAM, BOOL&) {
 	m_AspectList.Create(m_DetailsTabs, rcDefault, nullptr, WS_CHILD | WS_CLIPCHILDREN | WS_CLIPSIBLINGS);
 	m_AspectList.SetStatic();
 
+	m_MidpointList.Create(m_DetailsTabs, rcDefault, nullptr, WS_CHILD | WS_CLIPCHILDREN | WS_CLIPSIBLINGS);
+	m_MidpointList.SetStatic();
+
+	m_PartList.Create(m_DetailsTabs, rcDefault, nullptr, WS_CHILD | WS_CLIPCHILDREN | WS_CLIPSIBLINGS);
+	m_PartList.SetStatic();
+
 	m_DetailsTabs.AddPage(m_DetailsView.m_hWnd, L"Details");
 	m_DetailsTabs.AddPage(m_AspectGridScroll.m_hWnd, L"Aspect Grid");
 	m_DetailsTabs.AddPage(m_AspectList.m_hWnd, L"Aspect List");
+	m_DetailsTabs.AddPage(m_MidpointList.m_hWnd, L"Midpoints");
+	m_DetailsTabs.AddPage(m_PartList.m_hWnd, L"Arabic Parts");
 	m_DetailsTabs.SetActivePage(0);
 
 	m_Splitter.SetSplitterPanes(m_ChartDrawing, m_DetailsTabs);

@@ -215,6 +215,8 @@
     <ClCompile Include="AspectGridDrawing.cpp" />
     <ClCompile Include="AspectGridWnd.cpp" />
     <ClCompile Include="AspectListView.cpp" />
+    <ClCompile Include="MidpointListView.cpp" />
+    <ClCompile Include="PartListView.cpp" />
     <ClCompile Include="AstroFont.cpp" />
     <ClCompile Include="AstroStudio.cpp" />
     <ClCompile Include="ChartDetailsView.cpp" />
@@ -260,6 +262,8 @@
     <ClInclude Include="AspectGridDrawing.h" />
     <ClInclude Include="AspectGridWnd.h" />
     <ClInclude Include="AspectListView.h" />
+    <ClInclude Include="MidpointListView.h" />
+    <ClInclude Include="PartListView.h" />
     <ClInclude Include="AstroFont.h" />
     <ClInclude Include="ChartDetailsView.h" />
     <ClInclude Include="D2DChartDrawing.h" />
