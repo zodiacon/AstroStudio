@@ -95,6 +95,13 @@ struct AnalysisSettings {
 	}
 	// the movers that are used
 	std::vector<Planet> EffectiveMovers() const;
+
+	// What is worth keeping from one analysis to the next, as text like  types=0,3;movers=0,1;targets=0;angles=1;aspects=1;asp=0,1,2;
+	// houses=0;signs=1;stations=0;days=365  (numbers are the enum values; the range is kept as its length in days, not its dates,
+	// and the orbs are not kept - they come from the aspect options). FromText changes only what the text says, and ignores what it
+	// doesn't understand; the range then runs the kept number of days on from From.
+	std::wstring ToText() const;
+	void FromText(std::wstring const& text);
 };
 
 struct AnalysisResult {

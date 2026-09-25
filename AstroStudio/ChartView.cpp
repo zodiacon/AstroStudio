@@ -51,8 +51,10 @@ void CChartView::AspectSettingsChanged() {
 	UpdateAspects();
 }
 
-void CChartView::DerivedChart(ChartData data) {
+void CChartView::DerivedChart(ChartData data, DerivedRecipe const* recipe) {
 	m_ReadOnly = true;
+	if (recipe)
+		m_Recipe = *recipe;
 	m_Data = std::move(data);
 	m_DetailsView.SetChartData(&m_Data);
 	m_DetailsView.SetReadOnly();
@@ -165,8 +167,8 @@ void CChartView::PageActivated(bool active) {
 		ui.UIEnable(id, active && !m_ReadOnly);
 	for (UINT id : { ID_CHART_ANALYSIS, ID_CHART_OVERLAY, ID_CHART_TRANSITS, ID_CHART_OVERLAY_NONE, ID_CHART_OVERLAY_SYNASTRY })
 		ui.UIEnable(id, active);
-	ui.UIEnable(ID_FILE_SAVE, active && !m_ReadOnly);
-	ui.UIEnable(ID_FILE_SAVE_AS, active && !m_ReadOnly);
+	ui.UIEnable(ID_FILE_SAVE, active && (!m_ReadOnly || m_Recipe));
+	ui.UIEnable(ID_FILE_SAVE_AS, active && (!m_ReadOnly || m_Recipe));
 	ui.UIEnable(ID_FILE_EXPORT, active);
 	if (active) {
 		// the menu and toolbars are shared; show this chart's state
@@ -230,7 +232,7 @@ bool CChartView::Save(bool saveAs) {
 	}
 
 	std::wstring error;
-	if (!ChartFile::Save(m_Data, path, error)) {
+	if (!(m_Recipe ? ChartFile::SaveDerived(*m_Recipe, path, error) : ChartFile::Save(m_Data, path, error))) {
 		CString message;
 		message.Format(L"The chart could not be saved to %s:\n\n%s", (PCWSTR)path, error.c_str());
 		AtlMessageBox(m_hWnd, (PCWSTR)message, L"Astro Studio", MB_ICONWARNING);
@@ -246,8 +248,8 @@ bool CChartView::Save(bool saveAs) {
 }
 
 LRESULT CChartView::OnSave(WORD, WORD wID, HWND, BOOL&) {
-	if (m_ReadOnly)
-		return 0;
+	if (m_ReadOnly && !m_Recipe)
+		return 0;		// (a chart that can't be made again from what it was made of can't be saved)
 	Save(wID == ID_FILE_SAVE_AS);
 	return 0;
 }
@@ -447,6 +449,22 @@ bool CChartView::GetChart(OpenChart& chart) const {
 	return true;
 }
 
+bool CChartView::ShowMoment(DateTime const& ut, MomentKind kind) {
+	if (m_Data.AllPlanets().empty())
+		return false;
+	bool shown = kind == MomentKind::Transits ? ShowOverlay(OverlayKind::Transit) :
+		ShowOverlay(OverlayKind::Progressed, kind == MomentKind::SolarArc ? ProgressionMethod::SolarArc : ProgressionMethod::Secondary);
+	if (!shown || !m_Overlay)
+		return false;
+	// the overlay's moment is the one asked for, shown in the chart's zone as it would be
+	m_Overlay->When = ut;
+	int offset = m_Overlay->Zone.OffsetUT;
+	TimeZones::UtToLocal(ut, m_Overlay->Zone, &offset);
+	m_Overlay->Zone.OffsetUT = offset;
+	UpdateOverlay();
+	return true;
+}
+
 bool CChartView::PickOtherChart(OpenChart& chart, PCWSTR what) {
 	auto charts = Frame()->OpenCharts(this);
 	if (charts.empty()) {
@@ -515,26 +533,33 @@ void CChartView::NewSolarArcChart() {
 	if (dlg.DoModal(m_hWnd) != IDOK)
 		return;
 
-	ProgressionOptions options;
-	options.Method = ProgressionMethod::SolarArc;
-	options.Key = dlg.Key();
-	auto chart = DerivedCharts::Progress(m_Calc, m_Data, dlg.Target(), options);
+	DerivedRecipe recipe;
+	recipe.Kind = DerivedKind::SolarArc;
+	recipe.A = m_Data;
+	recipe.Target = dlg.Target();
+	recipe.Zone = dlg.Zone();
+	recipe.Key = dlg.Key();
+	auto chart = DerivedCharts::Build(m_Calc, recipe);
 
 	int shown = dlg.Zone().OffsetUT;
 	auto local = TimeZones::UtToLocal(dlg.Target(), dlg.Zone(), &shown);
 	CString title;
 	title.Format(L"Solar Arc %04ld/%02ld/%02ld: %s", local.Year, local.Month, local.Day, (PCWSTR)m_Title);
-	Frame()->AddDerivedChartView(std::move(chart), title);
+	Frame()->AddDerivedChartView(std::move(chart), title, &recipe);
 }
 
 void CChartView::NewPairChart(bool davison) {
 	OpenChart other;
 	if (!PickOtherChart(other, davison ? L"a Davison chart is made from two charts" : L"a composite is made from two charts"))
 		return;
-	ChartData chart = davison ? DerivedCharts::Davison(m_Calc, m_Data, other.Data) : DerivedCharts::Composite(m_Calc, m_Data, other.Data);
+	DerivedRecipe recipe;
+	recipe.Kind = davison ? DerivedKind::Davison : DerivedKind::Composite;
+	recipe.A = m_Data;
+	recipe.B = std::move(other.Data);
+	ChartData chart = DerivedCharts::Build(m_Calc, recipe);
 	CString title;
 	title.Format(L"%s: %s + %s", davison ? L"Davison" : L"Composite", (PCWSTR)m_Title, (PCWSTR)other.Name);
-	Frame()->AddDerivedChartView(std::move(chart), title);
+	Frame()->AddDerivedChartView(std::move(chart), title, &recipe);
 }
 
 LRESULT CChartView::OnAnalysis(WORD, WORD, HWND, BOOL&) {

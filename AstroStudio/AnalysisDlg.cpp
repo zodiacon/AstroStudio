@@ -2,6 +2,7 @@
 #include "AnalysisDlg.h"
 #include "AnalysisNames.h"
 #include "AspectOptions.h"
+#include "AppSettings.h"
 #include "Helpers.h"
 #include <algorithm>
 
@@ -52,6 +53,8 @@ AnalysisSettings CAnalysisDlg::Defaults() {
 	settings.Movers = StandardBodies();
 	settings.Targets = StandardBodies();
 	settings.Aspects = AspectOptions::Current().Transit;
+	// what the last analysis was made of, if there was one
+	settings.FromText(AppSettings::Get().LastAnalysis());
 	return settings;
 }
 
@@ -369,6 +372,7 @@ LRESULT CAnalysisDlg::OnOK(WORD, WORD, HWND, BOOL&) {
 
 	m_Settings = settings;
 	m_Chart = m_ChartBox.GetCurSel();
+	AppSettings::Get().LastAnalysis(settings.ToText());
 	EndDialog(IDOK);
 	return 0;
 }

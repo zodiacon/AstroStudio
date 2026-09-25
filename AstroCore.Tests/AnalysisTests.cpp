@@ -556,3 +556,60 @@ TEST_CASE("Each pass of a retrograde planet is a stay of its own", "[Analysis]")
 		previousLeave = stay.Leave.Julian();
 	}
 }
+
+TEST_CASE("Analysis settings can be kept as text and read back", "[Analysis]") {
+	AnalysisSettings settings;
+	settings.Types = { AnalysisType::TransitsToNatal, AnalysisType::SolarArcToNatal };
+	settings.Type = settings.Types[0];
+	settings.From = DateTime(2026, 1, 1, 0, 0, 0);
+	settings.To = DateTime(2027, 6, 1, 0, 0, 0);
+	settings.Movers = { Planet::Sun, Planet::Mars, Planet::Chiron };
+	settings.Targets = { Planet::Moon, Planet::Venus };
+	settings.NatalAngles = false;
+	settings.AspectEvents = true;
+	settings.Aspects.AspectEnabled.fill(false);
+	settings.Aspects.AspectEnabled[static_cast<int>(AspectType::Conjunction)] = true;
+	settings.Aspects.AspectEnabled[static_cast<int>(AspectType::Quintile)] = true;
+	settings.HouseIngresses = true;
+	settings.SignIngresses = false;
+	settings.Stations = true;
+
+	auto text = settings.ToText();
+	AnalysisSettings read;
+	read.From = DateTime(2030, 3, 3, 0, 0, 0);
+	read.FromText(text);
+	CHECK(read.TypeList() == settings.TypeList());
+	CHECK(read.Type == AnalysisType::TransitsToNatal);
+	CHECK(read.Movers == settings.Movers);
+	CHECK(read.Targets == settings.Targets);
+	CHECK_FALSE(read.NatalAngles);
+	CHECK(read.AspectEvents);
+	CHECK(read.Aspects.AspectEnabled == settings.Aspects.AspectEnabled);
+	CHECK(read.HouseIngresses);
+	CHECK_FALSE(read.SignIngresses);
+	CHECK(read.Stations);
+	// the range comes back as a length, from wherever it starts now
+	CHECK(read.To.Julian() - read.From.Julian() == Approx(settings.To.Julian() - settings.From.Julian()));
+	CHECK(read.ToText() == text);
+
+	// "major only" is kept as the aspects that are on
+	AnalysisSettings majors;
+	majors.Aspects.MajorOnly = true;
+	AnalysisSettings readMajors;
+	readMajors.FromText(majors.ToText());
+	CHECK_FALSE(readMajors.Aspects.MajorOnly);
+	for (int i = 0; i < AspectSettings::AspectTypeCount; i++)
+		CHECK(readMajors.Aspects.AspectEnabled[i] == (i <= static_cast<int>(AspectType::Opposition)));
+}
+
+TEST_CASE("Analysis settings text that is damaged or empty leaves the rest alone", "[Analysis]") {
+	AnalysisSettings settings;
+	settings.Movers = { Planet::Sun };
+	settings.Type = AnalysisType::TransitsToNatal;
+	settings.Types = { AnalysisType::ProgressedToNatal };
+	settings.FromText(L"");
+	CHECK(settings.Movers == std::vector<Planet>{ Planet::Sun });
+	settings.FromText(L"nonsense;types=;movers=1,x,99,-3,2;days=abc;=;;angles");
+	CHECK(settings.TypeList() == std::vector<AnalysisType>{ AnalysisType::TransitsToNatal });		// (an empty list falls back to Type, which is what it was)
+	CHECK(settings.Movers == std::vector<Planet>{ Planet::Moon, Planet::Mercury });
+}

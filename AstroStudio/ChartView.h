@@ -25,7 +25,8 @@ public:
 	CChartView(IMainFrame* frame);
 	void Chart(ChartData data);
 	// A chart worked out from others (see IMainFrame::AddDerivedChartView): shown as it is, never recalculated, read-only.
-	void DerivedChart(ChartData data);
+	// With the recipe it was made from (a chart that is made anew from it is saved as it).
+	void DerivedChart(ChartData data, DerivedRecipe const* recipe = nullptr);
 	void ChartForNow();
 	ChartData const& Chart() const;
 
@@ -39,6 +40,7 @@ public:
 	void AspectSettingsChanged() override;
 	void WheelOptionsChanged() override;
 	bool GetChart(OpenChart& chart) const override;
+	bool ShowMoment(DateTime const& ut, MomentKind kind) override;
 
 	BEGIN_MSG_MAP(CChartView)
 		MESSAGE_HANDLER(WM_RECALC, OnRecalc)
@@ -188,6 +190,7 @@ private:
 	bool m_AutoStep{ false };
 	bool m_Live{ false };
 	bool m_ReadOnly{ false };
+	std::optional<DerivedRecipe> m_Recipe;		// what a read-only chart was made from, if that is known
 	std::optional<ChartOverlay> m_Overlay;
 	CString m_FilePath, m_Title;
 	bool m_Modified{ false };

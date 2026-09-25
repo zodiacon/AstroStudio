@@ -3,6 +3,7 @@
 #include "AnalysisDlg.h"
 #include "AnalysisNames.h"
 #include "AppSettings.h"
+#include "AspectOptions.h"
 #include "DefaultFont.h"
 #include "Helpers.h"
 #include "TimeZones.h"
@@ -39,8 +40,24 @@ LRESULT CAnalysisView::OnCreate(UINT, WPARAM, LPARAM, BOOL&) {
 	};
 	CreateSimpleReBar(ATL_SIMPLE_REBAR_NOBORDER_STYLE);
 	auto tb = ToolbarHelper::CreateAndInitToolBar(m_hWndToolBar, buttons, _countof(buttons), 16);
+	// a box for filtering the events sits in the toolbar, on a separator made as wide as it is (created before the toolbar joins the
+	// rebar, which sizes the band from its buttons)
+	CToolBarCtrl bar(tb);
+	int dpi = CClientDC(m_hWnd).GetDeviceCaps(LOGPIXELSX);
+	auto px = [&](int value) { return MulDiv(value, dpi, 96); };
+	bar.AddSeparator(px(8));
+	int filterSlot = bar.GetButtonCount();
+	bar.AddSeparator(px(190));
 	AddSimpleReBarBand(tb);
 	Frame()->AddToolBarToUI(tb);
+
+	CRect item;
+	bar.GetItemRect(filterSlot, &item);
+	int height = px(22), top = item.top + (item.Height() - height) / 2;
+	CRect box(item.left, top, item.right - px(4), top + height);
+	m_Filter.Create(tb, box, nullptr, WS_CHILD | WS_VISIBLE | WS_TABSTOP | ES_AUTOHSCROLL, WS_EX_CLIENTEDGE, IDC_AN_FILTER);
+	m_Filter.SetFont(AtlGetDefaultGuiFont());
+	m_Filter.SetCueBannerText(L"Filter: square saturn", TRUE);
 
 	auto cm = GetColumnManager(m_List);
 	cm->AddColumn(ColumnNames[0], LVCFMT_LEFT, 140, ColumnType::Date);
@@ -227,6 +244,11 @@ void CAnalysisView::Start(OpenChart chart, AnalysisSettings settings) {
 }
 
 LRESULT CAnalysisView::OnTimer(UINT, WPARAM id, LPARAM, BOOL& handled) {
+	if (id == FilterTimer) {
+		KillTimer(FilterTimer);
+		ApplyFilter();
+		return 0;
+	}
 	if (id != ProgressTimer) {
 		handled = FALSE;
 		return 0;
@@ -256,13 +278,10 @@ LRESULT CAnalysisView::OnDone(UINT, WPARAM id, LPARAM, BOOL&) {
 	m_Chart = std::move(job->Chart);
 	m_Settings = std::move(job->Settings);
 	m_Events = std::move(job->Result.Events);
-	m_List.SetItemCount(static_cast<int>(m_Events.size()));
-	m_List.Invalidate();
+	m_Stale = false;
+	ApplyFilter();
 	UpdateHeaders(false);
 	UpdateTitle();
-	CString status;
-	status.Format(L"%d events", static_cast<int>(m_Events.size()));
-	SetStatus(status);
 	return 0;
 }
 
@@ -270,6 +289,51 @@ LRESULT CAnalysisView::OnCancel(WORD, WORD, HWND, BOOL&) {
 	if (m_Job)
 		m_Job->Cancel = true;		// OnDone hears of it
 	return 0;
+}
+
+LRESULT CAnalysisView::OnFilterChanged(WORD, WORD, HWND, BOOL&) {
+	// as the user types: a moment after the last key
+	SetTimer(FilterTimer, 250);
+	return 0;
+}
+
+LRESULT CAnalysisView::OnDoubleClick(int, LPNMHDR pnmh, BOOL& handled) {
+	if (pnmh->hwndFrom != m_List) {
+		handled = FALSE;
+		return 0;
+	}
+	int row = m_List.GetNextItem(-1, LVNI_SELECTED);
+	auto event = EventAt(row);
+	if (!event)
+		return 0;
+
+	MomentKind kind = MomentKind::Transits;
+	if (event->Type == AnalysisType::SolarArcToNatal)
+		kind = MomentKind::SolarArc;
+	else if (event->Type == AnalysisType::ProgressedToNatal || event->Type == AnalysisType::ProgressedToProgressed)
+		kind = MomentKind::Progressions;
+
+	// the chart's own tab if it is still open, otherwise a new tab with the copy this one was made from
+	IView* chart = nullptr;
+	if (m_Chart.View)
+		for (auto const& open : Frame()->OpenCharts())
+			if (open.View == m_Chart.View)
+				chart = open.View;
+	if (!chart) {
+		chart = Frame()->AddChartView(m_Chart.Data, m_Chart.Name);
+		m_Chart.View = chart;
+	}
+	Frame()->ActivateView(chart);
+	if (!chart->ShowMoment(event->Time, kind))
+		AtlMessageBox(m_hWnd, L"That chart can't show this moment around it.", L"Astro Studio", MB_ICONINFORMATION);
+	return 0;
+}
+
+void CAnalysisView::AspectSettingsChanged() {
+	if (m_Settings.AspectEvents && !m_Events.empty()) {
+		m_Stale = true;
+		ShowCount();
+	}
 }
 
 LRESULT CAnalysisView::OnDestroy(UINT, WPARAM, LPARAM, BOOL& handled) {
@@ -287,6 +351,57 @@ void CAnalysisView::UpdateTitle() {
 		what.Format(L"%d analyses", static_cast<int>(types.size()));
 	title.Format(L"%s: %s (%d)", (PCWSTR)what, (PCWSTR)m_Chart.Name, static_cast<int>(m_Events.size()));
 	Frame()->SetViewTitle(this, title);
+}
+
+AnalysisEvent const* CAnalysisView::EventAt(int row) const {
+	if (row < 0 || row >= static_cast<int>(m_Shown.size()))
+		return nullptr;
+	return &m_Events[m_Shown[row]];
+}
+
+bool CAnalysisView::Matches(AnalysisEvent const& event) const {
+	if (m_Terms.empty())
+		return true;
+	// everything a row says, in words
+	CString text;
+	for (auto column : { ColumnType::Date, ColumnType::Analysis, ColumnType::Event, ColumnType::Mover, ColumnType::Aspect, ColumnType::Target, ColumnType::Longitude })
+		text += CellText(event, column, false) + L" ";
+	text.MakeLower();
+	for (auto const& term : m_Terms)
+		if (text.Find(term) < 0)
+			return false;
+	return true;
+}
+
+void CAnalysisView::ApplyFilter() {
+	CString filter;
+	if (m_Filter)
+		m_Filter.GetWindowText(filter);
+	filter.MakeLower();
+	m_Terms.clear();
+	int position = 0;
+	for (auto term = filter.Tokenize(L" \t", position); position >= 0; term = filter.Tokenize(L" \t", position))
+		if (!term.IsEmpty())
+			m_Terms.push_back(term);
+
+	m_Shown.clear();
+	for (int i = 0; i < static_cast<int>(m_Events.size()); i++)
+		if (Matches(m_Events[i]))
+			m_Shown.push_back(i);
+	m_List.SetItemCount(static_cast<int>(m_Shown.size()));
+	m_List.Invalidate();
+	ShowCount();
+}
+
+void CAnalysisView::ShowCount() {
+	CString status;
+	if (m_Terms.empty())
+		status.Format(L"%d events", static_cast<int>(m_Events.size()));
+	else
+		status.Format(L"%d of %d events", static_cast<int>(m_Shown.size()), static_cast<int>(m_Events.size()));
+	if (m_Stale)
+		status += L"     The aspect settings have changed since: Refresh runs it again with them";
+	SetStatus(status);
 }
 
 CString CAnalysisView::EventText(AnalysisEvent const& event) const {
@@ -417,9 +532,10 @@ CString CAnalysisView::CellText(AnalysisEvent const& event, ColumnType column, b
 }
 
 CString CAnalysisView::GetColumnText(HWND h, int row, int col) const {
-	if (row < 0 || row >= static_cast<int>(m_Events.size()))
+	auto event = EventAt(row);
+	if (!event)
 		return CString();
-	return CellText(m_Events[row], GetColumnManager(h)->GetColumnTag<ColumnType>(col), m_Glyphs);
+	return CellText(*event, GetColumnManager(h)->GetColumnTag<ColumnType>(col), m_Glyphs);
 }
 
 DWORD CAnalysisView::OnPrePaint(int, LPNMCUSTOMDRAW) {
@@ -432,11 +548,11 @@ DWORD CAnalysisView::OnItemPrePaint(int, LPNMCUSTOMDRAW) {
 
 DWORD CAnalysisView::OnSubItemPrePaint(int, LPNMCUSTOMDRAW cd) {
 	auto lv = reinterpret_cast<LPNMLVCUSTOMDRAW>(cd);
-	int row = static_cast<int>(cd->dwItemSpec);
-	if (row < 0 || row >= static_cast<int>(m_Events.size()))
+	auto event = EventAt(static_cast<int>(cd->dwItemSpec));
+	if (!event)
 		return CDRF_DODEFAULT;
 
-	lv->clrTextBk = RowColor(m_Events[row]);
+	lv->clrTextBk = RowColor(*event);
 	lv->clrText = WTLHelper::IsDarkMode() ? RGB(235, 235, 235) : RGB(0, 0, 0);		// (without it the date cell comes out in a colour of its own)
 	auto column = GetColumnManager(m_List)->GetColumnTag<ColumnType>(lv->iSubItem);
 	::SelectObject(cd->hdc, m_Glyphs && IsGlyphColumn(column) ? m_SymbolFont.m_hFont : m_StdFont.m_hFont);
@@ -470,6 +586,7 @@ void CAnalysisView::DoSort(SortInfo const* si) {
 		return false;
 	};
 	std::stable_sort(m_Events.begin(), m_Events.end(), compare);
+	ApplyFilter();		// (the rows the filter lets through are in the new places)
 }
 
 LRESULT CAnalysisView::OnOptions(WORD, WORD, HWND, BOOL&) {
@@ -506,7 +623,13 @@ LRESULT CAnalysisView::OnRefresh(WORD, WORD, HWND, BOOL&) {
 				chart = std::move(open);
 				break;
 			}
-	Start(std::move(chart), m_Settings);
+	// the aspects are those that were chosen, with the orbs of the aspect options as they are now
+	auto settings = m_Settings;
+	auto orbs = AspectOptions::Current().Transit;
+	orbs.AspectEnabled = settings.Aspects.AspectEnabled;
+	orbs.MajorOnly = false;
+	settings.Aspects = orbs;
+	Start(std::move(chart), settings);
 	return 0;
 }
 
@@ -526,13 +649,14 @@ CString CAnalysisView::BuildTable(std::vector<int> const& rows, bool csv) const 
 	}
 	table += L"\r\n";
 	for (int row : rows) {
-		if (row < 0 || row >= static_cast<int>(m_Events.size()))
+		auto event = EventAt(row);
+		if (!event)
 			continue;
 		for (int column = 0; column < _countof(ColumnNames); column++) {
 			if (column)
 				table += separator;
 			// plain words, whatever the list shows
-			table += quote(CellText(m_Events[row], static_cast<ColumnType>(column), false));
+			table += quote(CellText(*event, static_cast<ColumnType>(column), false));
 		}
 		table += L"\r\n";
 	}
@@ -561,7 +685,7 @@ LRESULT CAnalysisView::OnExport(WORD, WORD, HWND, BOOL&) {
 		return 0;
 
 	CWaitCursor wait;
-	std::vector<int> rows(m_Events.size());
+	std::vector<int> rows(m_Shown.size());		// (what the filter lets through)
 	for (int i = 0; i < static_cast<int>(rows.size()); i++)
 		rows[i] = i;
 	Helpers::SaveTextFileUtf8(m_hWnd, dlg.m_szFileName, BuildTable(rows, true), L"The events");

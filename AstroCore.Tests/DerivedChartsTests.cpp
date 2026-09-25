@@ -456,3 +456,50 @@ TEST_CASE("Davison longitude takes the short way round the antimeridian", "[Deri
 	auto davison = DerivedCharts::Davison(calc, a, b);
 	CHECK(std::fabs(std::fabs(davison.Info().Longitude) - 180) < 1e-6);
 }
+
+TEST_CASE("A recipe builds the same chart as making it directly", "[Derived]") {
+	AstroCalculator calc;
+	auto a = Natal(1980, 3, 10, 6, 0, 40, -74);
+	auto b = Natal(1990, 7, 22, 15, 30, 51, 0);
+
+	// the recipe's sources are only their details: no positions
+	auto bare = [](ChartData chart) {
+		for (auto& planet : chart.AllPlanets())
+			planet.Longitude = AstroPoint(0);
+		chart.Houses() = {};
+		return chart;
+	};
+
+	DerivedRecipe recipe;
+	recipe.A = bare(a);
+	recipe.B = bare(b);
+	for (auto houses : { CompositeHouses::MidpointMC, CompositeHouses::MidpointARMC }) {
+		recipe.Kind = DerivedKind::Composite;
+		recipe.Houses = houses;
+		auto built = DerivedCharts::Build(calc, recipe);
+		auto direct = DerivedCharts::Composite(calc, a, b, houses);
+		REQUIRE(built.AllPlanets().size() == direct.AllPlanets().size());
+		for (size_t i = 0; i < built.AllPlanets().size(); i++)
+			CHECK(Diff(built.AllPlanets()[i].Longitude.Value, direct.AllPlanets()[i].Longitude.Value) < MicroDegree);
+		CHECK(Diff(built.Houses().MC.Value, direct.Houses().MC.Value) < MicroDegree);
+	}
+
+	recipe.Kind = DerivedKind::Davison;
+	auto davison = DerivedCharts::Build(calc, recipe);
+	auto directDavison = DerivedCharts::Davison(calc, a, b);
+	CHECK(davison.Info().Time.Julian() == Approx(directDavison.Info().Time.Julian()));
+	for (size_t i = 0; i < davison.AllPlanets().size(); i++)
+		CHECK(Diff(davison.AllPlanets()[i].Longitude.Value, directDavison.AllPlanets()[i].Longitude.Value) < MicroDegree);
+
+	recipe.Kind = DerivedKind::SolarArc;
+	recipe.Target = DateTime(2030, 1, 1, 0, 0, 0);
+	recipe.Key = ArcKey::Naibod;
+	auto arc = DerivedCharts::Build(calc, recipe);
+	ProgressionOptions options;
+	options.Method = ProgressionMethod::SolarArc;
+	options.Key = ArcKey::Naibod;
+	auto directArc = DerivedCharts::Progress(calc, a, recipe.Target, options);
+	for (size_t i = 0; i < arc.AllPlanets().size(); i++)
+		CHECK(Diff(arc.AllPlanets()[i].Longitude.Value, directArc.AllPlanets()[i].Longitude.Value) < MicroDegree);
+	CHECK(Diff(arc.Houses().Asc.Value, directArc.Houses().Asc.Value) < MicroDegree);
+}

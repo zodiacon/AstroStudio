@@ -689,3 +689,98 @@ AnalysisResult Analysis::RunAll(AstroCalculator const& calc, ChartData const& na
 	});
 	return all;
 }
+
+namespace {
+	template<class T>
+	std::wstring NumberList(std::vector<T> const& values) {
+		std::wstring text;
+		for (auto value : values)
+			text += (text.empty() ? L"" : L",") + std::to_wstring(static_cast<int>(value));
+		return text;
+	}
+
+	// the numbers in a comma separated list that are in 0 .. below
+	std::vector<int> ReadNumbers(std::wstring const& text, int below) {
+		std::vector<int> numbers;
+		size_t start = 0;
+		while (start <= text.size()) {
+			size_t end = text.find(L',', start);
+			if (end == std::wstring::npos)
+				end = text.size();
+			auto item = text.substr(start, end - start);
+			wchar_t* stop = nullptr;
+			long value = wcstol(item.c_str(), &stop, 10);
+			if (!item.empty() && *stop == 0 && value >= 0 && value < below)
+				numbers.push_back(static_cast<int>(value));
+			start = end + 1;
+		}
+		return numbers;
+	}
+}
+
+std::wstring AnalysisSettings::ToText() const {
+	std::vector<int> aspects;
+	for (int i = 0; i < AspectSettings::AspectTypeCount; i++)
+		if (Aspects.AspectEnabled[i] && !(Aspects.MajorOnly && i > static_cast<int>(AspectType::Opposition)))
+			aspects.push_back(i);
+	int days = static_cast<int>(std::lround(To.Julian() - From.Julian()));
+	return L"types=" + NumberList(TypeList()) + L";movers=" + NumberList(Movers) + L";targets=" + NumberList(Targets) +
+		L";angles=" + std::to_wstring(NatalAngles ? 1 : 0) + L";aspects=" + std::to_wstring(AspectEvents ? 1 : 0) + L";asp=" + NumberList(aspects) +
+		L";houses=" + std::to_wstring(HouseIngresses ? 1 : 0) + L";signs=" + std::to_wstring(SignIngresses ? 1 : 0) +
+		L";stations=" + std::to_wstring(Stations ? 1 : 0) + L";days=" + std::to_wstring(std::max(days, 1));
+}
+
+void AnalysisSettings::FromText(std::wstring const& text) {
+	size_t start = 0;
+	while (start < text.size()) {
+		size_t end = text.find(L';', start);
+		if (end == std::wstring::npos)
+			end = text.size();
+		auto part = text.substr(start, end - start);
+		start = end + 1;
+		auto equals = part.find(L'=');
+		if (equals == std::wstring::npos)
+			continue;
+		auto key = part.substr(0, equals), value = part.substr(equals + 1);
+		auto flag = [&] { return value == L"1"; };
+		if (key == L"types") {
+			Types.clear();
+			for (int i : ReadNumbers(value, 5))
+				Types.push_back(static_cast<AnalysisType>(i));
+			if (!Types.empty())
+				Type = Types[0];
+		}
+		else if (key == L"movers") {
+			Movers.clear();
+			for (int i : ReadNumbers(value, static_cast<int>(Planet::NumPlanets)))
+				Movers.push_back(static_cast<Planet>(i));
+		}
+		else if (key == L"targets") {
+			Targets.clear();
+			for (int i : ReadNumbers(value, static_cast<int>(Planet::NumPlanets)))
+				Targets.push_back(static_cast<Planet>(i));
+		}
+		else if (key == L"angles")
+			NatalAngles = flag();
+		else if (key == L"aspects")
+			AspectEvents = flag();
+		else if (key == L"asp") {
+			Aspects.AspectEnabled.fill(false);
+			Aspects.MajorOnly = false;
+			for (int i : ReadNumbers(value, AspectSettings::AspectTypeCount))
+				Aspects.AspectEnabled[i] = true;
+		}
+		else if (key == L"houses")
+			HouseIngresses = flag();
+		else if (key == L"signs")
+			SignIngresses = flag();
+		else if (key == L"stations")
+			Stations = flag();
+		else if (key == L"days") {
+			wchar_t* stop = nullptr;
+			long days = wcstol(value.c_str(), &stop, 10);
+			if (*stop == 0 && days >= 1 && days <= 40000)
+				To = From.AddDays(static_cast<double>(days));
+		}
+	}
+}

@@ -78,7 +78,7 @@ private:
 	void ActivateView(IView* view) override;
 	ChartInfo& DefaultChartInfo() override;
 	IView* NewChartWithDialog(ChartInfo const* initial = nullptr, HouseSystem const* houseSystem = nullptr) override;
-	IView* AddDerivedChartView(ChartData data, PCWSTR title) override;
+	IView* AddDerivedChartView(ChartData data, PCWSTR title, DerivedRecipe const* recipe = nullptr, PCWSTR filePath = nullptr) override;
 	bool IsLocationPending() const override;
 	std::vector<OpenChart> OpenCharts(IView* except = nullptr) override;
 	void NewAnalysis(IView* chart = nullptr) override;

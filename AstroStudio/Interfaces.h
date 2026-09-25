@@ -1,9 +1,13 @@
 #pragma once
 
 #include "ChartData.h"
+#include "DerivedCharts.h"
 
 struct IView;
 struct ChartInfo;
+
+// what a chart can show around itself at a moment (see IView::ShowMoment)
+enum class MomentKind { Transits, Progressions, SolarArc };
 
 // a chart open in a tab, as a copy
 struct OpenChart {
@@ -31,9 +35,10 @@ struct IMainFrame abstract {
 	// the default location if null) and opens it. Returns null if the dialog was cancelled.
 	// The house system the dialog starts with is the last one used, unless one is given.
 	virtual IView* NewChartWithDialog(ChartInfo const* initial = nullptr, HouseSystem const* houseSystem = nullptr) = 0;
-	// Opens a chart worked out from others (a composite, a Davison chart) in a new tab, read-only: its details are shown but
-	// can't be edited, the planets are kept as they are (never recalculated) and it can't be saved. Returns the new view.
-	virtual IView* AddDerivedChartView(ChartData data, PCWSTR title) = 0;
+	// Opens a chart worked out from others (a composite, a Davison chart, a solar arc chart) in a new tab, read-only: its details
+	// are shown but can't be edited and the planets are kept as they are (never recalculated). With the recipe it was made from
+	// it can be saved (as that recipe: see ChartFile), and filePath is the file it came from, if it did. Returns the new view.
+	virtual IView* AddDerivedChartView(ChartData data, PCWSTR title, DerivedRecipe const* recipe = nullptr, PCWSTR filePath = nullptr) = 0;
 	virtual BOOL AddToolBarToUI(HWND) = 0;
 
 	// True while the startup geolocation lookup is still running, so a new
@@ -67,6 +72,11 @@ struct IView {
 	// the file the view's document lives in, or null
 	virtual PCWSTR FilePath() const {
 		return nullptr;
+	}
+	// Shows the moment (UT) around the chart - the sky then, or the chart progressed or moved by the solar arc to it - as an overlay.
+	// False if the view is not a chart, or can't show that (a read-only chart has nothing to progress).
+	virtual bool ShowMoment(DateTime const& ut, MomentKind kind) {
+		return false;
 	}
 	// The chart the view shows, as a copy with its name (the tab's text), if it is a chart.
 	virtual bool GetChart(OpenChart& chart) const {

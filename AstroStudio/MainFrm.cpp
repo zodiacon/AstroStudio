@@ -371,16 +371,22 @@ bool CMainFrame::OpenChartFile(PCWSTR path) {
 		}
 	}
 
-	ChartData data;
+	ChartFile::Loaded loaded;
 	std::wstring error;
-	if (!ChartFile::Load(path, data, error)) {
+	if (!ChartFile::LoadFile(path, loaded, error)) {
 		CString message;
 		message.Format(L"%s could not be opened:\n\n%s", path, error.c_str());
 		AtlMessageBox(m_hWnd, (PCWSTR)message, L"Astro Studio", MB_ICONWARNING);
 		return false;
 	}
 	auto title = std::filesystem::path(path).stem().wstring();
-	AddChartView(std::move(data), title.c_str(), path);
+	if (loaded.Derived) {
+		// a chart worked out from others: made again from the charts stored with it
+		AstroCalculator calc;
+		AddDerivedChartView(DerivedCharts::Build(calc, loaded.Recipe), title.c_str(), &loaded.Recipe, path);
+	}
+	else
+		AddChartView(std::move(loaded.Chart), title.c_str(), path);
 	AddRecentFile(path);
 	return true;
 }
@@ -420,12 +426,12 @@ LRESULT CMainFrame::OnClose(UINT, WPARAM, LPARAM, BOOL& bHandled) {
 	return 0;
 }
 
-IView* CMainFrame::AddDerivedChartView(ChartData data, PCWSTR title) {
+IView* CMainFrame::AddDerivedChartView(ChartData data, PCWSTR title, DerivedRecipe const* recipe, PCWSTR filePath) {
 	auto pView = new CChartView(this);
 	pView->Create(m_view, rcDefault, nullptr, WS_CHILD | WS_VISIBLE | WS_CLIPCHILDREN, 0);
 	m_view.AddPage(pView->m_hWnd, title, 1, pView);
-	pView->DerivedChart(std::move(data));
-	pView->SetFile(title, nullptr);
+	pView->DerivedChart(std::move(data), recipe);
+	pView->SetFile(title, filePath);
 	return pView;
 }
 

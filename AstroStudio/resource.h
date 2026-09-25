@@ -151,6 +151,7 @@
 #define IDC_AN_SIGNS                    1095
 #define IDC_AN_STATIONS                 1096
 #define IDC_AN_NOTE                     1097
+#define IDC_AN_FILTER                   1098
 #define ID_WINDOW_CLOSE                 32772
 #define ID_WINDOW_CLOSE_ALL             32773
 #define ID_OPTIONS_ALWAYSONTOP          32775
@@ -198,7 +199,7 @@
 #ifndef APSTUDIO_READONLY_SYMBOLS
 #define _APS_NEXT_RESOURCE_VALUE        241
 #define _APS_NEXT_COMMAND_VALUE         32813
-#define _APS_NEXT_CONTROL_VALUE         1098
+#define _APS_NEXT_CONTROL_VALUE         1099
 #define _APS_NEXT_SYMED_VALUE           108
 #endif
 #endif

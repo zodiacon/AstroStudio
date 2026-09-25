@@ -52,6 +52,23 @@ enum class ReturnSearch {
 	Nearest,			// whichever of those is closer to it
 };
 
+// What a chart worked out from others is made of, which is all that needs saving of it: the charts it was made from (as their
+// birth details - positions are recalculated) and what was chosen. DerivedCharts::Build makes the chart again.
+enum class DerivedKind {
+	Composite,		// of A and B
+	Davison,		// of A and B
+	SolarArc,		// of A, moved to a date
+};
+
+struct DerivedRecipe {
+	DerivedKind Kind{ DerivedKind::Composite };
+	ChartData A, B;							// B only for a composite or a Davison chart
+	CompositeHouses Houses{ CompositeHouses::MidpointMC };		// composite
+	DateTime Target;						// solar arc: the date it is moved to (UT) ...
+	TimeZoneInfo Zone;						// ... and the zone it is shown in
+	ArcKey Key{ ArcKey::Actual };			// solar arc
+};
+
 // Charts worked out from other charts, and the calculations behind them.
 struct DerivedCharts abstract final {
 	// --- progressions and directions
@@ -86,6 +103,9 @@ struct DerivedCharts abstract final {
 	static ChartData Davison(AstroCalculator& calc, ChartData const& a, ChartData const& b);
 	// the midpoint of two charts' times and places, as chart details (no names, no time zone)
 	static ChartInfo MidpointInfo(ChartInfo const& a, ChartInfo const& b);
+
+	// The chart a recipe describes. The sources need only their details (their planets are calculated here).
+	static ChartData Build(AstroCalculator& calc, DerivedRecipe const& recipe);
 
 	// --- helpers
 

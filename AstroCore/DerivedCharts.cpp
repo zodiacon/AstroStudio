@@ -277,3 +277,17 @@ std::vector<int> DerivedCharts::HouseOverlay(HouseData const& houses, std::vecto
 		result.push_back(HouseOf(houses, planet.Longitude));
 	return result;
 }
+
+ChartData DerivedCharts::Build(AstroCalculator& calc, DerivedRecipe const& recipe) {
+	ChartData a = recipe.A;
+	calc.Calculate(a);
+	if (recipe.Kind == DerivedKind::SolarArc) {
+		ProgressionOptions options;
+		options.Method = ProgressionMethod::SolarArc;
+		options.Key = recipe.Key;
+		return Progress(calc, a, recipe.Target, options);
+	}
+	ChartData b = recipe.B;
+	calc.Calculate(b);
+	return recipe.Kind == DerivedKind::Davison ? Davison(calc, a, b) : Composite(calc, a, b, recipe.Houses);
+}

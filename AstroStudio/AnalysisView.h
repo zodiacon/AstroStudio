@@ -33,6 +33,8 @@ public:
 
 	void PageActivated(bool active) override;
 	void TextFontChanged() override;
+	// the aspect settings (orbs) changed: what the tab shows was found with the old ones
+	void AspectSettingsChanged() override;
 
 	DWORD OnPrePaint(int, LPNMCUSTOMDRAW cd);
 	DWORD OnItemPrePaint(int, LPNMCUSTOMDRAW cd);
@@ -43,6 +45,8 @@ public:
 		COMMAND_ID_HANDLER(ID_ANALYSIS_OPTIONS, OnOptions)
 		COMMAND_ID_HANDLER(ID_ANALYSIS_REFRESH, OnRefresh)
 		COMMAND_ID_HANDLER(ID_ANALYSIS_CANCEL, OnCancel)
+		COMMAND_HANDLER(IDC_AN_FILTER, EN_CHANGE, OnFilterChanged)
+		NOTIFY_CODE_HANDLER(NM_DBLCLK, OnDoubleClick)
 		COMMAND_ID_HANDLER(ID_VIEW_GLYPHS, OnViewGlyphs)
 		COMMAND_ID_HANDLER(ID_FONT_BIGGER, OnChangeFontSize)
 		COMMAND_ID_HANDLER(ID_FONT_SMALLER, OnChangeFontSize)
@@ -69,6 +73,9 @@ private:
 	LRESULT OnRefresh(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/);
 	LRESULT OnViewGlyphs(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/);
 	LRESULT OnCancel(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/);
+	LRESULT OnFilterChanged(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/);
+	// a double click on an event opens its chart (a copy, if it was closed) with the moment around it
+	LRESULT OnDoubleClick(int /*idCtrl*/, LPNMHDR /*pnmh*/, BOOL& /*bHandled*/);
 	LRESULT OnChangeFontSize(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/);
 	LRESULT OnDone(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, BOOL& /*bHandled*/);
 	LRESULT OnTimer(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, BOOL& /*bHandled*/);
@@ -82,6 +89,14 @@ private:
 	void Start(OpenChart chart, AnalysisSettings settings);
 	// stops the run in progress, if any, and waits for its thread
 	void StopWorker();
+	// The events the filter lets through, as indexes into m_Events: a text of words that must all be in a row's text (in words,
+	// whatever the list shows: "square saturn", "2027/03", "enters house 5"). Called when the events, their order or the filter change.
+	void ApplyFilter();
+	bool Matches(AnalysisEvent const& event) const;
+	// the event a row of the list shows
+	AnalysisEvent const* EventAt(int row) const;
+	// "12345 events", "36 of 12345 events", or that the aspect settings have changed since
+	void ShowCount();
 	// the status bar, the Cancel button and the timer that reads the worker's progress, for a run that is on or not
 	void ShowRunning(bool running);
 	void SetStatus(PCWSTR text);
@@ -118,13 +133,17 @@ private:
 		AnalysisResult Result;
 	};
 	static constexpr UINT WM_ANALYSIS_DONE = WM_APP + 20;
-	static constexpr UINT_PTR ProgressTimer = 1;
+	static constexpr UINT_PTR ProgressTimer = 1, FilterTimer = 2;
 
 	CListViewCtrl m_List;
 	CFont m_StdFont, m_SymbolFont;
 	int m_FontSize{ 90 };			// tenths of a point
 	bool m_Glyphs{ true };
 	bool m_PageActive{ false };
+	CEdit m_Filter;
+	std::vector<CString> m_Terms;		// the filter's words, in lower case
+	std::vector<int> m_Shown;			// what the list shows: indexes into m_Events
+	bool m_Stale{ false };				// the aspect settings changed since the events were found
 	std::shared_ptr<Job> m_Job;
 	std::thread m_Worker;
 	WPARAM m_JobId{ 0 };
