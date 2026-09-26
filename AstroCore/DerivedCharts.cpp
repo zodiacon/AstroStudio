@@ -283,11 +283,16 @@ std::vector<int> DerivedCharts::HouseOverlay(HouseData const& houses, std::vecto
 ChartData DerivedCharts::Build(AstroCalculator& calc, DerivedRecipe const& recipe) {
 	ChartData a = recipe.A;
 	calc.Calculate(a);
-	if (recipe.Kind == DerivedKind::SolarArc) {
+	if (!recipe.IsPair()) {
 		ProgressionOptions options;
-		options.Method = ProgressionMethod::SolarArc;
 		options.Key = recipe.Key;
-		return Progress(calc, a, recipe.Target, options);
+		options.Angles = recipe.Angles;
+		options.Method = recipe.Kind == DerivedKind::Progressed ? ProgressionMethod::Secondary :
+			recipe.Kind == DerivedKind::Primary ? ProgressionMethod::Primary : ProgressionMethod::SolarArc;
+		auto chart = Progress(calc, a, recipe.Target, options);
+		// the chart is the person's: it keeps the birth details (the progressed moment is only where the planets are)
+		chart.Info().Time = a.Info().Time;
+		return chart;
 	}
 	ChartData b = recipe.B;
 	calc.Calculate(b);

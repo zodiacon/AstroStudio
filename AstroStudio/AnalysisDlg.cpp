@@ -25,7 +25,7 @@ namespace {
 	};
 
 	enum Preset { Custom, Next30Days, Next12Months, ThisYear, Next5Years, Next10Years, BirthTo90 };
-	PCWSTR const PresetNames[] = { L"(dates below)", L"Next 30 days", L"Next 12 months", L"This calendar year", L"Next 5 years", L"Next 10 years", L"Birth to age 90" };
+	PCWSTR const PresetNames[] = { L"(dates above)", L"Next 30 days", L"Next 12 months", L"This calendar year", L"Next 5 years", L"Next 10 years", L"Birth to age 90" };
 
 	void FillPlanetList(CListViewCtrl& list, std::vector<Planet> const& checked) {
 		list.SetExtendedListViewStyle(LVS_EX_CHECKBOXES | LVS_EX_FULLROWSELECT);

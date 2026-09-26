@@ -47,6 +47,7 @@ public:
 	bool CanClose() override;
 	void AspectSettingsChanged() override;
 	void WheelOptionsChanged() override;
+	void MidpointOptionsChanged() override;
 	void PartOfFortuneChanged() override;
 	void TextFontChanged() override;
 	bool GetChart(OpenChart& chart) const override;
@@ -75,6 +76,8 @@ public:
 		COMMAND_ID_HANDLER(ID_CHART_DERIVED_LUNARRETURN, OnDerived)
 		COMMAND_ID_HANDLER(ID_CHART_ANALYSIS, OnAnalysis)
 		COMMAND_ID_HANDLER(ID_CHART_DERIVED_SOLARARC, OnDerived)
+		COMMAND_ID_HANDLER(ID_CHART_DERIVED_PROGRESSED, OnDerived)
+		COMMAND_ID_HANDLER(ID_CHART_DERIVED_PRIMARY, OnDerived)
 		COMMAND_ID_HANDLER(ID_CHART_DERIVED_COMPOSITE, OnDerived)
 		COMMAND_ID_HANDLER(ID_CHART_DERIVED_DAVISON, OnDerived)
 		COMMAND_HANDLER(IDC_STEPCOUNT, CBN_SELCHANGE, OnStepSettingChanged)
@@ -98,6 +101,8 @@ public:
 		COMMAND_ID_HANDLER(ID_CHART_DERIVED_LUNARRETURN, OnDerived)
 		COMMAND_ID_HANDLER(ID_CHART_ANALYSIS, OnAnalysis)
 		COMMAND_ID_HANDLER(ID_CHART_DERIVED_SOLARARC, OnDerived)
+		COMMAND_ID_HANDLER(ID_CHART_DERIVED_PROGRESSED, OnDerived)
+		COMMAND_ID_HANDLER(ID_CHART_DERIVED_PRIMARY, OnDerived)
 		COMMAND_ID_HANDLER(ID_CHART_DERIVED_COMPOSITE, OnDerived)
 		COMMAND_ID_HANDLER(ID_CHART_DERIVED_DAVISON, OnDerived)
 		COMMAND_ID_HANDLER(ID_FILE_SAVE, OnSave)
@@ -154,7 +159,7 @@ private:
 	// New Derived Chart: the chart of the return of the Sun or the Moon to its natal place, opened by the New Chart dialog
 	void NewReturnChart(Planet planet);
 	// ...a chart with every point moved by the solar arc to a date asked for...
-	void NewSolarArcChart();
+	void NewDirectedChart(DerivedKind kind);
 	// ...and a composite or Davison chart of this and another open chart
 	void NewPairChart(bool davison);
 	LRESULT OnDerived(WORD /*wNotifyCode*/, WORD wID, HWND /*hWndCtl*/, BOOL& /*bHandled*/);

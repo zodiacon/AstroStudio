@@ -1,5 +1,6 @@
 #pragma once
 
+#include "resource.h"
 #include "Midpoints.h"
 #include "Helpers.h"
 #include "ChartOverlay.h"
@@ -19,6 +20,12 @@ public:
 	void SetOverlay(ChartOverlay const* overlay);
 	// puts the text font the user chose with Options > Font on the tree (nothing if they have not chosen one)
 	void ApplyTextFont();
+	// glyphs or names: the tree is written in astrological symbols (the toolbar's Glyphs button)
+	bool Glyphs() const {
+		return m_Glyphs;
+	}
+	// the orb, the kind of contact and the points that take part (MidpointSettings::Current) changed: the two boxes show them, and the tree starts over
+	void SyncSettings();
 
 	// for Export and Print: the branches and their midpoints as a flat table of plain words
 	Helpers::TableSource Table() const;
@@ -32,6 +39,7 @@ public:
 		COMMAND_HANDLER(IDC_MT_ORB, CBN_SELCHANGE, OnChoice)
 		COMMAND_HANDLER(IDC_MT_KIND, CBN_SELCHANGE, OnChoice)
 		COMMAND_HANDLER(IDC_MT_PAIRS, CBN_SELCHANGE, OnChoice)
+		COMMAND_ID_HANDLER(ID_VIEW_GLYPHS, OnGlyphs)
 	END_MSG_MAP()
 
 private:
@@ -46,13 +54,24 @@ private:
 	LRESULT OnEraseBkgnd(UINT, WPARAM, LPARAM, BOOL&);
 	LRESULT OnCtlColorStatic(UINT, WPARAM, LPARAM, BOOL&);
 	LRESULT OnChoice(WORD, WORD, HWND, BOOL&);
+	LRESULT OnGlyphs(WORD, WORD, HWND, BOOL&);
+	// the tree's font: the symbol font with glyphs, otherwise the text font (the user's, or the system's)
+	void ApplyTreeFont();
 	void Rebuild();
 	void Layout();
 	ContactOptions Options() const;
+	// the size of the dial the tree is read on, in degrees (90, or 45), and the choice of contacts that shows the setting
+	int DialSize() const;
+	void SelectKind(ContactKind kind);
 	static CString PointName(ChartPoint const& point);
+	// a point in words ("Transit Sun"), which is what Export and Print have; and as the tree shows it (a glyph, with a prime after the
+	// glyph of a point of the overlay, when glyphs are on)
+	CString PointWords(ChartPoint const& point) const;
 	CString PointText(ChartPoint const& point) const;
 	CString Dial(double dial) const;
 	CString Position(AstroPoint const& longitude) const;
+	// degrees and minutes as the tree shows them (in the glyph font the degree sign is another character)
+	CString Degrees(double value, int decimals) const;
 
 	// what a row of the table is: a midpoint standing on a point
 	struct Entry {
@@ -65,6 +84,9 @@ private:
 	CComboBox m_Orb, m_Kind, m_Pairs;
 	ChartOverlay const* m_Overlay{ nullptr };
 	CTreeViewCtrl m_Tree;
-	CFont m_UiFont, m_TextFont;
+	CFont m_UiFont, m_TextFont, m_SymbolFont;
+	CToolBarCtrl m_Toolbar;
+	bool m_HasTextFont{ false };
+	bool m_Glyphs{ false };
 	std::vector<Entry> m_Entries;
 };

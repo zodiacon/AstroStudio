@@ -118,6 +118,49 @@ TEST_CASE("Midpoints of a chart", "[Midpoints]") {
 	}
 }
 
+TEST_CASE("Bodies and angles can be left out", "[Midpoints]") {
+	auto chart = J2000();
+	MidpointOptions options;
+	options.Angles = true;
+
+	SECTION("bodies") {
+		options.Except = { Planet::Sun, Planet::Pluto };
+		auto points = Midpoints::Points(chart, options);
+		REQUIRE(points.size() == 10);		// 8 planets and the two angles
+		for (auto const& point : points)
+			CHECK_FALSE((point.Kind == PointKind::Planet && (point.Body == Planet::Sun || point.Body == Planet::Pluto)));
+		CHECK(Midpoints::Calculate(chart, options).size() == 45);
+		// what is left out of a list of the ones that take part is left out of it
+		options.Only = { Planet::Sun, Planet::Moon, Planet::Mars };
+		points = Midpoints::Points(chart, options);
+		REQUIRE(points.size() == 4);
+		CHECK(points[0].Body == Planet::Moon);
+		CHECK(points[1].Body == Planet::Mars);
+	}
+	SECTION("one of the angles") {
+		options.Midheaven = false;
+		auto points = Midpoints::Points(chart, options);
+		REQUIRE(points.size() == 11);
+		CHECK(points.back().Kind == PointKind::Ascendant);
+		options.Midheaven = true;
+		options.Ascendant = false;
+		points = Midpoints::Points(chart, options);
+		REQUIRE(points.size() == 11);
+		CHECK(points.back().Kind == PointKind::Midheaven);
+		// with the angles off altogether, which of them is wanted doesn't matter
+		options.Angles = false;
+		options.Ascendant = true;
+		CHECK(Midpoints::Points(chart, options).size() == 10);
+	}
+	SECTION("every body left out") {
+		for (int i = 0; i < static_cast<int>(Planet::NumPlanets); i++)
+			options.Except.push_back(static_cast<Planet>(i));
+		auto points = Midpoints::Points(chart, options);
+		REQUIRE(points.size() == 2);		// (only the angles are left)
+		CHECK(Midpoints::Calculate(chart, options).size() == 1);
+	}
+}
+
 TEST_CASE("Points are the same point by kind and body", "[Midpoints]") {
 	CHECK(Body(Planet::Sun, 10).SameAs(Body(Planet::Sun, 200)));
 	CHECK_FALSE(Body(Planet::Sun, 10).SameAs(Body(Planet::Moon, 10)));
@@ -176,6 +219,11 @@ TEST_CASE("How far a point is from a midpoint", "[Midpoints]") {
 	CHECK(angle == 90);
 	CHECK(Midpoints::ContactOrb(164, 30, ContactKind::Dial90, &angle) == Approx(1));
 	CHECK(angle == 135);
+	// the 45 degree dial counts the same angles
+	CHECK(Midpoints::ContactOrb(75, 30, ContactKind::Dial45, &angle) == Approx(0));
+	CHECK(angle == 45);
+	CHECK(Midpoints::ContactOrb(121, 30, ContactKind::Dial45, &angle) == Approx(1));
+	CHECK(angle == 90);
 	// through 0 Aries, and on either side
 	CHECK(Midpoints::ContactOrb(359, 1, ContactKind::Axis, &angle) == Approx(2));
 	CHECK(angle == 0);
@@ -260,6 +308,38 @@ TEST_CASE("Planets on midpoints", "[Midpoints]") {
 		CHECK(contacts[1].Point.Kind == PointKind::Ascendant);
 		CHECK(contacts[1].Angle == 180);
 	}
+}
+
+TEST_CASE("A midpoint tree on the 45 degree dial", "[Midpoints]") {
+	CHECK(Midpoints::DialDivisions(ContactKind::Dial45) == 8);
+	CHECK(Midpoints::DialDivisions(ContactKind::Dial90) == 4);
+	CHECK(Midpoints::DialDivisions(ContactKind::Axis) == 4);
+
+	// the Sun and the Moon have their midpoint at 30; Mars is on it, Venus 45 degrees from it and Jupiter 90 degrees
+	auto midpoints = Midpoints::Calculate(std::vector{ Body(Planet::Sun, 10), Body(Planet::Moon, 50) });
+	std::vector points{ Body(Planet::Mars, 30), Body(Planet::Venus, 75), Body(Planet::Jupiter, 120) };
+	ContactOptions options;
+	options.Kind = ContactKind::Dial90;
+	auto tree90 = Midpoints::Tree(midpoints, points, options);
+	REQUIRE(tree90.size() == 3);
+	// on the 90 degree dial the semi-square is somewhere else
+	auto dialOf = [](std::vector<MidpointBranch> const& tree, Planet planet) {
+		auto it = std::ranges::find_if(tree, [&](auto const& b) { return b.Point.Body == planet; });
+		REQUIRE(it != tree.end());
+		return it->Dial;
+	};
+	CHECK(dialOf(tree90, Planet::Mars) == Approx(30));
+	CHECK(dialOf(tree90, Planet::Venus) == Approx(75));
+	CHECK(dialOf(tree90, Planet::Jupiter) == Approx(30));
+	// on the 45 degree dial they all stand together
+	options.Kind = ContactKind::Dial45;
+	auto tree45 = Midpoints::Tree(midpoints, points, options);
+	REQUIRE(tree45.size() == 3);
+	for (auto planet : { Planet::Mars, Planet::Venus, Planet::Jupiter })
+		CHECK(dialOf(tree45, planet) == Approx(30));
+	// (and they are the same contacts)
+	for (size_t i = 0; i < 3; i++)
+		CHECK(Midpoints::Contacts(midpoints, points[i], options).size() == Midpoints::Contacts(midpoints, points[i], ContactOptions{ .Kind = ContactKind::Dial90 }).size());
 }
 
 TEST_CASE("A chart's midpoint tree", "[Midpoints]") {

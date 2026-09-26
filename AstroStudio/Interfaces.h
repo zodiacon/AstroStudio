@@ -79,6 +79,8 @@ struct IView {
 	virtual void PartOfFortuneChanged() {}
 	// what the chart wheel draws (WheelOptions::Current) or the colours it draws in (ChartColors::Current) changed
 	virtual void WheelOptionsChanged() {}
+	// what the midpoint list and tree work with (MidpointSettings::Current) changed
+	virtual void MidpointOptionsChanged() {}
 	// changed since it was last saved or opened (what the project pane marks with a *); a view with nothing to save says no
 	virtual bool IsModified() const {
 		return false;

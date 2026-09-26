@@ -352,7 +352,8 @@ namespace {
 		PCWSTR Name;
 		DerivedKind Kind;
 	};
-	const KindName Kinds[] = { { L"Composite", DerivedKind::Composite }, { L"Davison", DerivedKind::Davison }, { L"SolarArc", DerivedKind::SolarArc } };
+	const KindName Kinds[] = { { L"Composite", DerivedKind::Composite }, { L"Davison", DerivedKind::Davison }, { L"SolarArc", DerivedKind::SolarArc },
+		{ L"Progressed", DerivedKind::Progressed }, { L"Primary", DerivedKind::Primary } };
 	struct HousesName {
 		PCWSTR Name;
 		CompositeHouses Houses;
@@ -363,6 +364,11 @@ namespace {
 		ArcKey Key;
 	};
 	const KeyName Keys[] = { { L"Actual", ArcKey::Actual }, { L"Naibod", ArcKey::Naibod }, { L"Ptolemy", ArcKey::Ptolemy } };
+	struct AnglesName {
+		PCWSTR Name;
+		ProgressedAngles Angles;
+	};
+	const AnglesName AngleModes[] = { { L"Calculated", ProgressedAngles::Calculated }, { L"SolarArc", ProgressedAngles::SolarArc }, { L"Natal", ProgressedAngles::Natal } };
 }
 
 bool ChartFile::Save(ChartData const& chart, PCWSTR path, std::wstring& error) {
@@ -389,14 +395,18 @@ bool ChartFile::SaveDerived(DerivedRecipe const& recipe, PCWSTR path, std::wstri
 		for (auto const& method : HouseMethods)
 			if (method.Houses == recipe.Houses)
 				ini.SetString(L"Derived", L"Houses", method.Name);
-	if (recipe.Kind == DerivedKind::SolarArc) {
+	if (recipe.Kind == DerivedKind::SolarArc || recipe.Kind == DerivedKind::Primary)
 		for (auto const& key : Keys)
 			if (key.Key == recipe.Key)
 				ini.SetString(L"Derived", L"ArcKey", key.Name);
+	if (recipe.Kind == DerivedKind::Progressed)
+		for (auto const& mode : AngleModes)
+			if (mode.Angles == recipe.Angles)
+				ini.SetString(L"Derived", L"Angles", mode.Name);
+	if (!recipe.IsPair())
 		WriteWhen(ini, L"Derived.Time", recipe.Target, recipe.Zone);
-	}
 	WriteChart(ini, recipe.A, L"A.");
-	if (recipe.Kind != DerivedKind::SolarArc)
+	if (recipe.IsPair())
 		WriteChart(ini, recipe.B, L"B.");
 
 	if (!ini.Save(path)) {
@@ -438,7 +448,7 @@ bool ChartFile::LoadFile(PCWSTR path, Loaded& loaded, std::wstring& error) {
 			found = true;
 		}
 	if (!found)
-		return r.Problem(L"Derived", L"Kind", L"'" + *kindName + L"' is not a kind of derived chart; use Composite, Davison or SolarArc");
+		return r.Problem(L"Derived", L"Kind", L"'" + *kindName + L"' is not a kind of derived chart; use Composite, Davison, SolarArc, Progressed or Primary");
 
 	if (recipe.Kind == DerivedKind::Composite)
 		if (auto name = ini.Get(L"Derived", L"Houses")) {
@@ -451,7 +461,7 @@ bool ChartFile::LoadFile(PCWSTR path, Loaded& loaded, std::wstring& error) {
 			if (!found)
 				return r.Problem(L"Derived", L"Houses", L"must be MidpointMC or MidpointARMC");
 		}
-	if (recipe.Kind == DerivedKind::SolarArc) {
+	if (recipe.Kind == DerivedKind::SolarArc || recipe.Kind == DerivedKind::Primary)
 		if (auto name = ini.Get(L"Derived", L"ArcKey")) {
 			found = false;
 			for (auto const& key : Keys)
@@ -462,13 +472,23 @@ bool ChartFile::LoadFile(PCWSTR path, Loaded& loaded, std::wstring& error) {
 			if (!found)
 				return r.Problem(L"Derived", L"ArcKey", L"must be Actual, Naibod or Ptolemy");
 		}
-		if (!ReadWhen(r, L"Derived.Time", recipe.Target, recipe.Zone))
-			return false;
-	}
+	if (recipe.Kind == DerivedKind::Progressed)
+		if (auto name = ini.Get(L"Derived", L"Angles")) {
+			found = false;
+			for (auto const& mode : AngleModes)
+				if (Normalize(mode.Name) == Normalize(*name)) {
+					recipe.Angles = mode.Angles;
+					found = true;
+				}
+			if (!found)
+				return r.Problem(L"Derived", L"Angles", L"must be Calculated, SolarArc or Natal");
+		}
+	if (!recipe.IsPair() && !ReadWhen(r, L"Derived.Time", recipe.Target, recipe.Zone))
+		return false;
 
 	if (!ReadChart(r, L"A.", recipe.A))
 		return false;
-	if (recipe.Kind != DerivedKind::SolarArc && !ReadChart(r, L"B.", recipe.B))
+	if (recipe.IsPair() && !ReadChart(r, L"B.", recipe.B))
 		return false;
 
 	loaded = {};
@@ -482,7 +502,7 @@ bool ChartFile::Load(PCWSTR path, ChartData& chart, std::wstring& error) {
 	if (!LoadFile(path, loaded, error))
 		return false;
 	if (loaded.Derived) {
-		error = L"this is a chart worked out from others (a composite, a Davison or a solar arc chart), not an ordinary one";
+		error = L"this is a chart worked out from others (a composite, a Davison, solar arc, progressed or primary directions chart), not an ordinary one";
 		return false;
 	}
 	chart = std::move(loaded.Chart);

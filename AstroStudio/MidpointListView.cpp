@@ -5,7 +5,9 @@
 #include "Helpers.h"
 #include "DefaultFont.h"
 #include "SortHelper.h"
+#include "MidpointSettings.h"
 #include <WTLHelper.h>
+#include <ToolbarHelper.h>
 #include <algorithm>
 
 CMidpointListView::CMidpointListView(IMainFrame* frame) : CFrameView(frame) {
@@ -18,6 +20,33 @@ CString CMidpointListView::PointText(ChartPoint const& point) const {
 	return CString(point.Set == 1 ? m_Overlay->Label.c_str() : m_Overlay->BaseLabel.c_str()) + L" " + name;
 }
 
+void CMidpointListView::SelectKind(ContactKind kind) {
+	for (int i = 0; i < m_Kind.GetCount(); i++)
+		if (static_cast<ContactKind>(m_Kind.GetItemData(i)) == kind)
+			m_Kind.SetCurSel(i);
+}
+
+void CMidpointListView::SyncSettings() {
+	auto& settings = MidpointSettings::Current();
+	if (m_Orb.m_hWnd) {
+		m_Orb.SetCurSel(MidpointSettings::NearestOrb(settings.ListOrb));
+		SelectKind(settings.ListKind);
+	}
+	SetChartData(m_Chart);
+}
+
+LRESULT CMidpointListView::OnChoice(WORD, WORD, HWND, BOOL&) {
+	auto& settings = MidpointSettings::Current();
+	int orb = m_Orb.GetCurSel();
+	if (orb >= 0 && orb < _countof(MidpointSettings::Orbs))
+		settings.ListOrb = MidpointSettings::Orbs[orb];
+	if (m_Kind.GetCurSel() >= 0)
+		settings.ListKind = static_cast<ContactKind>(m_Kind.GetItemData(m_Kind.GetCurSel()));
+	MidpointSettings::StoreInSettings();
+	SetChartData(m_Chart);
+	return 0;
+}
+
 void CMidpointListView::SetOverlay(ChartOverlay const* overlay) {
 	m_Overlay = overlay;
 	SetChartData(m_Chart);
@@ -27,26 +56,25 @@ void CMidpointListView::SetChartData(ChartData const* chart) {
 	m_Chart = chart;
 	m_Rows.clear();
 	if (chart && !chart->AllPlanets().empty()) {
-		MidpointOptions options;
-		options.Angles = true;
-		auto points = Midpoints::Points(*chart, options);
+		auto& settings = MidpointSettings::Current();
+		auto points = Midpoints::Points(*chart, settings.Points(true));
 		std::vector<MidpointData> midpoints;
 		if (m_Overlay) {
 			// the planets around the chart with the chart's: the overlay's are the first of each pair (a transit's sky has no angles)
-			MidpointOptions around;
-			around.Angles = m_Overlay->Data.Houses().Asc.Value != 0 || m_Overlay->Data.Houses().MC.Value != 0;
-			auto other = Midpoints::Points(m_Overlay->Data, around, 1);
+			bool hasAngles = m_Overlay->Data.Houses().Asc.Value != 0 || m_Overlay->Data.Houses().MC.Value != 0;
+			auto other = Midpoints::Points(m_Overlay->Data, settings.Points(hasAngles), 1);
 			midpoints = Midpoints::CalcBetween(other, points);
 			points.insert(points.end(), other.begin(), other.end());		// (both sets can stand on a midpoint)
 		}
 		else
 			midpoints = Midpoints::Calculate(points);
 		// the points on the axis of each midpoint, listed with it
-		auto contacts = Midpoints::Contacts(midpoints, points);
+		auto contacts = Midpoints::Contacts(midpoints, points, settings.ListContacts());
 		std::vector<CString> on(midpoints.size());
 		for (auto const& contact : contacts) {
 			CString text;
-			text.Format(L"%s%s %.2f%c", (PCWSTR)PointText(contact.Point), contact.Angle == 180 ? L" (opp)" : L"", contact.Orb, 0xb0);
+			CString angle = contact.Angle == 0 ? CString() : L" (" + CString(MidpointSettings::ShortAngleWords(contact.Angle)) + L")";
+			text.Format(L"%s%s %.2f%c", (PCWSTR)PointText(contact.Point), (PCWSTR)angle, contact.Orb, 0xb0);
 			auto& cell = on[contact.Midpoint];
 			cell += (cell.IsEmpty() ? L"" : L", ") + text;
 		}
@@ -75,7 +103,7 @@ void CMidpointListView::ApplyTextFont() {
 	// the columns grow with the text (they were made for 9 points)
 	int size = -MulDiv(lf.lfHeight, 72 * 10, ::GetDeviceCaps(CClientDC(m_hWnd), LOGPIXELSY));
 	double ratio = std::max(1.0, size / 90.0);
-	const int widths[] = { 150, 150, 100, 100, 60, 40, 200 };
+	const int widths[] = { 150, 150, 100, 60, 40, 340 };
 	for (int i = 0; i < _countof(widths); i++)
 		Helpers::SetColumnWidth(m_List, i, static_cast<int>(std::lround(widths[i] * ratio)));
 	m_List.Invalidate();
@@ -90,11 +118,7 @@ CString CMidpointListView::PointName(ChartPoint const& point) {
 }
 
 CString CMidpointListView::PointGlyph(ChartPoint const& point) {
-	switch (point.Kind) {
-		case PointKind::Ascendant: return L"Z";
-		case PointKind::Midheaven: return L"X";
-		default: return DefaultFont::Get().GetPlanetGlyphAsString(point.Body);
-	}
+	return MidpointSettings::PointGlyph(point);
 }
 
 int CMidpointListView::PointOrder(ChartPoint const& point) noexcept {
@@ -107,7 +131,6 @@ CString CMidpointListView::GetColumnText(HWND h, int row, int col) const {
 		case ColumnType::PointA: return PointText(data.A);
 		case ColumnType::PointB: return PointText(data.B);
 		case ColumnType::Midpoint: return Helpers::FormatLongitude(data.Longitude, FormatOptions::ShowSeconds | FormatOptions::UseGlyphs | FormatOptions::ShowDegreeGlyph);
-		case ColumnType::Opposite: return Helpers::FormatLongitude(data.Opposite(), FormatOptions::ShowSeconds | FormatOptions::UseGlyphs | FormatOptions::ShowDegreeGlyph);
 		case ColumnType::Arc: {
 			CString s;
 			s.Format(L"%.2f%c", data.Arc, 0xb0);
@@ -126,7 +149,7 @@ CString CMidpointListView::GetColumnText(HWND h, int row, int col) const {
 
 Helpers::TableSource CMidpointListView::Table() const {
 	Helpers::TableSource table;
-	table.Headers = { L"Point 1", L"Point 2", L"Midpoint", L"Opposite", L"Arc", L"House", L"On the midpoint" };
+	table.Headers = { L"Point 1", L"Point 2", L"Midpoint", L"Arc", L"House", L"On the midpoint" };
 	table.Rows = static_cast<int>(m_Rows.size());
 	table.Cell = [this](int row, int column) -> CString {
 		auto& r = m_Rows[row];
@@ -138,10 +161,9 @@ Helpers::TableSource CMidpointListView::Table() const {
 			case 0: return PointText(r.Data.A);
 			case 1: return PointText(r.Data.B);
 			case 2: return position(r.Data.Longitude);
-			case 3: return position(r.Data.Opposite());
-			case 4: text.Format(L"%.2f%c", r.Data.Arc, 0xb0); return text;
-			case 5: if (r.House > 0) text.Format(L"%d", r.House); return text;
-			case 6: return r.On;
+			case 3: text.Format(L"%.2f%c", r.Data.Arc, 0xb0); return text;
+			case 4: if (r.House > 0) text.Format(L"%d", r.House); return text;
+			case 5: return r.On;
 		}
 		return text;
 	};
@@ -154,7 +176,6 @@ void CMidpointListView::DoSort(SortInfo const* si) {
 			case ColumnType::PointA: return SortHelper::Sort(PointOrder(r1.Data.A), PointOrder(r2.Data.A), si->SortAscending);
 			case ColumnType::PointB: return SortHelper::Sort(PointOrder(r1.Data.B), PointOrder(r2.Data.B), si->SortAscending);
 			case ColumnType::Midpoint: return SortHelper::Sort(r1.Data.Longitude.Value, r2.Data.Longitude.Value, si->SortAscending);
-			case ColumnType::Opposite: return SortHelper::Sort(r1.Data.Opposite().Value, r2.Data.Opposite().Value, si->SortAscending);
 			case ColumnType::Arc: return SortHelper::Sort(r1.Data.Arc, r2.Data.Arc, si->SortAscending);
 			case ColumnType::House: return SortHelper::Sort(r1.House, r2.House, si->SortAscending);
 			case ColumnType::On: return SortHelper::Sort(r1.On.IsEmpty(), r2.On.IsEmpty(), si->SortAscending);
@@ -187,9 +208,6 @@ DWORD CMidpointListView::OnSubItemPrePaint(int, LPNMCUSTOMDRAW cd) const noexcep
 			break;
 		case ColumnType::Midpoint:
 			DrawCell(cd, GetColumnText(m_List, (int)cd->dwItemSpec, lv->iSubItem), m_Font.m_hFont, CAspectListView::GetElementColor(data.Longitude.Sign()));
-			break;
-		case ColumnType::Opposite:
-			DrawCell(cd, GetColumnText(m_List, (int)cd->dwItemSpec, lv->iSubItem), m_Font.m_hFont, CAspectListView::GetElementColor(data.Opposite().Sign()));
 			break;
 		default:
 			// (the numbers are right aligned; asking the list for the column's alignment doesn't work for these columns)
@@ -274,12 +292,62 @@ LRESULT CMidpointListView::OnCreate(UINT, WPARAM, LPARAM, BOOL&) {
 	cm->AddColumn(L"Point 1", LVCFMT_LEFT, 150, ColumnType::PointA);
 	cm->AddColumn(L"Point 2", LVCFMT_LEFT, 150, ColumnType::PointB);
 	cm->AddColumn(L"Midpoint", LVCFMT_LEFT, 100, ColumnType::Midpoint);
-	cm->AddColumn(L"Opposite", LVCFMT_LEFT, 100, ColumnType::Opposite);
 	cm->AddColumn(L"Arc", LVCFMT_CENTER | LVCFMT_FIXED_WIDTH, 60, ColumnType::Arc);
 	cm->AddColumn(L"H", LVCFMT_CENTER | LVCFMT_FIXED_WIDTH, 40, ColumnType::House);
-	cm->AddColumn(L"On the midpoint", LVCFMT_LEFT, 200, ColumnType::On);
+	cm->AddColumn(L"On the midpoint", LVCFMT_LEFT, 340, ColumnType::On);
 	cm->UpdateColumns();
 	ApplyTextFont();
+
+	// The orb and the kind of contact, as at the top of the midpoint tree, on a toolbar's separators (made before the toolbar joins the
+	// rebar, which sizes the band from its buttons).
+	CreateSimpleReBar(ATL_SIMPLE_REBAR_NOBORDER_STYLE);
+	ToolBarButtonInfo buttons[] = { { 0 } };
+	auto tb = ToolbarHelper::CreateAndInitToolBar(m_hWndToolBar, buttons, _countof(buttons), 16);
+	CToolBarCtrl bar(tb);
+	int dpi = CClientDC(m_hWnd).GetDeviceCaps(LOGPIXELSX);
+	auto px = [&](int value) { return MulDiv(value, dpi, 96); };
+	int firstSlot = bar.GetButtonCount();
+	bar.AddSeparator(px(36));		// "Orb:"
+	bar.AddSeparator(px(70));
+	bar.AddSeparator(px(70));		// "Contacts:"
+	bar.AddSeparator(px(250));
+	AddSimpleReBarBand(tb);
+	Frame()->AddToolBarToUI(tb);
+
+	CFontHandle font(AtlGetDefaultGuiFont());
+	const int comboHeight = px(22), dropHeight = px(120);
+	auto slotRect = [&](int slot, int drop) {
+		CRect item;
+		bar.GetItemRect(firstSlot + slot, &item);
+		int top = item.top + (item.Height() - comboHeight) / 2;
+		return CRect(item.left, top, item.right - px(4), top + comboHeight + drop);
+	};
+	CRect slot1 = slotRect(0, 0);
+	m_OrbLabel.Create(tb, slot1, L"Orb:", WS_CHILD | WS_VISIBLE | SS_RIGHT | SS_CENTERIMAGE);
+	m_OrbLabel.SetFont(font);
+	CRect slot2 = slotRect(1, dropHeight);
+	m_Orb.Create(tb, slot2, nullptr, WS_CHILD | WS_VISIBLE | WS_VSCROLL | WS_TABSTOP | CBS_DROPDOWNLIST, 0, IDC_ML_ORB);
+	m_Orb.SetFont(font);
+	for (int orb : MidpointSettings::Orbs) {
+		CString text;
+		text.Format(L"%g%c", orb / 100.0, 0xb0);
+		m_Orb.AddString(text);
+	}
+	CRect slot3 = slotRect(2, 0);
+	m_KindLabel.Create(tb, slot3, L"Contacts:", WS_CHILD | WS_VISIBLE | SS_RIGHT | SS_CENTERIMAGE);
+	m_KindLabel.SetFont(font);
+	CRect slot4 = slotRect(3, dropHeight);
+	m_Kind.Create(tb, slot4, nullptr, WS_CHILD | WS_VISIBLE | WS_VSCROLL | WS_TABSTOP | CBS_DROPDOWNLIST, 0, IDC_ML_KIND);
+	m_Kind.SetFont(font);
+	CString dial;
+	dial.Format(L"90%c dial (on, semi-square, square...)", 0xb0);
+	m_Kind.SetItemData(m_Kind.AddString(dial), static_cast<DWORD_PTR>(ContactKind::Dial90));
+	dial.Format(L"45%c dial (all of those together)", 0xb0);
+	m_Kind.SetItemData(m_Kind.AddString(dial), static_cast<DWORD_PTR>(ContactKind::Dial45));
+	m_Kind.SetItemData(m_Kind.AddString(L"Axis (on and opposite)"), static_cast<DWORD_PTR>(ContactKind::Axis));
+	auto& settings = MidpointSettings::Current();
+	m_Orb.SetCurSel(MidpointSettings::NearestOrb(settings.ListOrb));
+	SelectKind(settings.ListKind);
 
 	// what was set before the window existed
 	m_List.SetItemCountEx((int)m_Rows.size(), LVSICF_NOSCROLL);

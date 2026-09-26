@@ -57,16 +57,24 @@ enum class ReturnSearch {
 enum class DerivedKind {
 	Composite,		// of A and B
 	Davison,		// of A and B
-	SolarArc,		// of A, moved to a date
+	SolarArc,		// of A, moved to a date by the solar arc
+	Progressed,		// of A, secondary progressed to a date
+	Primary,		// of A, primary directions to a date (the planets stay, the angles and houses move)
 };
 
 struct DerivedRecipe {
 	DerivedKind Kind{ DerivedKind::Composite };
 	ChartData A, B;							// B only for a composite or a Davison chart
 	CompositeHouses Houses{ CompositeHouses::MidpointMC };		// composite
-	DateTime Target;						// solar arc: the date it is moved to (UT) ...
+	DateTime Target;						// solar arc, progressed, primary: the date it is moved to (UT) ...
 	TimeZoneInfo Zone;						// ... and the zone it is shown in
-	ArcKey Key{ ArcKey::Actual };			// solar arc
+	ArcKey Key{ ArcKey::Actual };			// solar arc and primary directions
+	ProgressedAngles Angles{ ProgressedAngles::Calculated };		// progressed
+
+	// made of two charts (A and B) rather than moved on to a date from one (A)
+	bool IsPair() const {
+		return Kind == DerivedKind::Composite || Kind == DerivedKind::Davison;
+	}
 };
 
 // Charts worked out from other charts, and the calculations behind them.

@@ -33,7 +33,7 @@ public:
 protected:
 	BEGIN_MSG_MAP(CMainFrame)
 		NOTIFY_CODE_HANDLER(TBVN_PAGEACTIVATED, OnPageActivated)
-		COMMAND_TABVIEW_HANDLER(m_view, 1)
+		COMMAND_TABVIEW_HANDLER(m_Tabs, 1)
 		COMMAND_ID_HANDLER(ID_APP_EXIT, OnFileExit)
 		COMMAND_ID_HANDLER(ID_VIEW_STATUS_BAR, OnViewStatusBar)
 		COMMAND_ID_HANDLER(ID_APP_ABOUT, OnAppAbout)
@@ -52,6 +52,7 @@ protected:
 		COMMAND_ID_HANDLER(ID_OPTIONS_DARKMODE, OnToggleDarkMode)
 		COMMAND_ID_HANDLER(ID_OPTIONS_ASPECTS, OnAspectOptions)
 		COMMAND_ID_HANDLER(ID_OPTIONS_WHEEL, OnWheelOptions)
+		COMMAND_ID_HANDLER(ID_OPTIONS_MIDPOINTS, OnMidpointOptions)
 		COMMAND_ID_HANDLER(ID_OPTIONS_FORTUNE, OnPartOfFortune)
 		COMMAND_ID_HANDLER(ID_OPTIONS_COLORS, OnChartColors)
 		COMMAND_ID_HANDLER(ID_OPTIONS_ALWAYSONTOP, OnAlwaysOnTop)
@@ -77,6 +78,7 @@ private:
 	void ActivatePage(int page);
 	// asks every view whether it can close (they may ask the user to save)
 	bool CanCloseAll();
+	// opens a file of any kind the program has: a chart, an analysis (in a tab) or a project (in the pane)
 	bool OpenChartFile(PCWSTR path);
 	// keeps the menu and the saved list in step
 	void RecentFilesChanged();
@@ -123,6 +125,7 @@ private:
 	LRESULT OnToggleDarkMode(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/);
 	LRESULT OnAspectOptions(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/);
 	LRESULT OnWheelOptions(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/);
+	LRESULT OnMidpointOptions(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/);
 	LRESULT OnPartOfFortune(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/);
 	LRESULT OnChartColors(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/);
 	LRESULT OnAlwaysOnTop(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/);
@@ -186,9 +189,9 @@ private:
 	CMultiPaneStatusBarCtrl m_Status;
 	CString m_PaneText[4];
 
-	CNativeCustomTabView m_view;
-	int m_CurrentPage{ -1 };
-	bool m_LocationPending{ false };
+	CNativeCustomTabView m_Tabs;
 	ChartInfo m_DefaultChartInfo{};
 	CRecentDocumentList m_Recent;
+	int m_CurrentPage{ -1 };
+	bool m_LocationPending{ false };
 };

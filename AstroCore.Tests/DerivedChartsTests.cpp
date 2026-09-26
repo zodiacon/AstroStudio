@@ -502,4 +502,43 @@ TEST_CASE("A recipe builds the same chart as making it directly", "[Derived]") {
 	for (size_t i = 0; i < arc.AllPlanets().size(); i++)
 		CHECK(Diff(arc.AllPlanets()[i].Longitude.Value, directArc.AllPlanets()[i].Longitude.Value) < MicroDegree);
 	CHECK(Diff(arc.Houses().Asc.Value, directArc.Houses().Asc.Value) < MicroDegree);
+
+	// secondary progressions: the same as Progress, but the chart keeps the birth details (the progressed moment is only the sky)
+	recipe.Kind = DerivedKind::Progressed;
+	recipe.Angles = ProgressedAngles::SolarArc;
+	auto progressed = DerivedCharts::Build(calc, recipe);
+	options = {};
+	options.Method = ProgressionMethod::Secondary;
+	options.Angles = ProgressedAngles::SolarArc;
+	auto directProgressed = DerivedCharts::Progress(calc, a, recipe.Target, options);
+	REQUIRE(progressed.AllPlanets().size() == directProgressed.AllPlanets().size());
+	for (size_t i = 0; i < progressed.AllPlanets().size(); i++)
+		CHECK(Diff(progressed.AllPlanets()[i].Longitude.Value, directProgressed.AllPlanets()[i].Longitude.Value) < MicroDegree);
+	CHECK(Diff(progressed.Houses().MC.Value, directProgressed.Houses().MC.Value) < MicroDegree);
+	CHECK(progressed.Info().Time.Julian() == Approx(a.Info().Time.Julian()));
+	CHECK(directProgressed.Info().Time.Julian() != Approx(a.Info().Time.Julian()));
+	// ... and it differs from the natal chart: the planets have moved
+	CHECK(Diff(progressed.AllPlanets()[0].Longitude.Value, a.AllPlanets()[0].Longitude.Value) > 1);
+
+	// primary directions: the planets stay and the houses move
+	recipe.Kind = DerivedKind::Primary;
+	recipe.Key = ArcKey::Ptolemy;
+	auto primary = DerivedCharts::Build(calc, recipe);
+	options = {};
+	options.Method = ProgressionMethod::Primary;
+	options.Key = ArcKey::Ptolemy;
+	auto directPrimary = DerivedCharts::Progress(calc, a, recipe.Target, options);
+	for (size_t i = 0; i < primary.AllPlanets().size(); i++) {
+		CHECK(Diff(primary.AllPlanets()[i].Longitude.Value, a.AllPlanets()[i].Longitude.Value) < MicroDegree);
+		CHECK(Diff(primary.AllPlanets()[i].Longitude.Value, directPrimary.AllPlanets()[i].Longitude.Value) < MicroDegree);
+	}
+	CHECK(Diff(primary.Houses().MC.Value, directPrimary.Houses().MC.Value) < MicroDegree);
+	CHECK(Diff(primary.Houses().MC.Value, a.Houses().MC.Value) > 1);
+	CHECK(primary.Info().Time.Julian() == Approx(a.Info().Time.Julian()));
+
+	// which kinds are made of two charts
+	CHECK(DerivedRecipe{ .Kind = DerivedKind::Composite }.IsPair());
+	CHECK(DerivedRecipe{ .Kind = DerivedKind::Davison }.IsPair());
+	for (auto kind : { DerivedKind::SolarArc, DerivedKind::Progressed, DerivedKind::Primary })
+		CHECK_FALSE(DerivedRecipe{ .Kind = kind }.IsPair());
 }

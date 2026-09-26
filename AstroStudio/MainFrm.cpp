@@ -9,6 +9,7 @@
 #include "MainFrm.h"
 #include "Printing.h"
 #include "Helpers.h"
+#include <IconHelper.h>
 #include "ToolbarHelper.h"
 #include "ChartView.h"
 #include "NewChartDlg.h"
@@ -19,6 +20,7 @@
 #include "AppSettings.h"
 #include "AspectOptionsDlg.h"
 #include "WheelOptionsDlg.h"
+#include "MidpointOptionsDlg.h"
 #include "ChartColorsDlg.h"
 #include "AnalysisDlg.h"
 #include "AnalysisView.h"
@@ -33,6 +35,10 @@ namespace {
 	constexpr PCWSTR RecentProjectsKey = LR"(Software\AstroStudio\Projects)";
 	constexpr int MaxRecentFiles = 8;
 
+	// File > Open takes everything the program has files for: charts, analyses and projects
+	constexpr wchar_t OpenFilter[] = L"Astro Studio files (*.chart;*.analysis;*.astroproj)\0*.chart;*.analysis;*.astroproj\0"
+		L"Charts (*.chart)\0*.chart\0Analyses (*.analysis)\0*.analysis\0Projects (*.astroproj)\0*.astroproj\0All files (*.*)\0*.*\0";
+
 	// Owned by the thread pool callback until it is posted to the frame, which
 	// then takes ownership - the same hand-off CChartDetailsView::OnHere uses.
 	struct LocationRequest {
@@ -45,7 +51,7 @@ BOOL CMainFrame::PreTranslateMessage(MSG* pMsg) {
 	if (CFrameWindowImpl<CMainFrame>::PreTranslateMessage(pMsg))
 		return TRUE;
 
-	return m_view.PreTranslateMessage(pMsg);
+	return m_Tabs.PreTranslateMessage(pMsg);
 }
 
 BOOL CMainFrame::OnIdle() {
@@ -99,13 +105,13 @@ LRESULT CMainFrame::OnCreate(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/
 		m_Status.SetPaneWidth(id, 0);
 	SetTimer(StatusTimer, 250);
 
-	//m_view.m_bTabCloseButton = FALSE;
+	m_Tabs.m_bTabCloseButton = FALSE;
 	// the tabs, with the pane of the project on their left (shown only while a project is open)
 	m_Splitter.Create(m_hWnd, rcDefault, nullptr, WS_CHILD | WS_VISIBLE | WS_CLIPSIBLINGS | WS_CLIPCHILDREN);
 	m_ProjectView.Init(this);
 	m_ProjectView.Create(m_Splitter, rcDefault, nullptr, WS_CHILD | WS_VISIBLE | WS_CLIPSIBLINGS | WS_CLIPCHILDREN);
-	m_view.Create(m_Splitter, rcDefault, nullptr, WS_CHILD | WS_VISIBLE | WS_CLIPSIBLINGS | WS_CLIPCHILDREN | WS_BORDER);
-	m_Splitter.SetSplitterPanes(m_ProjectView, m_view);
+	m_Tabs.Create(m_Splitter, rcDefault, nullptr, WS_CHILD | WS_VISIBLE | WS_CLIPSIBLINGS | WS_CLIPCHILDREN | WS_BORDER);
+	m_Splitter.SetSplitterPanes(m_ProjectView, m_Tabs);
 	m_Splitter.SetSplitterPos(std::max(120, AppSettings::Get().ProjectPaneWidth()));
 	m_Splitter.SetSinglePaneMode(SPLIT_PANE_RIGHT);
 	m_hWndClient = m_Splitter;
@@ -127,7 +133,7 @@ LRESULT CMainFrame::OnCreate(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/
 	UIEnable(ID_CHART_TRANSITS, FALSE);
 	UIEnable(ID_CHART_OVERLAY, FALSE);
 	UIEnable(ID_CHART_ANALYSIS, FALSE);
-	for (UINT id : { ID_CHART_DERIVED_SOLARRETURN, ID_CHART_DERIVED_LUNARRETURN, ID_CHART_DERIVED_SOLARARC, ID_CHART_DERIVED_COMPOSITE, ID_CHART_DERIVED_DAVISON })
+	for (UINT id : { ID_CHART_DERIVED_SOLARRETURN, ID_CHART_DERIVED_LUNARRETURN, ID_CHART_DERIVED_SOLARARC, ID_CHART_DERIVED_PROGRESSED, ID_CHART_DERIVED_PRIMARY, ID_CHART_DERIVED_COMPOSITE, ID_CHART_DERIVED_DAVISON })
 		UIEnable(id, FALSE);
 	UIEnable(ID_CHART_OVERLAY_NONE, FALSE);
 	UIEnable(ID_CHART_OVERLAY_PROGRESSED, FALSE);
@@ -148,8 +154,8 @@ LRESULT CMainFrame::OnCreate(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/
 		IDI_EPHEMERIS, IDI_CHART, IDI_EVENT,
 	};
 	for(auto icon : icons)
-		images.AddIcon(AtlLoadIconImage(icon, 0, 16, 16));
-	m_view.SetImageList(images);
+		images.AddIcon(IconHelper::Load(icon, 16));
+	m_Tabs.SetImageList(images);
 
 	auto pLoop = _Module.GetMessageLoop();
 	ATLASSERT(pLoop);
@@ -157,7 +163,7 @@ LRESULT CMainFrame::OnCreate(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/
 	pLoop->AddIdleHandler(this);
 
 	CMenuHandle menuMain = GetMenu();
-	m_view.SetWindowMenu(menuMain.GetSubMenu(WINDOW_MENU_POSITION));
+	m_Tabs.SetWindowMenu(menuMain.GetSubMenu(WINDOW_MENU_POSITION));
 
 	// the recent files list fills in at the "(empty)" item of the File menu's Recent Files submenu
 	m_Recent.SetMaxEntries(MaxRecentFiles);
@@ -220,8 +226,8 @@ LRESULT CMainFrame::OnFileExit(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCt
 
 LRESULT CMainFrame::OnToolEphemeris(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/) {
 	auto pView = new CEphemerisView(this);
-	pView->Create(m_view, rcDefault, nullptr, WS_CHILD | WS_VISIBLE | WS_CLIPCHILDREN | WS_CLIPSIBLINGS, 0);
-	m_view.AddPage(pView->m_hWnd, L"Ephemeris", 0, pView);
+	pView->Create(m_Tabs, rcDefault, nullptr, WS_CHILD | WS_VISIBLE | WS_CLIPCHILDREN | WS_CLIPSIBLINGS, 0);
+	m_Tabs.AddPage(pView->m_hWnd, L"Ephemeris", 0, pView);
 
 	return 0;
 }
@@ -249,8 +255,8 @@ void CMainFrame::NewAnalysis(IView* chart) {
 		return;
 
 	auto pView = new CAnalysisView(this);
-	pView->Create(m_view, rcDefault, nullptr, WS_CHILD | WS_VISIBLE | WS_CLIPCHILDREN | WS_CLIPSIBLINGS, 0);
-	m_view.AddPage(pView->m_hWnd, L"Analysis", 2, pView);
+	pView->Create(m_Tabs, rcDefault, nullptr, WS_CHILD | WS_VISIBLE | WS_CLIPCHILDREN | WS_CLIPSIBLINGS, 0);
+	m_Tabs.AddPage(pView->m_hWnd, L"Analysis", 2, pView);
 	pView->Analyse(charts[dlg.Chart()], dlg.Settings());
 }
 
@@ -261,9 +267,9 @@ LRESULT CMainFrame::OnNewChart(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCt
 
 LRESULT CMainFrame::OnNewChartNow(WORD, WORD, HWND, BOOL&) {
 	auto pView = new CChartView(this);
-	pView->Create(m_view, rcDefault, nullptr, WS_CHILD | WS_VISIBLE | WS_CLIPCHILDREN, 0);
+	pView->Create(m_Tabs, rcDefault, nullptr, WS_CHILD | WS_VISIBLE | WS_CLIPCHILDREN, 0);
 	pView->ChartForNow();
-	m_view.AddPage(pView->m_hWnd, L"NewChart", 1, pView);
+	m_Tabs.AddPage(pView->m_hWnd, L"NewChart", 1, pView);
 	pView->SetFile(L"NewChart", nullptr);
 
 	return 0;
@@ -281,8 +287,8 @@ LRESULT CMainFrame::OnLocationReady(UINT, WPARAM wParam, LPARAM lParam, BOOL&) {
 	if (wParam)
 		m_DefaultChartInfo = request->Info;
 
-	for (int i = 0; i < m_view.GetPageCount(); i++)
-		::SendMessage(m_view.GetPageHWND(i), WM_LOCATION_UPDATED, wParam, 0);
+	for (int i = 0; i < m_Tabs.GetPageCount(); i++)
+		::SendMessage(m_Tabs.GetPageHWND(i), WM_LOCATION_UPDATED, wParam, 0);
 
 	return 0;
 }
@@ -321,7 +327,7 @@ LRESULT CMainFrame::OnFont(WORD, WORD, HWND, BOOL&) {
 	chosen.lfHeight = std::clamp(dlg.GetSize(), 70, 180);
 	AppSettings::Get().TextFont(chosen);
 	D2DResources::Get().TextFontFamily(chosen.lfFaceName);
-	for (int i = 0; i < m_view.GetPageCount(); i++)
+	for (int i = 0; i < m_Tabs.GetPageCount(); i++)
 		if (auto view = ViewOfPage(i))
 			view->TextFontChanged();
 	return 0;
@@ -331,7 +337,7 @@ LRESULT CMainFrame::OnChartColors(WORD, WORD, HWND, BOOL&) {
 	// what the charts show follows Apply; Cancel puts back what was there
 	auto show = [this](ChartColors const& colors) {
 		ChartColors::Current() = colors;
-		for (int i = 0; i < m_view.GetPageCount(); i++)
+		for (int i = 0; i < m_Tabs.GetPageCount(); i++)
 			if (auto view = ViewOfPage(i))
 				view->WheelOptionsChanged();
 	};
@@ -349,7 +355,7 @@ LRESULT CMainFrame::OnPartOfFortune(WORD, WORD, HWND, BOOL&) {
 	bool show = AppSettings::Get().ShowPartOfFortune() == 0;
 	AppSettings::Get().ShowPartOfFortune(show ? 1 : 0);
 	UISetCheck(ID_OPTIONS_FORTUNE, show);
-	for (int i = 0; i < m_view.GetPageCount(); i++)
+	for (int i = 0; i < m_Tabs.GetPageCount(); i++)
 		if (auto view = ViewOfPage(i))
 			view->PartOfFortuneChanged();
 	return 0;
@@ -363,9 +369,23 @@ LRESULT CMainFrame::OnWheelOptions(WORD, WORD, HWND, BOOL&) {
 
 	WheelOptions::Current() = dlg.GetOptions();
 	WheelOptions::StoreInSettings();
-	for (int i = 0; i < m_view.GetPageCount(); i++)
+	for (int i = 0; i < m_Tabs.GetPageCount(); i++)
 		if (auto view = ViewOfPage(i))
 			view->WheelOptionsChanged();
+	return 0;
+}
+
+LRESULT CMainFrame::OnMidpointOptions(WORD, WORD, HWND, BOOL&) {
+	CMidpointOptionsDlg dlg;
+	dlg.SetOptions(MidpointSettings::Current());
+	if (dlg.DoModal(m_hWnd) != IDOK)
+		return 0;
+
+	MidpointSettings::Current() = dlg.GetOptions();
+	MidpointSettings::StoreInSettings();
+	for (int i = 0; i < m_Tabs.GetPageCount(); i++)
+		if (auto view = ViewOfPage(i))
+			view->MidpointOptionsChanged();
 	return 0;
 }
 
@@ -378,7 +398,7 @@ LRESULT CMainFrame::OnAspectOptions(WORD, WORD, HWND, BOOL&) {
 	AspectOptions::Current() = dlg.GetOptions();
 	AspectOptions::StoreInSettings();
 	// every chart works its aspects out again
-	for (int i = 0; i < m_view.GetPageCount(); i++)
+	for (int i = 0; i < m_Tabs.GetPageCount(); i++)
 		if (auto view = ViewOfPage(i))
 			view->AspectSettingsChanged();
 	return 0;
@@ -395,8 +415,8 @@ LRESULT CMainFrame::OnToggleDarkMode(WORD, WORD, HWND, BOOL&) {
 
 IView* CMainFrame::AddChartView(ChartData data, PCWSTR title, PCWSTR filePath) {
 	auto pView = new CChartView(this);
-	pView->Create(m_view, rcDefault, nullptr, WS_CHILD | WS_VISIBLE | WS_CLIPCHILDREN, 0);
-	m_view.AddPage(pView->m_hWnd, title ? title : L"Chart", 1, pView);
+	pView->Create(m_Tabs, rcDefault, nullptr, WS_CHILD | WS_VISIBLE | WS_CLIPCHILDREN, 0);
+	m_Tabs.AddPage(pView->m_hWnd, title ? title : L"Chart", 1, pView);
 	pView->Chart(std::move(data));
 	pView->SetFile(title ? title : L"Chart", filePath);
 
@@ -409,7 +429,7 @@ LRESULT CMainFrame::OnPrintSetup(WORD, WORD, HWND, BOOL&) {
 }
 
 LRESULT CMainFrame::OnFileOpen(WORD, WORD, HWND, BOOL&) {
-	CSimpleFileDialog dlg(TRUE, ChartFile::Extension, nullptr, OFN_FILEMUSTEXIST | OFN_PATHMUSTEXIST | OFN_EXPLORER | OFN_ENABLESIZING, ChartFile::OpenFilter, m_hWnd);
+	CSimpleFileDialog dlg(TRUE, ChartFile::Extension, nullptr, OFN_FILEMUSTEXIST | OFN_PATHMUSTEXIST | OFN_EXPLORER | OFN_ENABLESIZING, OpenFilter, m_hWnd);
 	WTLHelper::SuspendHook();
 	auto ok = dlg.DoModal(m_hWnd) == IDOK;
 	WTLHelper::ResumeHook();
@@ -419,8 +439,12 @@ LRESULT CMainFrame::OnFileOpen(WORD, WORD, HWND, BOOL&) {
 }
 
 bool CMainFrame::OpenChartFile(PCWSTR path) {
+	// a project isn't a tab: it becomes the open project (and has its own list of recent files)
+	if (_wcsicmp(std::filesystem::path(path).extension().c_str(), (std::wstring(L".") + Project::Extension).c_str()) == 0)
+		return OpenProject(path);
+
 	// a chart that is already open is shown, not opened a second time
-	for (int i = 0; i < m_view.GetPageCount(); i++) {
+	for (int i = 0; i < m_Tabs.GetPageCount(); i++) {
 		auto view = ViewOfPage(i);
 		if (view && view->FilePath() && _wcsicmp(view->FilePath(), path) == 0) {
 			ActivatePage(i);
@@ -440,8 +464,8 @@ bool CMainFrame::OpenChartFile(PCWSTR path) {
 			return false;
 		}
 		auto pView = new CAnalysisView(this);
-		pView->Create(m_view, rcDefault, nullptr, WS_CHILD | WS_VISIBLE | WS_CLIPCHILDREN | WS_CLIPSIBLINGS, 0);
-		m_view.AddPage(pView->m_hWnd, L"Analysis", 2, pView);
+		pView->Create(m_Tabs, rcDefault, nullptr, WS_CHILD | WS_VISIBLE | WS_CLIPCHILDREN | WS_CLIPSIBLINGS, 0);
+		m_Tabs.AddPage(pView->m_hWnd, L"Analysis", 2, pView);
 		pView->Restore(std::move(document), path);
 		AddRecentFile(path);
 		return true;
@@ -505,8 +529,8 @@ LRESULT CMainFrame::OnClose(UINT, WPARAM, LPARAM, BOOL& bHandled) {
 
 IView* CMainFrame::AddDerivedChartView(ChartData data, PCWSTR title, DerivedRecipe const* recipe, PCWSTR filePath) {
 	auto pView = new CChartView(this);
-	pView->Create(m_view, rcDefault, nullptr, WS_CHILD | WS_VISIBLE | WS_CLIPCHILDREN, 0);
-	m_view.AddPage(pView->m_hWnd, title, 1, pView);
+	pView->Create(m_Tabs, rcDefault, nullptr, WS_CHILD | WS_VISIBLE | WS_CLIPCHILDREN, 0);
+	m_Tabs.AddPage(pView->m_hWnd, title, 1, pView);
 	pView->DerivedChart(std::move(data), recipe);
 	pView->SetFile(title, filePath);
 	return pView;
@@ -554,11 +578,11 @@ LRESULT CMainFrame::OnAppAbout(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCt
 }
 
 LRESULT CMainFrame::OnWindowClose(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/) {
-	int nActivePage = m_view.GetActivePage();
+	int nActivePage = m_Tabs.GetActivePage();
 	if (nActivePage != -1) {
 		if (auto view = ViewOfPage(nActivePage); view && !view->CanClose())
 			return 0;		// the user cancelled
-		m_view.RemovePage(nActivePage);
+		m_Tabs.RemovePage(nActivePage);
 		UpdateProjectUI();
 	}
 	else
@@ -570,7 +594,7 @@ LRESULT CMainFrame::OnWindowClose(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWn
 LRESULT CMainFrame::OnWindowCloseAll(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/) {
 	if (!CanCloseAll())
 		return 0;		// the user cancelled
-	m_view.RemoveAllPages();
+	m_Tabs.RemoveAllPages();
 	UpdateProjectUI();
 
 	return 0;
@@ -614,7 +638,7 @@ void CMainFrame::UpdateStatusPanes() {
 	if (!m_Status.IsWindow() || !m_Status.IsWindowVisible())
 		return;
 	StatusInfo info;
-	if (auto view = ViewOfPage(m_view.GetActivePage()))
+	if (auto view = ViewOfPage(m_Tabs.GetActivePage()))
 		view->GetStatusInfo(info);
 	SetStatusPane(ID_PANE_NAME, info.Name, 60);
 	SetStatusPane(ID_PANE_TIME, info.Time, 60);
@@ -636,25 +660,25 @@ LRESULT CMainFrame::OnPageActivated(int, LPNMHDR hdr, BOOL&) {
 }
 
 IView* CMainFrame::ViewOfPage(int page) const {
-	if (page < 0 || page >= m_view.GetPageCount())
+	if (page < 0 || page >= m_Tabs.GetPageCount())
 		return nullptr;
-	return dynamic_cast<IView*>(static_cast<CMessageMap*>(m_view.GetPageData(page)));
+	return dynamic_cast<IView*>(static_cast<CMessageMap*>(m_Tabs.GetPageData(page)));
 }
 
 int CMainFrame::PageOfView(IView* view) const {
-	for (int i = 0; i < m_view.GetPageCount(); i++)
+	for (int i = 0; i < m_Tabs.GetPageCount(); i++)
 		if (ViewOfPage(i) == view)
 			return i;
 	return -1;
 }
 
 void CMainFrame::ActivatePage(int page) {
-	m_view.SetActivePage(page);
+	m_Tabs.SetActivePage(page);
 
 	// SetActivePage doesn't announce the change (clicking a tab does), so the pages would not hear that
 	// they were shown or hidden; pass on the same notification a click sends.
 	NMHDR nmhdr{};
-	nmhdr.hwndFrom = m_view;
+	nmhdr.hwndFrom = m_Tabs;
 	nmhdr.idFrom = page;
 	nmhdr.code = TBVN_PAGEACTIVATED;
 	BOOL handled = TRUE;
@@ -663,11 +687,11 @@ void CMainFrame::ActivatePage(int page) {
 
 std::vector<OpenChart> CMainFrame::OpenCharts(IView* except) {
 	std::vector<OpenChart> charts;
-	for (int i = 0; i < m_view.GetPageCount(); i++)
+	for (int i = 0; i < m_Tabs.GetPageCount(); i++)
 		if (auto view = ViewOfPage(i); view && view != except)
 			if (OpenChart chart; view->GetChart(chart)) {
 				chart.View = view;
-				chart.Active = i == m_view.GetActivePage();
+				chart.Active = i == m_Tabs.GetActivePage();
 				charts.push_back(std::move(chart));
 			}
 	return charts;
@@ -675,17 +699,17 @@ std::vector<OpenChart> CMainFrame::OpenCharts(IView* except) {
 
 void CMainFrame::SetViewTitle(IView* view, PCWSTR title) {
 	if (int page = PageOfView(view); page >= 0)
-		m_view.SetPageTitle(page, title);
+		m_Tabs.SetPageTitle(page, title);
 	UpdateProjectUI();		// (the mark of a chart with unsaved changes is in the title)
 }
 
 void CMainFrame::ActivateView(IView* view) {
-	if (int page = PageOfView(view); page >= 0 && page != m_view.GetActivePage())
+	if (int page = PageOfView(view); page >= 0 && page != m_Tabs.GetActivePage())
 		ActivatePage(page);
 }
 
 bool CMainFrame::CanCloseAll() {
-	for (int i = 0; i < m_view.GetPageCount(); i++)
+	for (int i = 0; i < m_Tabs.GetPageCount(); i++)
 		if (auto view = ViewOfPage(i); view && !view->CanClose())
 			return false;
 	return true;

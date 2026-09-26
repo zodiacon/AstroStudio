@@ -230,7 +230,7 @@ void CMainFrame::NewProject() {
 
 	// the charts that are open (from files) are the natural start
 	std::vector<fs::path> open;
-	for (int i = 0; i < m_view.GetPageCount(); i++)
+	for (int i = 0; i < m_Tabs.GetPageCount(); i++)
 		if (auto view = ViewOfPage(i); view && view->FilePath() && Linkable(view->FilePath()))
 			open.emplace_back(view->FilePath());
 	if (!open.empty()) {
@@ -355,7 +355,7 @@ IView* CMainFrame::ViewForItem(ProjectItem const& item) const {
 	if (!m_Project)
 		return nullptr;
 	auto path = m_Project->Resolve(item);
-	for (int i = 0; i < m_view.GetPageCount(); i++)
+	for (int i = 0; i < m_Tabs.GetPageCount(); i++)
 		if (auto view = ViewOfPage(i); view && view->FilePath() && SamePath(view->FilePath(), path))
 			return view;
 	return nullptr;
@@ -365,8 +365,8 @@ void CMainFrame::CaptureSession() {
 	if (!m_Project)
 		return;
 	ProjectSession session;
-	int active = m_view.GetActivePage();
-	for (int i = 0; i < m_view.GetPageCount(); i++) {
+	int active = m_Tabs.GetActivePage();
+	for (int i = 0; i < m_Tabs.GetPageCount(); i++) {
 		auto view = ViewOfPage(i);
 		if (!view || !view->FilePath())
 			continue;
@@ -448,7 +448,7 @@ void CMainFrame::ProjectOpenItem(std::wstring const& id) {
 			}
 			AspectOptions::Current() = loaded;
 			AspectOptions::StoreInSettings();
-			for (int i = 0; i < m_view.GetPageCount(); i++)
+			for (int i = 0; i < m_Tabs.GetPageCount(); i++)
 				if (auto view = ViewOfPage(i))
 					view->AspectSettingsChanged();
 			break;
@@ -467,7 +467,7 @@ void CMainFrame::ProjectOpenItem(std::wstring const& id) {
 			}
 			ChartColors::Current() = loaded;
 			ChartColors::StoreInSettings();
-			for (int i = 0; i < m_view.GetPageCount(); i++)
+			for (int i = 0; i < m_Tabs.GetPageCount(); i++)
 				if (auto view = ViewOfPage(i))
 					view->WheelOptionsChanged();
 			break;
@@ -480,7 +480,7 @@ void CMainFrame::ProjectOpenItem(std::wstring const& id) {
 }
 
 void CMainFrame::AddCurrentTab(ProjectNode const& node) {
-	int page = m_view.GetActivePage();
+	int page = m_Tabs.GetActivePage();
 	auto view = ViewOfPage(page);
 	if (!view) {
 		Ask(m_hWnd, L"There is no tab to add.", MB_OK | MB_ICONINFORMATION);

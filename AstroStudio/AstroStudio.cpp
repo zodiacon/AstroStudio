@@ -7,6 +7,7 @@
 #include "AppSettings.h"
 #include "AspectOptions.h"
 #include "WheelOptions.h"
+#include "MidpointSettings.h"
 #include "ChartColors.h"
 
 CAppModule _Module;
@@ -52,6 +53,7 @@ int WINAPI _tWinMain(HINSTANCE hInstance, HINSTANCE /*hPrevInstance*/, LPTSTR lp
 	AppSettings::Get().Load(AppSettings::RegistryKey);
 	AspectOptions::LoadFromSettings();
 	WheelOptions::LoadFromSettings();
+	MidpointSettings::LoadFromSettings();
 	D2DResources::Get().TextFontFamily(AppSettings::Get().TextFont().lfFaceName);
 	ChartColors::LoadFromSettings();
 	// dark or not as the user last chose, and as the system is until then

@@ -23,6 +23,9 @@ public:
 	void SetOverlay(ChartOverlay const* overlay);
 	// puts the text font the user chose with Options > Font on the list (nothing if they have not chosen one)
 	void ApplyTextFont();
+	// the orb and the kind of contact (MidpointSettings::Current) changed elsewhere (Options > Midpoints): the two boxes show them, and
+	// the list is made again
+	void SyncSettings();
 
 	// for Copy and Export: the list as a table of plain words, in the order it is shown now, and its window (for the selection)
 	Helpers::TableSource Table() const;
@@ -39,6 +42,8 @@ public:
 
 	BEGIN_MSG_MAP(CMidpointListView)
 		MESSAGE_HANDLER(WM_CREATE, OnCreate)
+		COMMAND_HANDLER(IDC_ML_ORB, CBN_SELCHANGE, OnChoice)
+		COMMAND_HANDLER(IDC_ML_KIND, CBN_SELCHANGE, OnChoice)
 		CHAIN_MSG_MAP(CCustomDraw)
 		CHAIN_MSG_MAP(CVirtualListView)
 		CHAIN_MSG_MAP(BaseFrame)
@@ -46,8 +51,9 @@ public:
 
 private:
 	enum class ColumnType {
-		PointA, PointB, Midpoint, Opposite, Arc, House, On,
+		PointA, PointB, Midpoint, Arc, House, On,
 	};
+	enum { IDC_ML_ORB = 7101, IDC_ML_KIND };
 
 	// what is on the axis of a midpoint (Midpoints::Contacts, the axis kind), for the list
 	struct Row {
@@ -57,6 +63,8 @@ private:
 	};
 
 	LRESULT OnCreate(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, BOOL& /*bHandled*/);
+	LRESULT OnChoice(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/);
+	void SelectKind(ContactKind kind);
 	static CString PointName(ChartPoint const& point);
 	// the name, with the overlay's label or the chart's before it when there is an overlay ("Transit Sun", "natal Moon")
 	CString PointText(ChartPoint const& point) const;
@@ -68,6 +76,8 @@ private:
 	void DrawCell(LPNMCUSTOMDRAW cd, PCWSTR text, HFONT font, COLORREF backColorOverride = CLR_INVALID, bool right = false) const;
 
 	CListViewCtrl m_List;
+	CStatic m_OrbLabel, m_KindLabel;
+	CComboBox m_Orb, m_Kind;
 	CFont m_Font, m_TextFont;
 	std::vector<Row> m_Rows;
 	ChartData const* m_Chart{ nullptr };

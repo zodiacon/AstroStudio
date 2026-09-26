@@ -13,6 +13,7 @@
 #include "DerivedCharts.h"
 #include <filesystem>
 #include <ToolbarHelper.h>
+#include <IconHelper.h>
 #include <DarkMode/DmlibColor.h>
 #include <DarkMode/DarkModeSubclass.h>
 
@@ -107,6 +108,11 @@ void CChartView::WheelOptionsChanged() {
 	}
 	m_ChartDrawing.Refresh();
 	m_AspectGrid.Refresh();		// (its colours are the wheel's)
+}
+
+void CChartView::MidpointOptionsChanged() {
+	m_MidpointList.SyncSettings();
+	m_MidpointTree.SyncSettings();		// (the tab's two boxes show the new orb and kind, and it makes its tree again)
 }
 
 void CChartView::TextFontChanged() {
@@ -236,7 +242,8 @@ void CChartView::PageActivated(bool active) {
 	// (charts worked out from others have nothing to progress, return to or combine)
 	ui.UIEnable(ID_CHART_OVERLAY_PROGRESSED, active && !m_ReadOnly);
 	ui.UIEnable(ID_CHART_OVERLAY_SOLARARC, active && !m_ReadOnly);
-	for (UINT id : { ID_CHART_DERIVED_SOLARRETURN, ID_CHART_DERIVED_LUNARRETURN, ID_CHART_DERIVED_SOLARARC, ID_CHART_DERIVED_COMPOSITE, ID_CHART_DERIVED_DAVISON })
+	for (UINT id : { ID_CHART_DERIVED_SOLARRETURN, ID_CHART_DERIVED_LUNARRETURN, ID_CHART_DERIVED_SOLARARC, ID_CHART_DERIVED_PROGRESSED,
+		ID_CHART_DERIVED_PRIMARY, ID_CHART_DERIVED_COMPOSITE, ID_CHART_DERIVED_DAVISON })
 		ui.UIEnable(id, active && !m_ReadOnly);
 	for (UINT id : { ID_CHART_ANALYSIS, ID_CHART_OVERLAY, ID_CHART_TRANSITS, ID_CHART_OVERLAY_NONE, ID_CHART_OVERLAY_SYNASTRY })
 		ui.UIEnable(id, active);
@@ -370,15 +377,15 @@ void CChartView::CreateStepToolBar() {
 	// then the auto step check button and its interval
 	tb.AddSeparator(px(10));
 	CImageList images = tb.GetImageList();
-	tb.AddButton(ID_CHART_AUTOSTEP, BTNS_CHECK | BTNS_SHOWTEXT, TBSTATE_ENABLED, images.AddIcon(AtlLoadIconImage(IDI_PLAY, 0, 24, 24)), L"Auto", 0);
+	tb.AddButton(ID_CHART_AUTOSTEP, BTNS_CHECK | BTNS_SHOWTEXT, TBSTATE_ENABLED, images.AddIcon(IconHelper::Load(IDI_PLAY, 24)), L"Auto", 0);
 	int intervalSlot = tb.GetButtonCount();
 	tb.AddSeparator(px(84));	// interval
 
 	// and Live, which keeps the chart at the current time
 	tb.AddSeparator(px(10));
-	tb.AddButton(ID_CHART_LIVE, BTNS_CHECK | BTNS_SHOWTEXT, TBSTATE_ENABLED, images.AddIcon(AtlLoadIconImage(IDI_CLOCK_REFRESH, 0, 24, 24)), L"Live", 0);
+	tb.AddButton(ID_CHART_LIVE, BTNS_CHECK | BTNS_SHOWTEXT, TBSTATE_ENABLED, images.AddIcon(IconHelper::Load(IDI_CLOCK_REFRESH, 24)), L"Live", 0);
 	// (checked while an overlay is shown; the drop-down is the same choice as the Chart > Overlay menu)
-	tb.AddButton(ID_CHART_OVERLAY, BTNS_CHECK | BTNS_WHOLEDROPDOWN | BTNS_SHOWTEXT, TBSTATE_ENABLED, images.AddIcon(AtlLoadIconImage(IDI_HOURGLASS, 0, 24, 24)), L"Overlay", 0);
+	tb.AddButton(ID_CHART_OVERLAY, BTNS_CHECK | BTNS_WHOLEDROPDOWN | BTNS_SHOWTEXT, TBSTATE_ENABLED, images.AddIcon(IconHelper::Load(IDI_HOURGLASS, 24)), L"Overlay", 0);
 
 	AddSimpleReBarBand(tb);
 	Frame()->AddToolBarToUI(tb);
@@ -639,7 +646,7 @@ void CChartView::NewReturnChart(Planet planet) {
 	Frame()->NewChartWithDialog(&info, &houses);
 }
 
-void CChartView::NewSolarArcChart() {
+void CChartView::NewDirectedChart(DerivedKind kind) {
 	// the date to start from: the overlay's moment if one shows (so Step and Live can pick it), otherwise now, in this chart's zone
 	DateTime target = OverlayHasTime() ? m_Overlay->When : DateTime::Now();
 	TimeZoneInfo zone = OverlayHasTime() ? m_Overlay->Zone : m_Data.Info().TimeZone;
@@ -648,22 +655,40 @@ void CChartView::NewSolarArcChart() {
 	zone.OffsetUT = offset;
 
 	CDirectionsDlg dlg;
-	dlg.Init(target, zone, ArcKey::Actual, L"Solar Arc Chart");
+	PCWSTR name;
+	switch (kind) {
+		case DerivedKind::Progressed:
+			name = L"Progressed";
+			dlg.InitProgressed(target, zone, ProgressedAngles::Calculated, L"Progressed Chart");
+			break;
+		case DerivedKind::Primary:
+			name = L"Primary";
+			dlg.Init(target, zone, ArcKey::Naibod, L"Primary Directions Chart", false);
+			break;
+		default:
+			kind = DerivedKind::SolarArc;
+			name = L"Solar Arc";
+			dlg.Init(target, zone, ArcKey::Actual, L"Solar Arc Chart");
+			break;
+	}
 	if (dlg.DoModal(m_hWnd) != IDOK)
 		return;
 
 	DerivedRecipe recipe;
-	recipe.Kind = DerivedKind::SolarArc;
+	recipe.Kind = kind;
 	recipe.A = m_Data;
 	recipe.Target = dlg.Target();
 	recipe.Zone = dlg.Zone();
-	recipe.Key = dlg.Key();
+	if (kind == DerivedKind::Progressed)
+		recipe.Angles = dlg.Angles();
+	else
+		recipe.Key = dlg.Key();
 	auto chart = DerivedCharts::Build(m_Calc, recipe);
 
 	int shown = dlg.Zone().OffsetUT;
 	auto local = TimeZones::UtToLocal(dlg.Target(), dlg.Zone(), &shown);
 	CString title;
-	title.Format(L"Solar Arc %04ld/%02ld/%02ld: %s", local.Year, local.Month, local.Day, (PCWSTR)m_Title);
+	title.Format(L"%s %04ld/%02ld/%02ld: %s", name, local.Year, local.Month, local.Day, (PCWSTR)m_Title);
 	Frame()->AddDerivedChartView(std::move(chart), title, &recipe);
 }
 
@@ -693,7 +718,9 @@ LRESULT CChartView::OnDerived(WORD, WORD id, HWND, BOOL&) {
 	switch (id) {
 		case ID_CHART_DERIVED_SOLARRETURN: NewReturnChart(Planet::Sun); break;
 		case ID_CHART_DERIVED_LUNARRETURN: NewReturnChart(Planet::Moon); break;
-		case ID_CHART_DERIVED_SOLARARC: NewSolarArcChart(); break;
+		case ID_CHART_DERIVED_SOLARARC: NewDirectedChart(DerivedKind::SolarArc); break;
+		case ID_CHART_DERIVED_PROGRESSED: NewDirectedChart(DerivedKind::Progressed); break;
+		case ID_CHART_DERIVED_PRIMARY: NewDirectedChart(DerivedKind::Primary); break;
 		case ID_CHART_DERIVED_COMPOSITE: NewPairChart(false); break;
 		case ID_CHART_DERIVED_DAVISON: NewPairChart(true); break;
 	}

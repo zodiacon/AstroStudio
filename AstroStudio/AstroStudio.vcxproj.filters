@@ -218,6 +218,18 @@
     <ClInclude Include="WheelOptionsDlg.h">
       <Filter>Helpers</Filter>
     </ClInclude>
+    <ClCompile Include="MidpointSettings.cpp">
+      <Filter>Helpers</Filter>
+    </ClCompile>
+    <ClCompile Include="MidpointOptionsDlg.cpp">
+      <Filter>Helpers</Filter>
+    </ClCompile>
+    <ClInclude Include="MidpointSettings.h">
+      <Filter>Helpers</Filter>
+    </ClInclude>
+    <ClInclude Include="MidpointOptionsDlg.h">
+      <Filter>Helpers</Filter>
+    </ClInclude>
     <ClCompile Include="WheelOptions.cpp">
       <Filter>Helpers</Filter>
     </ClCompile>
@@ -416,6 +428,12 @@
       <Filter>Resource Files\Icons</Filter>
     </Image>
     <Image Include="res\Options.ico">
+      <Filter>Resource Files\Icons</Filter>
+    </Image>
+    <Image Include="res\project.ico">
+      <Filter>Resource Files\Icons</Filter>
+    </Image>
+    <Image Include="res\ChartPie.ico">
       <Filter>Resource Files\Icons</Filter>
     </Image>
   </ItemGroup>

@@ -15,14 +15,15 @@ std::vector<ChartPoint> Midpoints::Points(std::vector<PlanetPosition> const& pla
 std::vector<ChartPoint> Midpoints::Points(ChartData const& chart, MidpointOptions const& options, int set) {
 	std::vector<ChartPoint> points;
 	for (auto const& planet : chart.AllPlanets()) {
-		if (planet.Planet == Planet::PartOfFortune || (!options.Only.empty() && std::ranges::find(options.Only, planet.Planet) == options.Only.end()))
+		if (planet.Planet == Planet::PartOfFortune || (!options.Only.empty() && std::ranges::find(options.Only, planet.Planet) == options.Only.end()) ||
+			std::ranges::find(options.Except, planet.Planet) != options.Except.end())
 			continue;
 		points.push_back({ PointKind::Planet, planet.Planet, planet.Longitude, planet.Speed, set });
 	}
-	if (options.Angles) {
+	if (options.Angles && options.Ascendant)
 		points.push_back({ PointKind::Ascendant, Planet::Sun, chart.Houses().Asc, 0, set });
+	if (options.Angles && options.Midheaven)
 		points.push_back({ PointKind::Midheaven, Planet::Sun, chart.Houses().MC, 0, set });
-	}
 	return points;
 }
 
@@ -79,7 +80,7 @@ double Midpoints::OnDial(double longitude, int divisions) {
 double Midpoints::ContactOrb(double point, double midpoint, ContactKind kind, int* angle) {
 	// the angle between them, 0-180, and the nearest multiple of the step (180, or 45 on the dial)
 	double distance = AstroPoint::Diff(AstroPoint(point).Normalize(), AstroPoint(midpoint).Normalize());
-	double step = kind == ContactKind::Dial90 ? 45 : 180;
+	double step = kind == ContactKind::Axis ? 180 : 45;
 	double nearest = std::round(distance / step) * step;
 	if (angle)
 		*angle = (int)nearest;
@@ -118,7 +119,7 @@ std::vector<MidpointBranch> Midpoints::Tree(std::vector<MidpointData> const& mid
 	for (auto const& point : points) {
 		MidpointBranch branch;
 		branch.Point = point;
-		branch.Dial = OnDial(point.Longitude.Value);
+		branch.Dial = OnDial(point.Longitude.Value, DialDivisions(options.Kind));
 		for (auto const& contact : contacts)
 			if (contact.Point.SameAs(point))
 				branch.Contacts.push_back(contact);

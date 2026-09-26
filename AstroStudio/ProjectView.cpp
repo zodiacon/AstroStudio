@@ -2,6 +2,7 @@
 #include "ProjectView.h"
 #include "resource.h"
 #include "Helpers.h"
+#include <IconHelper.h>
 #include <shellapi.h>
 #include <algorithm>
 #include <optional>
@@ -35,13 +36,6 @@ namespace {
 
 	bool SameNode(ProjectNode const& a, ProjectNode const& b) {
 		return a.Type == b.Type && SameText(a.Key, b.Key);
-	}
-
-	HICON StockIcon(SHSTOCKICONID id) {
-		SHSTOCKICONINFO info{ sizeof(info) };
-		if (SUCCEEDED(::SHGetStockIconInfo(id, SHGSI_ICON | SHGSI_SMALLICON, &info)))
-			return info.hIcon;
-		return nullptr;
 	}
 }
 
@@ -207,13 +201,13 @@ LRESULT CProjectView::OnCreate(UINT, WPARAM, LPARAM, BOOL&) {
 
 	// icons: the project and the groups are folders; a chart, an analysis, a set of aspects and a set of colours have theirs
 	m_Images.Create(16, 16, ILC_COLOR32 | ILC_MASK, 8, 4);
-	HICON root = StockIcon(SIID_FOLDEROPEN), folder = StockIcon(SIID_FOLDER);
-	m_Images.AddIcon(root ? root : AtlLoadIconImage(IDI_CHART, 0, 16, 16));
-	m_Images.AddIcon(folder ? folder : AtlLoadIconImage(IDI_CHART, 0, 16, 16));
+	HICON folder = IconHelper::GetStockIcon(SIID_FOLDER);
+	m_Images.AddIcon(IconHelper::Load(IDI_PROJECT, 16));
+	m_Images.AddIcon(folder ? folder : IconHelper::Load(IDI_CHART, 16));
 	for (auto icon : { IDI_CHART, IDI_EVENT, IDI_OPTIONS, IDI_COLORWHEEL })
-		m_Images.AddIcon(AtlLoadIconImage(icon, 0, 16, 16));
-	HICON other = StockIcon(SIID_DOCNOASSOC);
-	m_Images.AddIcon(other ? other : AtlLoadIconImage(IDI_CHART, 0, 16, 16));
+		m_Images.AddIcon(IconHelper::Load(icon, 16));
+	HICON other = IconHelper::GetStockIcon(SIID_DOCNOASSOC);
+	m_Images.AddIcon(other ? other : IconHelper::Load(IDI_CHART, 16));
 	m_Tree.SetImageList(m_Images, TVSIL_NORMAL);
 
 	ApplyTextFont();

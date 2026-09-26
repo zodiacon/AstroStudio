@@ -49,11 +49,16 @@
 #define IDI_ICON3                       235
 #define IDI_CLOCK_REFRESH               235
 #define IDD_WHEELOPTIONS                236
+#define IDD_MIDPOINTOPTIONS             245
 #define IDD_CHARTCOLORS                 237
 #define IDD_DIRECTIONS                  238
 #define IDD_ANALYSIS                    239
 #define IDI_ICON2                       240
 #define IDI_OPTIONS                     240
+#define IDD_PROJECTITEM                 242
+#define IDI_PIE                         243
+#define IDI_ICON6                       244
+#define IDI_PROJECT                     244
 #define IDC_HOUSESYSTEM                 1000
 #define IDC_PLANETS                     1001
 #define IDC_DATE                        1002
@@ -127,7 +132,6 @@
 #define IDC_COLOR_LOAD                  1071
 #define IDC_COLOR_SAVE                  1072
 #define IDC_DIR_ARC                     1073
-#define IDC_DIR_ARC_LABEL               1099
 #define IDC_AN_CHART                    1074
 #define IDC_AN_TYPE                     1075
 #define IDC_AN_FROM_DAY                 1076
@@ -153,6 +157,15 @@
 #define IDC_AN_STATIONS                 1096
 #define IDC_AN_NOTE                     1097
 #define IDC_AN_FILTER                   1098
+#define IDC_DIR_ARC_LABEL               1099
+#define IDC_PI_NAME                     1100
+#define IDC_PI_PATH                     1101
+#define IDC_PI_TAGS                     1102
+#define IDC_PI_NOTES                    1103
+#define IDC_PI_PATHLABEL                1104
+#define IDC_PI_TAGSLABEL                1105
+#define IDC_PI_TAGSHINT                 1106
+#define IDC_PI_NOTESLABEL               1107
 #define ID_WINDOW_CLOSE                 32772
 #define ID_WINDOW_CLOSE_ALL             32773
 #define ID_OPTIONS_ALWAYSONTOP          32775
@@ -195,7 +208,6 @@
 #define ID_ANALYSIS_CANCEL              32812
 #define ID_CHART_OVERLAY_DATE           32813
 #define ID_OPTIONS_FORTUNE              32814
-
 #define ID_PROJECT_NEW                  32815
 #define ID_PROJECT_OPEN                 32816
 #define ID_PROJECT_SAVE                 32817
@@ -220,23 +232,24 @@
 #define ID_PANE_TIME                    32849
 #define ID_PANE_PLACE                   32850
 #define ID_PANE_DETAILS                 32851
-#define IDD_PROJECTITEM                 242
-#define IDC_PI_NAME                     1100
-#define IDC_PI_PATH                     1101
-#define IDC_PI_TAGS                     1102
-#define IDC_PI_NOTES                    1103
-#define IDC_PI_PATHLABEL                1104
-#define IDC_PI_TAGSLABEL                1105
-#define IDC_PI_TAGSHINT                 1106
-#define IDC_PI_NOTESLABEL               1107
+#define ID_CHART_DERIVED_PROGRESSED     32852
+#define ID_CHART_DERIVED_PRIMARY        32853
+#define ID_OPTIONS_MIDPOINTS            32854
+#define IDC_MP_POINTS                   1108
+#define IDC_MP_ALL                      1109
+#define IDC_MP_NONE                     1110
+#define IDC_MP_LIST_ORB                 1111
+#define IDC_MP_LIST_KIND                1112
+#define IDC_MP_TREE_ORB                 1113
+#define IDC_MP_TREE_KIND                1114
 
 // Next default values for new objects
 // 
 #ifdef APSTUDIO_INVOKED
 #ifndef APSTUDIO_READONLY_SYMBOLS
-#define _APS_NEXT_RESOURCE_VALUE        243
-#define _APS_NEXT_COMMAND_VALUE         32852
-#define _APS_NEXT_CONTROL_VALUE         1108
+#define _APS_NEXT_RESOURCE_VALUE        246
+#define _APS_NEXT_COMMAND_VALUE         32855
+#define _APS_NEXT_CONTROL_VALUE         1115
 #define _APS_NEXT_SYMED_VALUE           108
 #endif
 #endif

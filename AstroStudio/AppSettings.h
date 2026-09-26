@@ -15,8 +15,8 @@ struct AppSettings : Settings {
 		SETTING(ViewStatusBar, 1, SettingType::Bool);
 		SETTING(AlwaysOnTop, 0, SettingType::Bool);
 		SETTING(TextFont, LOGFONT{}, SettingType::Binary);		// the font for text that is not astrological symbols (empty face: Consolas); lfHeight in tenths of a point
-		SETTING(MidpointTreeOrb, 15, SettingType::Int32);		// the midpoint tree's orb, in tenths of a degree
-		SETTING(MidpointTreeAxis, 0, SettingType::Bool);		// the midpoint tree counts only the axis (on and opposite), not the whole 90 degree dial
+		SETTING(MidpointTreeGlyphs, 0, SettingType::Bool);		// the midpoint tree is written in astrological symbols (its toolbar's Glyphs button) rather than names
+		SETTING_STRING(MidpointSettingsText, L"");		// what the midpoint list and tree work with (MidpointSettings), as text; empty: the defaults
 		SETTING(ProjectPaneWidth, 240, SettingType::Int32);		// the width of the pane with the project, in pixels
 		SETTING(OpenLastProject, 1, SettingType::Bool);		// open the last project again at the start (its path is kept either way)
 		SETTING_STRING(LastProject, L"");		// the project that was open when the program was closed, opened again at the start
@@ -56,8 +56,8 @@ struct AppSettings : Settings {
 	DEF_SETTING(ProjectPaneWidth, int)
 	DEF_SETTING(OpenLastProject, int)
 	DEF_SETTING_STRING(LastProject)
-	DEF_SETTING(MidpointTreeOrb, int)
-	DEF_SETTING(MidpointTreeAxis, int)
+	DEF_SETTING(MidpointTreeGlyphs, int)
+	DEF_SETTING_STRING(MidpointSettingsText)
 	DEF_SETTING(ChartStepCount, int)
 	DEF_SETTING(ChartStepUnit, int)
 	DEF_SETTING(ChartStepInterval, int)

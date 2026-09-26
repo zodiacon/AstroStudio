@@ -41,10 +41,15 @@ struct MidpointData {
 };
 
 struct MidpointOptions {
-	// the Ascendant and Midheaven take part (when the chart has houses)
+	// the Ascendant and Midheaven take part (when the chart has houses) ...
 	bool Angles{ false };
+	// ... and which of the two, when they do
+	bool Ascendant{ true };
+	bool Midheaven{ true };
 	// the bodies that take part; empty means all the chart's
 	std::vector<Planet> Only;
+	// bodies that are left out (of those that take part)
+	std::vector<Planet> Except;
 };
 
 // What counts as a planet standing on a midpoint.
@@ -53,6 +58,9 @@ enum class ContactKind {
 	Axis,
 	// as Ebertin's 90 degree dial: also at 45, 90 and 135 degrees from the midpoint
 	Dial90,
+	// the same points (0, 45, 90, 135 and 180 degrees), but a tree of them is read on the 45 degree dial: the dial of the eighth harmonic,
+	// where the conjunction, semi-square, square, sesquiquadrate and opposition of a place all fall on the same spot
+	Dial45,
 };
 
 struct ContactOptions {
@@ -74,7 +82,7 @@ struct MidpointContact {
 // One branch of a midpoint tree: a point and the midpoints that stand on it (or at an angle to it), the tightest first.
 struct MidpointBranch {
 	ChartPoint Point;
-	double Dial{ 0 };								// where the point is on the 90 degree dial
+	double Dial{ 0 };								// where the point is on the dial (the 90 degree one, or the 45 degree one for ContactKind::Dial45)
 	std::vector<MidpointContact> Contacts;			// (Midpoint is an index into the midpoints the tree was made from)
 };
 
@@ -109,6 +117,10 @@ public:
 	// the position of a longitude on a dial of 360/n degrees: on the 90 degree dial (n = 4) the conjunction, square and
 	// opposition all fall together, and the midpoints of a tree stand side by side
 	static double OnDial(double longitude, int divisions = 4);
+	// the number of divisions of the circle that a tree of this kind of contact is read on: 8 (the 45 degree dial) for Dial45, otherwise 4
+	static int DialDivisions(ContactKind kind) noexcept {
+		return kind == ContactKind::Dial45 ? 8 : 4;
+	}
 	// how far a longitude is from the nearest of the angles that the kind of contact counts, and which one that was
 	static double ContactOrb(double point, double midpoint, ContactKind kind, int* angle = nullptr);
 };

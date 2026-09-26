@@ -1,21 +1,14 @@
 #include "pch.h"
 #include "MidpointTreeView.h"
 #include "AppSettings.h"
+#include "MidpointSettings.h"
+#include "DefaultFont.h"
+#include <ToolbarHelper.h>
 #include "DerivedCharts.h"
 
 namespace {
-	// the orbs to choose from, in degrees
-	const double Orbs[] = { 0.5, 1, 1.5, 2, 3 };
-
 	PCWSTR AngleWords(int angle) {
-		switch (angle) {
-			case 0: return L"on";
-			case 45: return L"semi-square";
-			case 90: return L"square";
-			case 135: return L"sesquiquadrate";
-			case 180: return L"opposite";
-		}
-		return L"";
+		return MidpointSettings::AngleWords(angle);
 	}
 }
 
@@ -28,30 +21,86 @@ CString CMidpointTreeView::PointName(ChartPoint const& point) {
 }
 
 CString CMidpointTreeView::Position(AstroPoint const& longitude) const {
-	return Helpers::FormatLongitude(longitude, FormatOptions::ShowDegreeGlyph);
+	return Helpers::FormatLongitude(longitude, m_Glyphs ? FormatOptions::ShowDegreeGlyph | FormatOptions::UseGlyphs : FormatOptions::ShowDegreeGlyph);
 }
 
-CString CMidpointTreeView::Dial(double dial) const {
-	// degrees and minutes on the dial of 90 degrees
-	int minutes = static_cast<int>(std::lround(dial * 60)) % (90 * 60);
+CString CMidpointTreeView::Degrees(double value, int decimals) const {
 	CString text;
-	text.Format(L"%d%c%02d'", minutes / 60, 0xb0, minutes % 60);
+	text.Format(L"%.*f%c", decimals, value, m_Glyphs ? 59 : 0xb0);
 	return text;
 }
 
-ContactOptions CMidpointTreeView::Options() const {
-	ContactOptions options;
-	int orb = m_Orb.m_hWnd ? m_Orb.GetCurSel() : -1;
-	options.Orb = orb >= 0 && orb < _countof(Orbs) ? Orbs[orb] : 1.5;
-	options.Kind = m_Kind.m_hWnd && m_Kind.GetCurSel() == 1 ? ContactKind::Axis : ContactKind::Dial90;
-	return options;
+CString CMidpointTreeView::Dial(double dial) const {
+	// degrees and minutes on the dial (of 90 degrees, or of 45)
+	int minutes = static_cast<int>(std::lround(dial * 60)) % (DialSize() * 60);
+	CString text;
+	text.Format(L"%d%c%02d'", minutes / 60, m_Glyphs ? 59 : 0xb0, minutes % 60);
+	return text;
 }
 
-CString CMidpointTreeView::PointText(ChartPoint const& point) const {
+int CMidpointTreeView::DialSize() const {
+	return 360 / Midpoints::DialDivisions(MidpointSettings::Current().TreeKind);
+}
+
+void CMidpointTreeView::SelectKind(ContactKind kind) {
+	for (int i = 0; i < m_Kind.GetCount(); i++)
+		if (static_cast<ContactKind>(m_Kind.GetItemData(i)) == kind)
+			m_Kind.SetCurSel(i);
+}
+
+ContactOptions CMidpointTreeView::Options() const {
+	return MidpointSettings::Current().TreeContacts();
+}
+
+void CMidpointTreeView::SyncSettings() {
+	auto& settings = MidpointSettings::Current();
+	if (m_Orb.m_hWnd) {
+		m_Orb.SetCurSel(MidpointSettings::NearestOrb(settings.TreeOrb));
+		SelectKind(settings.TreeKind);
+	}
+	Rebuild();
+}
+
+CString CMidpointTreeView::PointWords(ChartPoint const& point) const {
 	auto name = PointName(point);
 	if (!m_Overlay)
 		return name;
 	return CString(point.Set == 1 ? m_Overlay->Label.c_str() : m_Overlay->BaseLabel.c_str()) + L" " + name;
+}
+
+CString CMidpointTreeView::PointText(ChartPoint const& point) const {
+	if (!m_Glyphs)
+		return PointWords(point);
+	// (a prime after the glyph is what tells the overlay's Sun from the chart's when both are in the tree)
+	return MidpointSettings::PointGlyph(point) + (m_Overlay && point.Set == 1 ? L"'" : L"");
+}
+
+LRESULT CMidpointTreeView::OnGlyphs(WORD, WORD, HWND, BOOL&) {
+	m_Glyphs = !m_Glyphs;
+	m_Toolbar.CheckButton(ID_VIEW_GLYPHS, m_Glyphs);
+	AppSettings::Get().MidpointTreeGlyphs(m_Glyphs ? 1 : 0);
+	ApplyTreeFont();
+	Rebuild();
+	return 0;
+}
+
+void CMidpointTreeView::ApplyTreeFont() {
+	if (!m_Tree.m_hWnd)
+		return;
+	CFontHandle normal = m_HasTextFont ? CFontHandle(m_TextFont.m_hFont) : CFontHandle(m_UiFont.m_hFont);
+	if (!m_Glyphs || normal.IsNull()) {
+		if (!normal.IsNull())
+			m_Tree.SetFont(normal);
+		return;
+	}
+	// the same size as the text, in the glyph font
+	LOGFONT lf;
+	normal.GetLogFont(lf);
+	wcscpy_s(lf.lfFaceName, L"HamburgSymbols");
+	if (m_SymbolFont)
+		m_SymbolFont.DeleteObject();
+	m_SymbolFont.CreateFontIndirect(&lf);
+	m_Tree.SetFont(m_SymbolFont);
 }
 
 void CMidpointTreeView::SetOverlay(ChartOverlay const* overlay) {
@@ -79,15 +128,13 @@ void CMidpointTreeView::Rebuild() {
 	m_Tree.SetRedraw(FALSE);
 	m_Tree.DeleteAllItems();
 	if (m_Data && !m_Data->AllPlanets().empty()) {
-		MidpointOptions midpointOptions;
-		midpointOptions.Angles = true;
-		auto points = Midpoints::Points(*m_Data, midpointOptions);
+		auto& settings = MidpointSettings::Current();
+		auto points = Midpoints::Points(*m_Data, settings.Points(true));
 		std::vector<MidpointData> midpoints;
 		std::vector<ChartPoint> branches = points;		// the points the branches are of
 		if (m_Overlay) {
-			MidpointOptions around;
-			around.Angles = m_Overlay->Data.Houses().Asc.Value != 0 || m_Overlay->Data.Houses().MC.Value != 0;
-			auto other = Midpoints::Points(m_Overlay->Data, around, 1);
+			bool hasAngles = m_Overlay->Data.Houses().Asc.Value != 0 || m_Overlay->Data.Houses().MC.Value != 0;
+			auto other = Midpoints::Points(m_Overlay->Data, settings.Points(hasAngles), 1);
 			switch (m_Pairs.m_hWnd ? m_Pairs.GetCurSel() : 0) {
 				case 1:		// the overlay's own midpoints, with the chart's points on them
 					midpoints = Midpoints::Calculate(other);
@@ -111,25 +158,34 @@ void CMidpointTreeView::Rebuild() {
 
 		for (auto const& branch : tree) {
 			CString text;
-			text.Format(L"%s   %s   (on the dial: %s)", (PCWSTR)PointText(branch.Point), (PCWSTR)Position(branch.Point.Longitude), (PCWSTR)Dial(branch.Dial));
+			if (m_Glyphs)
+				text.Format(L"%s   %s   (%s)", (PCWSTR)PointText(branch.Point), (PCWSTR)Position(branch.Point.Longitude), (PCWSTR)Dial(branch.Dial));
+			else
+				text.Format(L"%s   %s   (on the dial: %s)", (PCWSTR)PointText(branch.Point), (PCWSTR)Position(branch.Point.Longitude), (PCWSTR)Dial(branch.Dial));
 			auto root = m_Tree.InsertItem(text, TVI_ROOT, TVI_LAST);
 			for (auto const& contact : branch.Contacts) {
 				auto const& midpoint = midpoints[contact.Midpoint];
+				CString angle = m_Glyphs ? DefaultFont::Get().GetAspectGlyphAsString(MidpointSettings::AspectOfAngle(contact.Angle)) : CString(AngleWords(contact.Angle));
 				CString line;
-				line.Format(L"%s / %s  =  %s   %s   %.2f%c", (PCWSTR)PointText(midpoint.A), (PCWSTR)PointText(midpoint.B),
-					(PCWSTR)Position(midpoint.Longitude), AngleWords(contact.Angle), contact.Orb, 0xb0);
+				line.Format(L"%s / %s  =  %s   %s   %s", (PCWSTR)PointText(midpoint.A), (PCWSTR)PointText(midpoint.B),
+					(PCWSTR)Position(midpoint.Longitude), (PCWSTR)angle, (PCWSTR)Degrees(contact.Orb, 2));
 				m_Tree.InsertItem(line, root, TVI_LAST);
-				CString orb;
-				orb.Format(L"%.2f%c", contact.Orb, 0xb0);
-				m_Entries.push_back({ PointText(branch.Point), Helpers::FormatLongitude(branch.Point.Longitude, FormatOptions::ShowSeconds | FormatOptions::ShowDegreeGlyph),
-					Dial(branch.Dial), PointText(midpoint.A) + L"/" + PointText(midpoint.B),
+				// (what Export and Print get is always in words, with the dial written as it is with names)
+				CString dial;
+				int minutes = static_cast<int>(std::lround(branch.Dial * 60)) % (DialSize() * 60);
+				dial.Format(L"%d%c%02d'", minutes / 60, 0xb0, minutes % 60);
+				m_Entries.push_back({ PointWords(branch.Point), Helpers::FormatLongitude(branch.Point.Longitude, FormatOptions::ShowSeconds | FormatOptions::ShowDegreeGlyph),
+					dial, PointWords(midpoint.A) + L"/" + PointWords(midpoint.B),
 					Helpers::FormatLongitude(midpoint.Longitude, FormatOptions::ShowSeconds | FormatOptions::ShowDegreeGlyph), AngleWords(contact.Angle), contact.Orb });
 			}
 			m_Tree.Expand(root);
 		}
 		if (tree.empty()) {
 			CString none;
-			none.Format(L"No midpoint within %.1f%c of a point", options.Orb, 0xb0);
+			if (m_Glyphs)
+				none = L"-";		// (the glyph font has no letters)
+			else
+				none.Format(L"No midpoint within %.1f%c of a point", options.Orb, 0xb0);
 			m_Tree.InsertItem(none, TVI_ROOT, TVI_LAST);
 		}
 		if (HTREEITEM first = m_Tree.GetRootItem())
@@ -160,8 +216,8 @@ Helpers::TableSource CMidpointTreeView::Table() const {
 }
 
 void CMidpointTreeView::ApplyTextFont() {
-	if (Helpers::UserTextFont(m_TextFont) && m_Tree.m_hWnd)
-		m_Tree.SetFont(m_TextFont);
+	m_HasTextFont = Helpers::UserTextFont(m_TextFont);
+	ApplyTreeFont();
 }
 
 LRESULT CMidpointTreeView::OnCreate(UINT, WPARAM, LPARAM, BOOL&) {
@@ -178,26 +234,29 @@ LRESULT CMidpointTreeView::OnCreate(UINT, WPARAM, LPARAM, BOOL&) {
 	m_Pairs.Create(m_hWnd, rcDefault, nullptr, WS_CHILD | WS_TABSTOP | WS_VSCROLL | CBS_DROPDOWNLIST, 0, IDC_MT_PAIRS);
 	m_Tree.Create(m_hWnd, rcDefault, nullptr, WS_CHILD | WS_VISIBLE | WS_TABSTOP | WS_CLIPSIBLINGS | TVS_HASLINES | TVS_HASBUTTONS |
 		TVS_LINESATROOT | TVS_SHOWSELALWAYS | TVS_DISABLEDRAGDROP, 0, IDC_MT_TREE);
+	// the Glyphs button: symbols or names
+	ToolBarButtonInfo buttons[] = { { ID_VIEW_GLYPHS, IDI_GLYPH, BTNS_CHECK, L"Glyphs" } };
+	m_Glyphs = AppSettings::Get().MidpointTreeGlyphs() != 0;
+	m_Toolbar = ToolbarHelper::CreateAndInitToolBar(m_hWnd, buttons, _countof(buttons), 16);
+	m_Toolbar.CheckButton(ID_VIEW_GLYPHS, m_Glyphs);
 	if (!m_UiFont.IsNull())
 		for (CWindow* control : { (CWindow*)&m_OrbLabel, (CWindow*)&m_Orb, (CWindow*)&m_KindLabel, (CWindow*)&m_Kind, (CWindow*)&m_PairsLabel, (CWindow*)&m_Pairs, (CWindow*)&m_Tree })
 			control->SetFont(m_UiFont);
 
-	auto& settings = AppSettings::Get();
-	for (double orb : Orbs) {
+	auto& settings = MidpointSettings::Current();
+	for (int orb : MidpointSettings::Orbs) {
 		CString text;
-		text.Format(L"%.1f%c", orb, 0xb0);
+		text.Format(L"%g%c", orb / 100.0, 0xb0);
 		m_Orb.AddString(text);
 	}
-	int selected = 2;		// 1.5 degrees
-	for (int i = 0; i < _countof(Orbs); i++)
-		if (std::lround(Orbs[i] * 10) == settings.MidpointTreeOrb())
-			selected = i;
-	m_Orb.SetCurSel(selected);
+	m_Orb.SetCurSel(MidpointSettings::NearestOrb(settings.TreeOrb));
 	CString dialChoice;
 	dialChoice.Format(L"90%c dial (on, semi-square, square...)", 0xb0);
-	m_Kind.AddString(dialChoice);
-	m_Kind.AddString(L"Axis (on and opposite)");
-	m_Kind.SetCurSel(settings.MidpointTreeAxis() ? 1 : 0);
+	m_Kind.SetItemData(m_Kind.AddString(dialChoice), static_cast<DWORD_PTR>(ContactKind::Dial90));
+	dialChoice.Format(L"45%c dial (all of those together)", 0xb0);
+	m_Kind.SetItemData(m_Kind.AddString(dialChoice), static_cast<DWORD_PTR>(ContactKind::Dial45));
+	m_Kind.SetItemData(m_Kind.AddString(L"Axis (on and opposite)"), static_cast<DWORD_PTR>(ContactKind::Axis));
+	SelectKind(settings.TreeKind);
 	m_Pairs.AddString(L"the chart (with the overlay's points on them)");
 	m_Pairs.AddString(L"the overlay (with the chart's points on them)");
 	m_Pairs.AddString(L"the chart and the overlay (with both)");
@@ -219,6 +278,11 @@ void CMidpointTreeView::Layout() {
 	m_Orb.MoveWindow(x + 34, y, 64, 200);
 	m_KindLabel.MoveWindow(x + 112, y, 62, h);
 	m_Kind.MoveWindow(x + 176, y, 210, 200);
+	if (m_Toolbar.m_hWnd) {
+		CSize size;
+		m_Toolbar.GetMaxSize(&size);
+		m_Toolbar.MoveWindow(x + 394, y, size.cx + 4, h);
+	}
 	// (with an overlay a second row: whose midpoints)
 	m_PairsLabel.MoveWindow(x, y + 28, 80, h);
 	m_Pairs.MoveWindow(x + 84, y + 28, 302, 200);
@@ -252,11 +316,13 @@ LRESULT CMidpointTreeView::OnSetFocus(UINT, WPARAM, LPARAM, BOOL&) {
 }
 
 LRESULT CMidpointTreeView::OnChoice(WORD, WORD, HWND, BOOL&) {
-	auto& settings = AppSettings::Get();
+	auto& settings = MidpointSettings::Current();
 	int orb = m_Orb.GetCurSel();
-	if (orb >= 0 && orb < _countof(Orbs))
-		settings.MidpointTreeOrb(static_cast<int>(std::lround(Orbs[orb] * 10)));
-	settings.MidpointTreeAxis(m_Kind.GetCurSel() == 1 ? 1 : 0);
+	if (orb >= 0 && orb < _countof(MidpointSettings::Orbs))
+		settings.TreeOrb = MidpointSettings::Orbs[orb];
+	if (m_Kind.GetCurSel() >= 0)
+		settings.TreeKind = static_cast<ContactKind>(m_Kind.GetItemData(m_Kind.GetCurSel()));
+	MidpointSettings::StoreInSettings();
 	Rebuild();
 	return 0;
 }

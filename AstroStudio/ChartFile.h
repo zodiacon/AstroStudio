@@ -16,13 +16,14 @@
 // the computer, and it settles which of the two identical local times of a DST change is meant.
 // Only what is needed to recreate the chart is stored - positions are always recalculated.
 //
-// A chart worked out from others (a composite, a Davison chart, a solar arc chart) is saved as its *recipe*: the charts it was
+// A chart worked out from others (a composite, a Davison chart, a solar arc, progressed or primary directions chart) is saved as its *recipe*: the charts it was
 // made from, each in the four sections above under a prefix, and what was chosen. Loading rebuilds the chart from them.
 //
-//   [Derived]        Version, Kind (Composite, Davison or SolarArc), Houses (MidpointMC or MidpointARMC: composite),
-//                    ArcKey (Actual, Naibod or Ptolemy: solar arc)
-//   [Derived.Time]   solar arc: the date it is moved to, like [Time]
-//   [A.Chart] [A.Person] [A.Time] [A.Location]     the first chart (the only one for a solar arc chart)
+//   [Derived]        Version, Kind (Composite, Davison, SolarArc, Progressed or Primary), Houses (MidpointMC or MidpointARMC:
+//                    composite), ArcKey (Actual, Naibod or Ptolemy: solar arc and primary), Angles (Calculated, SolarArc or
+//                    Natal: progressed)
+//   [Derived.Time]   solar arc, progressed, primary: the date it is moved to, like [Time]
+//   [A.Chart] [A.Person] [A.Time] [A.Location]     the first chart (the only one when a chart is moved on to a date)
 //   [B.Chart] [B.Person] [B.Time] [B.Location]     the second chart (composite and Davison)
 
 // An analysis on disk (.analysis): what it was made of - the chart, the kinds of analysis, the range, the movers, targets, aspects
@@ -42,7 +43,6 @@ struct ChartFile abstract final {
 	static constexpr PCWSTR AnalysisExtension = L"analysis";
 	static constexpr wchar_t AnalysisFilter[] = L"Astro Studio analyses (*.analysis)\0*.analysis\0All files (*.*)\0*.*\0";
 	// for the Open dialog: charts and analyses
-	static constexpr wchar_t OpenFilter[] = L"Astro Studio files (*.chart;*.analysis)\0*.chart;*.analysis\0Charts (*.chart)\0*.chart\0Analyses (*.analysis)\0*.analysis\0All files (*.*)\0*.*\0";
 
 	// what a file holds
 	struct Loaded {
