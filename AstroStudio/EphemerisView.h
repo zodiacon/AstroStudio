@@ -36,7 +36,7 @@ public:
 	DECLARE_WND_CLASS(L"AstroPlanetStrip")
 
 	// the label (when the positions were calculated) is in labelFont, the text after it in font
-	void SetText(PCWSTR label, HFONT labelFont, PCWSTR text, HFONT font);
+	void SetText(PCWSTR label, HFONT labelFont, PCWSTR text, HFONT font, bool tinted = false);
 
 	BEGIN_MSG_MAP(CPlanetStrip)
 		MESSAGE_HANDLER(WM_PAINT, OnPaint)
@@ -50,6 +50,7 @@ private:
 
 	CString m_Label, m_Text;
 	HFONT m_LabelFont{ nullptr }, m_Font{ nullptr };
+	bool m_Tinted{ false };		// purple background: the Moon is void of course now
 };
 
 class CEphemerisView : 
@@ -77,6 +78,7 @@ protected:
 		COMMAND_ID_HANDLER(ID_FONT_SIZE_DEFAULT, OnChangeFontSize)
 		COMMAND_ID_HANDLER(ID_VIEW_GRIDLINES, OnViewGridLines)
 		COMMAND_ID_HANDLER(ID_EPHEMERIS_OPTIONS, OnOptions)
+		COMMAND_HANDLER(IDC_EPH_TIME, CBN_SELCHANGE, OnTimeOfDayChanged)
 		MESSAGE_HANDLER(WM_CREATE, OnCreate)
 		MESSAGE_HANDLER(WM_DESTROY, OnDestroy)
 		MESSAGE_HANDLER(WM_TIMER, OnTimer)
@@ -104,6 +106,10 @@ protected:
 
 private:
 	void UpdateList();
+	// The time of day the rows are for: the row's calendar date (m_StartTime + step * row, a UT midnight) at 00:00 or 12:00, in UT or in
+	// this machine's zone. The result is the UT instant.
+	enum class TimeOfDay { MidnightUT, NoonUT, MidnightLocal, NoonLocal };
+	DateTime RowTime(int row) const;
 	// what happens in the row's day (ingresses, stations), with glyphs or in words; the row after it must exist
 	CString GetRowPhenom(int row, bool glyphs) const;
 	// calculates the rows up to (not including) index count
@@ -156,6 +162,7 @@ private:
 	LRESULT OnViewGridLines(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/);
 	LRESULT OnEditCopy(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/);
 	LRESULT OnOptions(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/);
+	LRESULT OnTimeOfDayChanged(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/);
 	LRESULT OnExport(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/);
 	LRESULT OnPrint(WORD /*wNotifyCode*/, WORD wID, HWND /*hWndCtl*/, BOOL& /*bHandled*/);
 	LRESULT OnNewChart(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/);
@@ -169,6 +176,9 @@ private:
 
 	CListViewCtrl m_List;
 	CPlanetStrip m_NowStrip;
+	CStatic m_TimeLabel;
+	CComboBox m_TimeCombo;
+	TimeOfDay m_TimeOfDay{ TimeOfDay::MidnightUT };
 	AstroCalculator m_Calc;
 	ChartInfo m_ChartInfo;
 	DateTime m_StartTime;

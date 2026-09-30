@@ -17,6 +17,12 @@ namespace {
 		return DateTime(jd, DateTime::AfterPapalReform(jd));
 	}
 
+	// A UT instant as this machine's local wall-clock time (its calendar fields are what Helpers::FormatDateTime and DateTime::Year()/
+	// Month()/Day() read; the DST rules in force at that instant are used, via TimeZones::Machine()'s Windows zone key).
+	DateTime ToLocal(DateTime const& ut) {
+		return TimeZones::FieldsToDateTime(TimeZones::UtToLocal(ut, TimeZones::Machine()));
+	}
+
 	PCWSTR EclipseKindName(EclipseKind kind) {
 		switch (kind) {
 			case EclipseKind::Total: return L"total";
@@ -52,7 +58,8 @@ ColorOptions DarkColors{
 	true, true
 };
 
-void CPlanetStrip::SetText(PCWSTR label, HFONT labelFont, PCWSTR text, HFONT font) {
+void CPlanetStrip::SetText(PCWSTR label, HFONT labelFont, PCWSTR text, HFONT font, bool tinted) {
+	m_Tinted = tinted;
 	m_Label = label;
 	m_LabelFont = labelFont;
 	m_Text = text;
@@ -68,7 +75,9 @@ LRESULT CPlanetStrip::OnPaint(UINT msg, WPARAM wp, LPARAM, BOOL&) {
 	CRect rc;
 	GetClientRect(&rc);
 	bool dark = WTLHelper::IsDarkMode();
-	dc.FillSolidRect(&rc, dark ? DarkMode::getCtrlBackgroundColor() : ::GetSysColor(COLOR_BTNFACE));
+	// the same purples as the void of course cells of the list
+	dc.FillSolidRect(&rc, m_Tinted ? (dark ? RGB(95, 55, 175) : RGB(175, 145, 240)) :
+		dark ? DarkMode::getCtrlBackgroundColor() : ::GetSysColor(COLOR_BTNFACE));
 	dc.SetBkMode(TRANSPARENT);
 	dc.SetTextColor(dark ? DarkMode::getTextColor() : ::GetSysColor(COLOR_BTNTEXT));
 	rc.left += 6;
@@ -88,7 +97,7 @@ CString CEphemerisView::GetColumnText(HWND h, int row, int col) {
 	auto type = GetColumnManager(h)->GetColumnTag<ColumnType>(col);
 	CString text;
 	switch (type) {
-		case ColumnType::Time: return Helpers::FormatDateTime(m_StartTime.AddDays(m_Increment * row));
+		case ColumnType::Time: return Helpers::FormatDateTime(ToLocal(RowTime(row)));
 		case ColumnType::MoonVoid:
 			EnsureRows(row + 2);
 			CalcExtras(row);
@@ -149,7 +158,10 @@ DWORD CEphemerisView::OnSubItemPrePaint(int, LPNMCUSTOMDRAW cd) {
 
 	lv->clrTextBk = CLR_INVALID;
 	auto& item = m_Items[(int)cd->dwItemSpec];
-	bool highlight = item.Date == DateTime::Today(true);
+	// "today" is a local calendar date; the row's own date is UT, so it is converted before the two are compared
+	auto localDate = ToLocal(item.Date);
+	auto today = DateTime::Today(true);
+	bool highlight = localDate.Year() == today.Year() && localDate.Month() == today.Month() && localDate.Day() == today.Day();
 	if (colType >= ColumnType::Planet) {
 		if (m_ColorOptions.PaintSigns) {
 			int element = int(item.Planets[lv->iSubItem - 1].Position.Longitude.Sign()) % 4;
@@ -222,10 +234,24 @@ void CEphemerisView::UpdateList() {
 	m_List.RedrawItems(m_List.GetTopIndex(), m_List.GetTopIndex() + m_List.GetCountPerPage());
 }
 
+DateTime CEphemerisView::RowTime(int row) const {
+	auto date = m_StartTime.AddDays(m_Increment * row);
+	const bool noon = m_TimeOfDay == TimeOfDay::NoonUT || m_TimeOfDay == TimeOfDay::NoonLocal;
+	if (m_TimeOfDay == TimeOfDay::MidnightUT || m_TimeOfDay == TimeOfDay::NoonUT)
+		return noon ? date.AddDays(0.5) : date;
+
+	// the same calendar date on this machine's clock, with the zone's DST rule for that day
+	auto fields = TimeZones::DateTimeToFields(date);
+	fields.Hour = noon ? 12 : 0;
+	fields.Minute = fields.Second = 0;
+	auto zone = TimeZones::Machine();
+	return TimeZones::LocalToUt(fields, zone);
+}
+
 void CEphemerisView::EnsureRows(size_t count) {
 	while (m_Items.size() < count) {
 		RowData data;
-		data.Date = m_StartTime.AddDays(m_Increment * (int)m_Items.size());
+		data.Date = RowTime((int)m_Items.size());
 		for (auto p : m_Planets) {
 			PlanetData pd;
 			pd.Position = m_Calc.CalcPlanet(p, data.Date);
@@ -260,7 +286,7 @@ CString CEphemerisView::GetRowPhenom(int row, bool glyphs) const {
 					DefaultFont::Get().GetSignGlyphAsString(c.Position.Longitude.Sign());
 				item.PhenomText += Helpers::GetPlanetName(c.Planet) + CString(L" to ") +
 					Helpers::GetZodiacSignName(c.Position.Longitude.Sign()).Left(3);
-				auto dt = L" (" + Helpers::FormatDateTime(ingress.Time, DateTimeFormatOptions::TimeOnly) + L")";
+				auto dt = L" (" + Helpers::FormatDateTime(ToLocal(ingress.Time), DateTimeFormatOptions::TimeOnly) + L")";
 				item.PhenomGlyph += dt;
 				item.PhenomText += dt;
 			}
@@ -283,7 +309,7 @@ CString CEphemerisView::GetRowPhenom(int row, bool glyphs) const {
 					item.PhenomGlyph += DefaultFont::Get().GetPlanetGlyphAsString(c.Planet) + CString(L" ") + DefaultFont::Get().GetRetroGlyphAsString();
 					item.PhenomText += Helpers::GetPlanetName(c.Planet) + CString(L" R");
 				}
-				auto dt = L" (" + Helpers::FormatDateTime(station.Time, DateTimeFormatOptions::TimeOnly) + L")";
+				auto dt = L" (" + Helpers::FormatDateTime(ToLocal(station.Time), DateTimeFormatOptions::TimeOnly) + L")";
 				item.PhenomGlyph += dt;
 				item.PhenomText += dt;
 			}
@@ -304,7 +330,7 @@ CString CEphemerisView::GetRowPhenom(int row, bool glyphs) const {
 				if (!item.PhenomText.IsEmpty())
 					item.PhenomText += L" | ";
 				// the time; with steps longer than a day the date too
-				auto when = L" (" + Helpers::FormatDateTime(FromJd(jd), to - from < 1.5 ? DateTimeFormatOptions::TimeOnly : DateTimeFormatOptions::None).Trim() + L")";
+				auto when = L" (" + Helpers::FormatDateTime(ToLocal(FromJd(jd)), to - from < 1.5 ? DateTimeFormatOptions::TimeOnly : DateTimeFormatOptions::None).Trim() + L")";
 				auto& font = DefaultFont::Get();
 				// the glyph font has no letters: Sun, conjunction or opposition, Moon
 				item.PhenomGlyph += font.GetPlanetGlyphAsString(Planet::Sun) + CString(L" ") +
@@ -378,7 +404,18 @@ void CEphemerisView::UpdateNowStrip() {
 		text += glyphs ? (PCWSTR)DefaultFont::Get().GetPlanetGlyphAsString(p) : (PCWSTR)CString(Helpers::GetPlanetName(p)).Left(3);
 		text += L" " + Helpers::FormatLongitude(pos.Longitude, m_FormatOptions);
 	}
-	m_NowStrip.SetText(label, m_StdFont, text, glyphs ? m_Font : m_StdFont);
+	// Tinted purple while the Moon is void of course (only if the void column is on). The periods come from a fresh
+	// calculation around now, so they don't depend on the rows the list has looked at.
+	bool isVoid = false;
+	if (m_ShowVoid) {
+		double jd = now.Julian();
+		for (auto const& period : m_Calc.CalcVoidOfCourse(FromJd(jd - 3), FromJd(jd + 3)))
+			if (period.Start.Julian() <= jd && jd < period.End.Julian()) {
+				isVoid = true;
+				break;
+			}
+	}
+	m_NowStrip.SetText(label, m_StdFont, text, glyphs ? m_Font : m_StdFont, isVoid);
 
 	// the band is as high as the text
 	CClientDC dc(m_NowStrip);
@@ -420,6 +457,7 @@ LRESULT CEphemerisView::OnCreate(UINT, WPARAM, LPARAM, BOOL&) {
 	m_Increment = std::clamp(settings.EphemerisStep(), 1, (int)EphemerisSettings::MaxStep);
 	m_ShowEclipses = settings.EphemerisEclipses() && m_Increment <= EphemerisSettings::MaxEclipseStep;
 	m_ShowVoid = settings.EphemerisVoid() && m_Increment <= EphemerisSettings::MaxVoidStep;
+	m_TimeOfDay = static_cast<TimeOfDay>(std::clamp(settings.EphemerisTime(), 0, 3));
 	// the bodies: numbers of Planet values separated by commas
 	m_Planets.clear();
 	{
@@ -463,10 +501,40 @@ LRESULT CEphemerisView::OnCreate(UINT, WPARAM, LPARAM, BOOL&) {
 	};
 
 	CreateSimpleReBar(ATL_SIMPLE_REBAR_NOBORDER_STYLE);
-	auto tb = ToolbarHelper::CreateAndInitToolBar(m_hWndToolBar, buttons, _countof(buttons));
+	CToolBarCtrl tb(ToolbarHelper::CreateAndInitToolBar(m_hWndToolBar, buttons, _countof(buttons)));
+
+	// The label and the time of day combo box live inside the toolbar, on separators made as wide as they are (made before
+	// the toolbar joins the rebar, which sizes the band from its buttons).
+	int dpi = CClientDC(m_hWnd).GetDeviceCaps(LOGPIXELSX);
+	auto px = [&](int value) { return MulDiv(value, dpi, 96); };
+	tb.AddSeparator(px(10));
+	int firstSlot = tb.GetButtonCount();
+	tb.AddSeparator(px(80));	// "Time of day:"
+	tb.AddSeparator(px(120));	// the choice
+
 	AddSimpleReBarBand(tb);
 	Frame()->AddToolBarToUI(tb);
 	CreateFonts();
+
+	{
+		CFontHandle font(AtlGetDefaultGuiFont());
+		const int comboHeight = px(22), dropHeight = px(120);
+		auto slotRect = [&](int slot, int drop) {
+			CRect item;
+			tb.GetItemRect(firstSlot + slot, &item);
+			int top = item.top + (item.Height() - comboHeight) / 2;
+			return CRect(item.left, top, item.right - px(4), top + comboHeight + drop);
+		};
+		CRect labelRect = slotRect(0, 0), comboRect = slotRect(1, dropHeight);
+		m_TimeLabel.Create(tb, labelRect, L"Time of day:", WS_CHILD | WS_VISIBLE | SS_RIGHT | SS_CENTERIMAGE);
+		m_TimeLabel.SetFont(font);
+		m_TimeCombo.Create(tb, comboRect, nullptr, WS_CHILD | WS_VISIBLE | WS_TABSTOP | CBS_DROPDOWNLIST, 0, IDC_EPH_TIME);
+		m_TimeCombo.SetFont(font);
+		// in the order of TimeOfDay
+		for (auto text : { L"00:00 UT", L"12:00 UT", L"00:00 local", L"12:00 local" })
+			m_TimeCombo.AddString(text);
+		m_TimeCombo.SetCurSel(static_cast<int>(m_TimeOfDay));
+	}
 
 	// a second toolbar line with where the planets are right now
 	{
@@ -503,6 +571,7 @@ void CEphemerisView::SaveSettings() {
 	settings.EphemerisStep((int)std::lround(m_Increment));
 	settings.EphemerisEclipses(m_ShowEclipses ? 1 : 0);
 	settings.EphemerisVoid(m_ShowVoid ? 1 : 0);
+	settings.EphemerisTime(static_cast<int>(m_TimeOfDay));
 	std::wstring bodies;
 	for (auto planet : m_Planets) {
 		if (!bodies.empty())
@@ -564,7 +633,7 @@ LRESULT CEphemerisView::OnViewGridLines(WORD, WORD, HWND, BOOL&) {
 CString CEphemerisView::PlainCellText(int row, ColumnType type) {
 	EnsureRows(row + 2);
 	if (type == ColumnType::Time)
-		return Helpers::FormatDateTime(m_StartTime.AddDays(m_Increment * row)).Trim();
+		return Helpers::FormatDateTime(ToLocal(RowTime(row))).Trim();
 	if (type == ColumnType::Phenom)
 		return GetRowPhenom(row, false);
 	if (type == ColumnType::MoonVoid) {
@@ -660,6 +729,24 @@ void CEphemerisView::ApplySettings(EphemerisSettings const& settings) {
 	UpdateNowStrip();
 }
 
+LRESULT CEphemerisView::OnTimeOfDayChanged(WORD, WORD, HWND, BOOL&) {
+	int selected = m_TimeCombo.GetCurSel();
+	if (selected < 0 || selected == static_cast<int>(m_TimeOfDay))
+		return 0;
+	m_TimeOfDay = static_cast<TimeOfDay>(selected);
+
+	// every row's moment changes: start the list over, as for new options
+	EphemerisSettings settings;
+	settings.Start = m_StartTime;
+	settings.Step = m_Increment;
+	settings.Planets = m_Planets;
+	settings.Eclipses = m_ShowEclipses;
+	settings.VoidOfCourse = m_ShowVoid;
+	ApplySettings(settings);
+	m_List.SetFocus();
+	return 0;
+}
+
 LRESULT CEphemerisView::OnOptions(WORD, WORD, HWND, BOOL&) {
 	EphemerisSettings settings;
 	settings.Start = m_StartTime;
@@ -711,7 +798,7 @@ void CEphemerisView::CalcExtras(int row) const {
 	const bool oneDay = to - from < 1.5;
 	// times only when the rows are days; with longer steps the date is needed as well
 	auto stamp = [&](double jd) {
-		return Helpers::FormatDateTime(FromJd(jd), oneDay ? DateTimeFormatOptions::TimeOnly : DateTimeFormatOptions::None).Trim();
+		return Helpers::FormatDateTime(ToLocal(FromJd(jd)), oneDay ? DateTimeFormatOptions::TimeOnly : DateTimeFormatOptions::None).Trim();
 	};
 
 	if (m_ShowVoid) {
@@ -822,10 +909,10 @@ LRESULT CEphemerisView::OnNewChart(WORD, WORD, HWND, BOOL&) {
 		return 0;
 	}
 
-	// For now a chart from an ephemeris row is for noon UT of that date (the row itself is a UT midnight).
+	// A chart from an ephemeris row is for the moment the row is for (see RowTime).
 	// The dialog shows it, like any time, as local time in this machine's zone; UT is calculated from that.
 	auto info = Frame()->DefaultChartInfo();
-	info.Time = m_Items[selected].Date.AddDays(0.5);
+	info.Time = m_Items[selected].Date;
 	info.TimeZone = TimeZones::Machine();
 	Frame()->NewChartWithDialog(&info);
 

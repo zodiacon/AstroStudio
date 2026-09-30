@@ -218,7 +218,7 @@ LRESULT CProjectView::OnCreate(UINT, WPARAM, LPARAM, BOOL&) {
 LRESULT CProjectView::OnSize(UINT, WPARAM, LPARAM, BOOL&) {
 	CRect rc;
 	GetClientRect(&rc);
-	if (m_Tree.m_hWnd)
+	if (m_Tree)
 		m_Tree.MoveWindow(0, 0, rc.Width(), rc.Height());
 	return 0;
 }
@@ -228,7 +228,7 @@ LRESULT CProjectView::OnEraseBkgnd(UINT, WPARAM, LPARAM, BOOL&) {
 }
 
 LRESULT CProjectView::OnSetFocus(UINT, WPARAM, LPARAM, BOOL&) {
-	if (m_Tree.m_hWnd)
+	if (m_Tree)
 		m_Tree.SetFocus();
 	return 0;
 }
@@ -290,8 +290,8 @@ LRESULT CProjectView::OnBeginLabelEdit(int, LPNMHDR pnmh, BOOL&) {
 		plain = item->Name.c_str();
 	else
 		return TRUE;		// (nothing to edit)
-	if (HWND edit = m_Tree.GetEditControl())
-		::SetWindowText(edit, plain);
+	if (auto edit = m_Tree.GetEditControl())
+		edit.SetWindowText(plain);
 	return FALSE;
 }
 
