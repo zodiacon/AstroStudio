@@ -812,22 +812,11 @@ void CEphemerisView::CalcExtras(int row) const {
 			voidTime += std::min(end, to) - std::max(start, from);
 			// In words for the plain font; with glyphs, numbers and dashes only for the glyph font, which has no letters (a
 			// dash is the open end of a void that began before the row or goes on after it).
+			// The last aspect goes right after the start time, before any dash.
 			CString text, glyphs;
-			if (startsHere && endsHere)
-				text = glyphs = stamp(start) + L" - " + stamp(end);
-			else if (startsHere) {
-				text = L"from " + stamp(start);
-				glyphs = stamp(start) + L" -";
-			}
-			else if (endsHere) {
-				text = L"until " + stamp(end);
-				glyphs = L"- " + stamp(end);
-			}
-			else {
-				text = L"all through";
-				glyphs = L"-";
-			}
 			if (startsHere) {
+				text = (endsHere ? L"" : L"from ") + stamp(start);
+				glyphs = stamp(start);
 				if (period.WholeSign) {
 					text += L" (no aspect in the sign)";
 					glyphs += L" (-)";
@@ -837,6 +826,20 @@ void CEphemerisView::CalcExtras(int row) const {
 					text += L" (" + CString(Helpers::GetAspectName(type)).MakeLower() + L" " + Helpers::GetPlanetName(period.LastPlanet) + L")";
 					glyphs += L" (" + DefaultFont::Get().GetAspectGlyphAsString(type) + L" " + DefaultFont::Get().GetPlanetGlyphAsString(period.LastPlanet) + L")";
 				}
+				if (endsHere) {
+					text += L" - " + stamp(end);
+					glyphs += L" - " + stamp(end);
+				}
+				else
+					glyphs += L" -";
+			}
+			else if (endsHere) {
+				text = L"until " + stamp(end);
+				glyphs = L"- " + stamp(end);
+			}
+			else {
+				text = L"all through";
+				glyphs = L"-";
 			}
 			if (!item.VoidText.IsEmpty()) {
 				item.VoidText += L" | ";
