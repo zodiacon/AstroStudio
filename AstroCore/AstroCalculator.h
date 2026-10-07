@@ -46,6 +46,13 @@ struct VoidOfCourseData {
 	double LastAngle;		// and of this angle (0, 60, 90, 120 or 180 degrees)
 };
 
+// The moment two bodies are exactly at an aspect to each other.
+struct ExactAspectData {
+	DateTime Time;			// UT
+	Planet Planet1, Planet2;	// in the order of the list the aspects were looked for in
+	double Angle;			// 0, 60, 90, 120 or 180 degrees
+};
+
 enum class HouseSystem {
 	Placidus = 'P', 
 	Koch = 'K', 
@@ -99,6 +106,9 @@ public:
 	// The void of course periods of the Moon that overlap [from, to), in time order. The aspects looked for are to the
 	// Sun and the planets up to Saturn, and to Uranus, Neptune and Pluto too when outerPlanets is set.
 	std::vector<VoidOfCourseData> CalcVoidOfCourse(DateTime const& from, DateTime const& to, bool outerPlanets = true) const;
+	// The exact major aspects (conjunction, sextile, square, trine, opposition) between every two of the bodies in [from, to),
+	// in time order. The two nodes (mean and true) and the two Liliths (mean and osculating) are not paired with each other.
+	std::vector<ExactAspectData> CalcExactAspects(std::vector<Planet> const& planets, DateTime const& from, DateTime const& to) const;
 
 	bool Calculate(ChartData& data);
 

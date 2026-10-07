@@ -96,7 +96,7 @@ protected:
 
 	// Planet is last: the columns of the bodies follow it, one value each
 	enum class ColumnType {
-		Time, SiderealTime, Phenom, MoonVoid, Planet
+		Time, SiderealTime, Phenom, MoonVoid, Transits, Planet
 	};
 
 	void UpdateUI(CUpdateUIBase& ui);
@@ -129,7 +129,7 @@ private:
 	void SaveSettings();
 	// starts the list over with other settings
 	void ApplySettings(EphemerisSettings const& settings);
-	// The void of course text of a row (the row after it must exist). Eclipses (which go in the Phenomena column) and voids are worked out
+	// The void of course and transits texts of a row (the row after it must exist). Eclipses (which go in the Phenomena column) and voids are worked out
 	// for as far as rows have been asked for, a stretch at a time, and kept.
 	void CalcExtras(int row) const;
 	void EnsureEclipses(double until) const;
@@ -148,6 +148,7 @@ private:
 		mutable bool HasEclipse{ false };		// the Phenomena cell has an eclipse in it (which is then shown in colour)
 		mutable CString VoidText, VoidGlyph;
 		mutable double VoidFraction{ 0 };		// how much of the row's stretch of time the Moon is void of course (0 to 1)
+		mutable CString TransitText, TransitGlyph;		// the exact aspects between the bodies in the row's stretch of time
 		mutable bool ExtrasCalculated{ false };
 	};
 	// Handler prototypes (uncomment arguments if needed):
@@ -189,7 +190,7 @@ private:
 	int m_FontSize{ 100 };
 	std::vector<RowData> m_Items;
 	std::vector<Planet> m_Planets;
-	bool m_ShowEclipses{ false }, m_ShowVoid{ false };
+	bool m_ShowEclipses{ false }, m_ShowVoid{ false }, m_ShowTransits{ false }, m_TransitsNoMoon{ false };
 	mutable std::vector<EclipseData> m_Eclipses;
 	mutable double m_EclipsesUntil{ 0 };
 	mutable std::vector<VoidOfCourseData> m_Voids;

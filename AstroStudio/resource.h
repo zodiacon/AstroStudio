@@ -243,6 +243,8 @@
 #define IDC_MP_TREE_ORB                 1113
 #define IDC_MP_TREE_KIND                1114
 #define IDC_EPH_TIME                    1115
+#define IDC_EPH_TRANSITS                1116
+#define IDC_EPH_TRANSITS_NOMOON         1117
 
 // Next default values for new objects
 // 
@@ -250,7 +252,7 @@
 #ifndef APSTUDIO_READONLY_SYMBOLS
 #define _APS_NEXT_RESOURCE_VALUE        246
 #define _APS_NEXT_COMMAND_VALUE         32855
-#define _APS_NEXT_CONTROL_VALUE         1116
+#define _APS_NEXT_CONTROL_VALUE         1118
 #define _APS_NEXT_SYMED_VALUE           108
 #endif
 #endif

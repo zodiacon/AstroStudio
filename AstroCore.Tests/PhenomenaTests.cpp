@@ -186,3 +186,50 @@ TEST_CASE("Only aspects to inner planets can be used", "[VoidOfCourse]") {
 		CHECK(inner[i].Start.Julian() <= all[i].Start.Julian() + 1e-6);
 	}
 }
+
+TEST_CASE("The great conjunction of 2020", "[ExactAspects]") {
+	AstroCalculator calc;
+	auto aspects = calc.CalcExactAspects({ Planet::Jupiter, Planet::Saturn }, DateTime(2020, 12, 1), DateTime(2021, 1, 1));
+	REQUIRE(aspects.size() == 1);
+	CHECK(aspects[0].Planet1 == Planet::Jupiter);
+	CHECK(aspects[0].Planet2 == Planet::Saturn);
+	CHECK(aspects[0].Angle == 0);
+	// 21 December 2020, about 18:20 UT
+	CHECK(aspects[0].Time.Julian() == Approx(Jd(2020, 12, 21, 18, 20)).margin(0.02));
+}
+
+TEST_CASE("Exact aspects are exact, in order and complete", "[ExactAspects]") {
+	AstroCalculator calc;
+	const double from = Jd(2024, 1, 1), to = Jd(2024, 2, 1);
+	auto aspects = calc.CalcExactAspects({ Planet::Sun, Planet::Moon, Planet::Mercury, Planet::Mars }, DateTime(from, true), DateTime(to, true));
+
+	int sunMoon = 0;
+	for (size_t i = 0; i < aspects.size(); i++) {
+		auto const& a = aspects[i];
+		double jd = a.Time.Julian();
+		INFO("aspect " << i << " JD " << jd << " planets " << (int)a.Planet1 << ", " << (int)a.Planet2 << " angle " << a.Angle);
+		CHECK(jd >= from);
+		CHECK(jd < to);
+		if (i > 0)
+			CHECK(jd >= aspects[i - 1].Time.Julian());
+		CHECK(fabs(AstroPoint::Diff(Lon(calc, a.Planet1, jd), Lon(calc, a.Planet2, jd)) - a.Angle) < 1e-5);
+		if (a.Planet1 == Planet::Sun && a.Planet2 == Planet::Moon)
+			sunMoon++;
+	}
+	// a lunation has eight: new moon, sextile, square, trine, full moon, trine, square, sextile; a month has seven to nine
+	CHECK(sunMoon >= 7);
+	CHECK(sunMoon <= 9);
+
+	// the Moon's first aspect to the Sun: last quarter on 4 January 2024, 03:30 UT
+	auto quarter = std::find_if(aspects.begin(), aspects.end(), [](auto const& a) { return a.Planet1 == Planet::Sun && a.Planet2 == Planet::Moon && a.Angle == 90; });
+	REQUIRE(quarter != aspects.end());
+	CHECK(quarter->Time.Julian() == Approx(Jd(2024, 1, 4, 3, 30)).margin(0.02));
+}
+
+TEST_CASE("The two nodes are not paired", "[ExactAspects]") {
+	AstroCalculator calc;
+	auto aspects = calc.CalcExactAspects({ Planet::MeanNode, Planet::TrueNode, Planet::Lilith, Planet::OscuApog }, DateTime(2024, 1, 1), DateTime(2025, 1, 1));
+	for (auto const& a : aspects) {
+		CHECK_FALSE(((a.Planet1 == Planet::MeanNode && a.Planet2 == Planet::TrueNode) || (a.Planet1 == Planet::Lilith && a.Planet2 == Planet::OscuApog)));
+	}
+}

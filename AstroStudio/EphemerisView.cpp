@@ -102,6 +102,10 @@ CString CEphemerisView::GetColumnText(HWND h, int row, int col) {
 			EnsureRows(row + 2);
 			CalcExtras(row);
 			return (m_FormatOptions & FormatOptions::UseGlyphs) == FormatOptions::UseGlyphs ? m_Items[row].VoidGlyph : m_Items[row].VoidText;
+		case ColumnType::Transits:
+			EnsureRows(row + 2);
+			CalcExtras(row);
+			return (m_FormatOptions & FormatOptions::UseGlyphs) == FormatOptions::UseGlyphs ? m_Items[row].TransitGlyph : m_Items[row].TransitText;
 		case ColumnType::Phenom: return GetRowPhenom(row, (m_FormatOptions & FormatOptions::UseGlyphs) == FormatOptions::UseGlyphs);
 
 		default:
@@ -195,7 +199,7 @@ DWORD CEphemerisView::OnSubItemPrePaint(int, LPNMCUSTOMDRAW cd) {
 		lv->clrTextBk = RGB(mix(0), mix(8), mix(16));
 	}
 
-	bool glyphColumn = colType == ColumnType::Phenom || colType == ColumnType::MoonVoid || colType >= ColumnType::Planet;
+	bool glyphColumn = colType == ColumnType::Phenom || colType == ColumnType::MoonVoid || colType == ColumnType::Transits || colType >= ColumnType::Planet;
 	dc.SelectFont(glyphColumn && glyphs ? m_Font : m_StdFont);
 	return CDRF_NEWFONT | CDRF_SKIPPOSTPAINT;
 }
@@ -457,6 +461,8 @@ LRESULT CEphemerisView::OnCreate(UINT, WPARAM, LPARAM, BOOL&) {
 	m_Increment = std::clamp(settings.EphemerisStep(), 1, (int)EphemerisSettings::MaxStep);
 	m_ShowEclipses = settings.EphemerisEclipses() && m_Increment <= EphemerisSettings::MaxEclipseStep;
 	m_ShowVoid = settings.EphemerisVoid() && m_Increment <= EphemerisSettings::MaxVoidStep;
+	m_ShowTransits = settings.EphemerisTransits() && m_Increment <= EphemerisSettings::MaxTransitStep;
+	m_TransitsNoMoon = settings.EphemerisTransitsNoMoon();
 	m_TimeOfDay = static_cast<TimeOfDay>(std::clamp(settings.EphemerisTime(), 0, 3));
 	// the bodies: numbers of Planet values separated by commas
 	m_Planets.clear();
@@ -571,6 +577,8 @@ void CEphemerisView::SaveSettings() {
 	settings.EphemerisStep((int)std::lround(m_Increment));
 	settings.EphemerisEclipses(m_ShowEclipses ? 1 : 0);
 	settings.EphemerisVoid(m_ShowVoid ? 1 : 0);
+	settings.EphemerisTransits(m_ShowTransits ? 1 : 0);
+	settings.EphemerisTransitsNoMoon(m_TransitsNoMoon ? 1 : 0);
 	settings.EphemerisTime(static_cast<int>(m_TimeOfDay));
 	std::wstring bodies;
 	for (auto planet : m_Planets) {
@@ -640,6 +648,10 @@ CString CEphemerisView::PlainCellText(int row, ColumnType type) {
 		CalcExtras(row);
 		return m_Items[row].VoidText;
 	}
+	if (type == ColumnType::Transits) {
+		CalcExtras(row);
+		return m_Items[row].TransitText;
+	}
 
 	auto& pp = m_Items[row].Planets[int(type) - int(ColumnType::Planet)];
 	auto longitude = pp.Position.Longitude;
@@ -702,6 +714,8 @@ void CEphemerisView::RebuildColumns() {
 	cm->AddColumn(L"Phenomena", LVCFMT_LEFT, 320, ColumnType::Phenom);
 	if (m_ShowVoid)
 		cm->AddColumn(L"Moon void of course", LVCFMT_LEFT, 200, ColumnType::MoonVoid);
+	if (m_ShowTransits)
+		cm->AddColumn(L"Transits", LVCFMT_LEFT, 320, ColumnType::Transits);
 	cm->UpdateColumns();
 }
 
@@ -712,6 +726,8 @@ void CEphemerisView::ApplySettings(EphemerisSettings const& settings) {
 	m_Planets = settings.Planets;
 	m_ShowEclipses = settings.Eclipses;
 	m_ShowVoid = settings.VoidOfCourse;
+	m_ShowTransits = settings.Transits;
+	m_TransitsNoMoon = settings.TransitsNoMoon;
 	SaveSettings();
 
 	m_Items.clear();
@@ -742,6 +758,8 @@ LRESULT CEphemerisView::OnTimeOfDayChanged(WORD, WORD, HWND, BOOL&) {
 	settings.Planets = m_Planets;
 	settings.Eclipses = m_ShowEclipses;
 	settings.VoidOfCourse = m_ShowVoid;
+	settings.Transits = m_ShowTransits;
+	settings.TransitsNoMoon = m_TransitsNoMoon;
 	ApplySettings(settings);
 	m_List.SetFocus();
 	return 0;
@@ -754,6 +772,8 @@ LRESULT CEphemerisView::OnOptions(WORD, WORD, HWND, BOOL&) {
 	settings.Planets = m_Planets;
 	settings.Eclipses = m_ShowEclipses;
 	settings.VoidOfCourse = m_ShowVoid;
+	settings.Transits = m_ShowTransits;
+	settings.TransitsNoMoon = m_TransitsNoMoon;
 
 	CEphemerisOptionsDlg dlg;
 	dlg.SetSettings(settings);
@@ -849,6 +869,26 @@ void CEphemerisView::CalcExtras(int row) const {
 			item.VoidGlyph += glyphs;
 		}
 		item.VoidFraction = std::clamp(voidTime / (to - from), 0.0, 1.0);
+	}
+
+	if (m_ShowTransits) {
+		// the exact aspects between the listed bodies: "Sun square Mars (14.05)", with glyphs "☉ □ ♂ (14.05)"
+		auto& font = DefaultFont::Get();
+		auto bodies = m_Planets;
+		if (m_TransitsNoMoon)
+			std::erase(bodies, Planet::Moon);
+		for (auto const& aspect : m_Calc.CalcExactAspects(bodies, FromJd(from), FromJd(to))) {
+			auto type = MajorAspectType(aspect.Angle);
+			auto when = L" (" + stamp(aspect.Time.Julian()) + L")";
+			if (!item.TransitText.IsEmpty()) {
+				item.TransitText += L" | ";
+				item.TransitGlyph += L" | ";
+			}
+			item.TransitText += Helpers::GetPlanetName(aspect.Planet1) + CString(L" ") + CString(Helpers::GetAspectName(type)).MakeLower() +
+				L" " + Helpers::GetPlanetName(aspect.Planet2) + when;
+			item.TransitGlyph += font.GetPlanetGlyphAsString(aspect.Planet1) + CString(L" ") + font.GetAspectGlyphAsString(type) +
+				L" " + font.GetPlanetGlyphAsString(aspect.Planet2) + when;
+		}
 	}
 }
 

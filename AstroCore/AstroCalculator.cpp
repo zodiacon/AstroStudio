@@ -264,6 +264,85 @@ std::vector<VoidOfCourseData> AstroCalculator::CalcVoidOfCourse(DateTime const& 
 	return periods;
 }
 
+std::vector<ExactAspectData> AstroCalculator::CalcExactAspects(std::vector<Planet> const& planets, DateTime const& from, DateTime const& to) const {
+	std::vector<ExactAspectData> aspects;
+	const double first = from.Julian(), end = to.Julian();
+
+	// the bodies the ephemeris has (the Part of Fortune is a point of a chart, and the Earth is where we stand)
+	std::vector<Planet> bodies;
+	for (auto planet : planets)
+		if (planet != Planet::PartOfFortune && planet != Planet::Earth && std::find(bodies.begin(), bodies.end(), planet) == bodies.end())
+			bodies.push_back(planet);
+	const int count = (int)bodies.size();
+	if (count < 2 || end <= first)
+		return aspects;
+
+	// two versions of the same point keep crossing each other
+	auto sameKind = [](Planet a, Planet b) {
+		auto isNode = [](Planet p) { return p == Planet::MeanNode || p == Planet::TrueNode; };
+		auto isLilith = [](Planet p) { return p == Planet::Lilith || p == Planet::OscuApog; };
+		return (isNode(a) && isNode(b)) || (isLilith(a) && isLilith(b));
+	};
+
+	// The step: the two fastest bodies move apart by a few degrees at most in it, so that the difference of two bodies less an
+	// aspect's angle changes sign at most once between two samples (a quarter of a day with the Moon, half a day without it).
+	double fastest = 0, second = 0;
+	for (auto planet : bodies) {
+		double speed = fabs(CalcPlanet(planet, from).Speed);
+		if (speed > fastest) {
+			second = fastest;
+			fastest = speed;
+		}
+		else if (speed > second)
+			second = speed;
+	}
+	const double step = std::clamp(4 / std::max(fastest + second, 1e-3), 1 / 24.0, 0.5);
+
+	static constexpr double angles[] = { 0, 60, -60, 90, -90, 120, -120, 180 };
+	auto longitudes = [&](double jd) {
+		std::vector<double> result(count);
+		for (int i = 0; i < count; i++)
+			result[i] = Longitude((int)bodies[i], jd);
+		return result;
+	};
+
+	double t = first;
+	auto before = longitudes(t);
+	while (t < end) {
+		double next = std::min(t + step, end);
+		auto after = longitudes(next);
+		for (int i = 0; i < count; i++)
+			for (int j = i + 1; j < count; j++) {
+				if (sameKind(bodies[i], bodies[j]))
+					continue;
+				for (double angle : angles) {
+					double a = Wrap180(before[i] - before[j] - angle), b = Wrap180(after[i] - after[j] - angle);
+					// a change of sign, but not the jump from +180 to -180 on the far side
+					if ((a < 0) == (b < 0) || fabs(b - a) >= 90)
+						continue;
+					double low = t, high = next, lowValue = a;
+					for (int k = 0; k < 50 && high - low > 1e-9; k++) {
+						double middle = (low + high) / 2;
+						double value = Wrap180(Longitude((int)bodies[i], middle) - Longitude((int)bodies[j], middle) - angle);
+						if ((value < 0) == (lowValue < 0)) {
+							low = middle;
+							lowValue = value;
+						}
+						else
+							high = middle;
+					}
+					double when = (low + high) / 2;
+					if (when >= first && when < end)
+						aspects.push_back({ FromJulian(when), bodies[i], bodies[j], fabs(angle) });
+				}
+			}
+		t = next;
+		before = std::move(after);
+	}
+	std::sort(aspects.begin(), aspects.end(), [](auto const& x, auto const& y) { return x.Time.Julian() < y.Time.Julian(); });
+	return aspects;
+}
+
 bool AstroCalculator::Calculate(ChartData& data) {
 	auto const& info = data.Info();
 	data.Houses() = CalcHouses(info.Time, info.Latitude, info.Longitude, data.GetHouseSystem());

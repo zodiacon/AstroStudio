@@ -12,9 +12,11 @@ struct EphemerisSettings {
 	std::vector<Planet> Planets;	// the columns, in order
 	bool Eclipses{ false };			// a column with the eclipses of each row's stretch of time
 	bool VoidOfCourse{ false };		// and one with the Moon's void of course periods
+	bool Transits{ false };			// and one with the exact aspects between the bodies
+	bool TransitsNoMoon{ false };	// leaving out the Moon's
 
 	// the extra columns only make sense while a row is a short stretch of time
-	static constexpr double MaxEclipseStep = 31, MaxVoidStep = 7;
+	static constexpr double MaxEclipseStep = 31, MaxVoidStep = 7, MaxTransitStep = 7;
 	static constexpr double MaxStep = 366;
 };
 
@@ -37,6 +39,7 @@ public:
 		COMMAND_ID_HANDLER(IDC_EPH_STANDARD, OnStandard)
 		COMMAND_ID_HANDLER(IDC_EPH_ALL, OnAll)
 		COMMAND_HANDLER(IDC_EPH_STEP, EN_CHANGE, OnStepChanged)
+		COMMAND_HANDLER(IDC_EPH_TRANSITS, BN_CLICKED, OnStepChanged)
 		COMMAND_HANDLER(IDC_MONTH, CBN_SELCHANGE, OnMonthOrYearChanged)
 		COMMAND_HANDLER(IDC_YEAR, EN_KILLFOCUS, OnMonthOrYearChanged)
 	END_MSG_MAP()
