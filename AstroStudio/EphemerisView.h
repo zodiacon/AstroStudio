@@ -35,8 +35,9 @@ class CPlanetStrip : public CWindowImpl<CPlanetStrip> {
 public:
 	DECLARE_WND_CLASS(L"AstroPlanetStrip")
 
-	// the label (when the positions were calculated) is in labelFont, the text after it in font
-	void SetText(PCWSTR label, HFONT labelFont, PCWSTR text, HFONT font, bool tinted = false);
+	// the label (when the positions were calculated) is in labelFont, the text after it in font, and the note after that
+	// (the Moon's void of course) in labelFont again
+	void SetText(PCWSTR label, HFONT labelFont, PCWSTR text, HFONT font, bool tinted = false, PCWSTR note = L"");
 
 	BEGIN_MSG_MAP(CPlanetStrip)
 		MESSAGE_HANDLER(WM_PAINT, OnPaint)
@@ -48,7 +49,7 @@ private:
 	LRESULT OnPaint(UINT, WPARAM, LPARAM, BOOL&);
 	LRESULT OnEraseBkgnd(UINT, WPARAM, LPARAM, BOOL&) { return 1; }
 
-	CString m_Label, m_Text;
+	CString m_Label, m_Text, m_Note;
 	HFONT m_LabelFont{ nullptr }, m_Font{ nullptr };
 	bool m_Tinted{ false };		// purple background: the Moon is void of course now
 };

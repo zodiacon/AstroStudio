@@ -58,8 +58,9 @@ ColorOptions DarkColors{
 	true, true
 };
 
-void CPlanetStrip::SetText(PCWSTR label, HFONT labelFont, PCWSTR text, HFONT font, bool tinted) {
+void CPlanetStrip::SetText(PCWSTR label, HFONT labelFont, PCWSTR text, HFONT font, bool tinted, PCWSTR note) {
 	m_Tinted = tinted;
+	m_Note = note;
 	m_Label = label;
 	m_LabelFont = labelFont;
 	m_Text = text;
@@ -88,7 +89,14 @@ LRESULT CPlanetStrip::OnPaint(UINT msg, WPARAM wp, LPARAM, BOOL&) {
 	dc.DrawText(m_Label, m_Label.GetLength(), &rc, flags);
 	rc.left += size.cx + 16;
 	dc.SelectFont(m_Font ? m_Font : AtlGetDefaultGuiFont());
+	dc.GetTextExtent(m_Text, m_Text.GetLength(), &size);
 	dc.DrawText(m_Text, m_Text.GetLength(), &rc, flags);
+	if (!m_Note.IsEmpty()) {
+		// in the label's font: the glyph font has no letters
+		rc.left += size.cx + 16;
+		dc.SelectFont(m_LabelFont ? m_LabelFont : AtlGetDefaultGuiFont());
+		dc.DrawText(m_Note, m_Note.GetLength(), &rc, flags);
+	}
 	dc.SelectFont(old);
 	return 0;
 }
@@ -410,16 +418,26 @@ void CEphemerisView::UpdateNowStrip() {
 	}
 	// Tinted purple while the Moon is void of course (only if the void column is on). The periods come from a fresh
 	// calculation around now, so they don't depend on the rows the list has looked at.
+	// After the positions, how long until the void ends (or, between voids, until the next one starts).
 	bool isVoid = false;
+	CString note;
 	if (m_ShowVoid) {
 		double jd = now.Julian();
-		for (auto const& period : m_Calc.CalcVoidOfCourse(FromJd(jd - 3), FromJd(jd + 3)))
-			if (period.Start.Julian() <= jd && jd < period.End.Julian()) {
-				isVoid = true;
-				break;
-			}
+		for (auto const& period : m_Calc.CalcVoidOfCourse(FromJd(jd - 3), FromJd(jd + 4))) {
+			if (period.End.Julian() <= jd)
+				continue;
+			isVoid = period.Start.Julian() <= jd;
+			double until = isVoid ? period.End.Julian() : period.Start.Julian();
+			int minutes = (int)((until - jd) * 1440);
+			// a day or more: "1d 07:05"
+			CString days;
+			if (minutes >= 1440)
+				days.Format(L"%dd ", minutes / 1440);
+			note.Format(L"| VOC %s in %s%02d:%02d", isVoid ? L"ending" : L"starting", (PCWSTR)days, minutes % 1440 / 60, minutes % 60);
+			break;
+		}
 	}
-	m_NowStrip.SetText(label, m_StdFont, text, glyphs ? m_Font : m_StdFont, isVoid);
+	m_NowStrip.SetText(label, m_StdFont, text, glyphs ? m_Font : m_StdFont, isVoid, note);
 
 	// the band is as high as the text
 	CClientDC dc(m_NowStrip);

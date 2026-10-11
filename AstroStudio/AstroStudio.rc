@@ -141,6 +141,7 @@ BEGIN
     POPUP "&Tools"
     BEGIN
         MENUITEM "&Ephemeris",                  ID_TOOL_EPHEMERIS
+        MENUITEM "Moon &Void of Course",        ID_TOOL_VOID
         MENUITEM "&Analysis...",                ID_TOOL_ANALYSIS
     END
     POPUP "&Options"
@@ -515,6 +516,25 @@ BEGIN
     PUSHBUTTON      "Cancel",IDCANCEL,243,179,50,14
 END
 
+IDD_VOIDRANGE DIALOGEX 0, 0, 200, 92
+STYLE DS_SETFONT | DS_MODALFRAME | DS_FIXEDSYS | DS_CENTER | WS_POPUP | WS_CAPTION | WS_SYSMENU
+CAPTION "Void of Course Range"
+FONT 9, "Segoe UI", 400, 0, 0x0
+BEGIN
+    LTEXT           "From:",IDC_STATIC,7,10,30,8
+    COMBOBOX        IDC_AN_FROM_DAY,42,7,30,120,CBS_DROPDOWNLIST | WS_VSCROLL | WS_TABSTOP
+    COMBOBOX        IDC_AN_FROM_MONTH,75,7,66,150,CBS_DROPDOWNLIST | WS_VSCROLL | WS_TABSTOP
+    EDITTEXT        IDC_AN_FROM_YEAR,144,7,36,14,ES_AUTOHSCROLL
+    LTEXT           "Through:",IDC_STATIC,7,31,30,8
+    COMBOBOX        IDC_AN_TO_DAY,42,28,30,120,CBS_DROPDOWNLIST | WS_VSCROLL | WS_TABSTOP
+    COMBOBOX        IDC_AN_TO_MONTH,75,28,66,150,CBS_DROPDOWNLIST | WS_VSCROLL | WS_TABSTOP
+    EDITTEXT        IDC_AN_TO_YEAR,144,28,36,14,ES_AUTOHSCROLL
+    LTEXT           "Local dates, both included.",IDC_STATIC,42,48,140,8
+    PUSHBUTTON      "Default",IDC_VOID_DEFAULT,7,71,50,14
+    DEFPUSHBUTTON   "OK",IDOK,87,71,50,14
+    PUSHBUTTON      "Cancel",IDCANCEL,143,71,50,14
+END
+
 IDD_ANALYSIS DIALOGEX 0, 0, 396, 292
 STYLE DS_SETFONT | DS_MODALFRAME | DS_FIXEDSYS | DS_CENTER | WS_POPUP | WS_CAPTION | WS_SYSMENU
 CAPTION "Analysis"
@@ -761,6 +781,8 @@ BEGIN
     ID_CHART_DERIVED_SOLARARC 
                             "Open this chart with every point moved by the solar arc to a date you choose \nSolar Arc Chart"
     ID_TOOL_ANALYSIS        "Find when things happen between a chart and the sky, over a range of dates \nAnalysis"
+    ID_TOOL_VOID            "List the Moon's void of course periods, with the last aspect of each \nMoon Void of Course"
+    ID_VOID_RANGE           "Choose the dates the void of course periods are listed for \nRange"
     ID_ANALYSIS_OPTIONS     "Change what is analysed and for which dates \nOptions"
     ID_ANALYSIS_REFRESH     "Run the analysis again \nRefresh"
     ID_CHART_ANALYSIS       "Find when things happen between this chart and the sky, over a range of dates \nAnalysis"

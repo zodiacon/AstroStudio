@@ -149,6 +149,7 @@
     <ClCompile Include="WheelOptionsDlg.cpp" />
     <ClCompile Include="DefaultFont.cpp" />
     <ClCompile Include="EphemerisView.cpp" />
+    <ClCompile Include="VoidView.cpp" />
     <ClCompile Include="GraphicChartView.cpp" />
     <ClCompile Include="AspectOptions.cpp" />
     <ClCompile Include="AspectOptionsDlg.cpp" />
@@ -191,6 +192,7 @@
     <ClInclude Include="ChartView.h" />
     <ClInclude Include="DefaultFont.h" />
     <ClInclude Include="EphemerisView.h" />
+    <ClInclude Include="VoidView.h" />
     <ClInclude Include="GraphicChartView.h" />
     <ClInclude Include="AppSettings.h" />
     <ClInclude Include="AspectOptions.h" />

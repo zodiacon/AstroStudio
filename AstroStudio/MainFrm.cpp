@@ -5,6 +5,7 @@
 #include "pch.h"
 #include "resource.h"
 #include "EphemerisView.h"
+#include "VoidView.h"
 #include "AboutDlg.h"
 #include "MainFrm.h"
 #include "Printing.h"
@@ -151,7 +152,7 @@ LRESULT CMainFrame::OnCreate(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/
 	CImageList images;
 	images.Create(16, 16, ILC_COLOR32 | ILC_MASK, 8, 4);
 	UINT icons[] = {
-		IDI_EPHEMERIS, IDI_CHART, IDI_EVENT,
+		IDI_EPHEMERIS, IDI_CHART, IDI_EVENT, IDI_CLOCK,
 	};
 	for(auto icon : icons)
 		images.AddIcon(IconHelper::Load(icon, 16));
@@ -229,6 +230,13 @@ LRESULT CMainFrame::OnToolEphemeris(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*h
 	pView->Create(m_Tabs, rcDefault, nullptr, WS_CHILD | WS_VISIBLE | WS_CLIPCHILDREN | WS_CLIPSIBLINGS, 0);
 	m_Tabs.AddPage(pView->m_hWnd, L"Ephemeris", 0, pView);
 
+	return 0;
+}
+
+LRESULT CMainFrame::OnToolVoid(WORD, WORD, HWND, BOOL&) {
+	auto pView = new CVoidView(this);
+	pView->Create(m_Tabs, rcDefault, nullptr, WS_CHILD | WS_VISIBLE | WS_CLIPCHILDREN | WS_CLIPSIBLINGS, 0);
+	m_Tabs.AddPage(pView->m_hWnd, L"Void of Course", 3, pView);
 	return 0;
 }
 

@@ -41,6 +41,7 @@ struct AppSettings : Settings {
 		SETTING(EphemerisVoid, 0, SettingType::Bool);
 		SETTING(EphemerisTransits, 0, SettingType::Bool);		// the Transits column: exact aspects between the bodies
 		SETTING(EphemerisTransitsNoMoon, 0, SettingType::Bool);	// and the Moon left out of them
+		SETTING(VoidGlyphs, 1, SettingType::Bool);		// the void of course view shows glyphs (or words)
 		SETTING(EphemerisTime, 0, SettingType::Int32);		// the time of day the rows are for (EphemerisTimeOfDay): 0 midnight UT, 1 noon UT, 2 midnight local, 3 noon local
 		SETTING_STRING(AspectSets, L"");		// the aspect settings (AspectOptions), as INI text; empty: the defaults
 		SETTING_STRING(WheelOptions, L"");		// what the chart wheel draws (WheelOptions), as text; empty: everything
@@ -76,6 +77,7 @@ struct AppSettings : Settings {
 	DEF_SETTING(EphemerisVoid, int)
 	DEF_SETTING(EphemerisTransits, int)
 	DEF_SETTING(EphemerisTransitsNoMoon, int)
+	DEF_SETTING(VoidGlyphs, int)
 	DEF_SETTING(EphemerisTime, int)
 	DEF_SETTING_STRING(AspectSets)
 	DEF_SETTING_STRING(EphemerisBodies)

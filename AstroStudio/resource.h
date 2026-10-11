@@ -245,14 +245,18 @@
 #define IDC_EPH_TIME                    1115
 #define IDC_EPH_TRANSITS                1116
 #define IDC_EPH_TRANSITS_NOMOON         1117
+#define IDC_VOID_DEFAULT                1118
+#define IDD_VOIDRANGE                   246
+#define ID_TOOL_VOID                    32855
+#define ID_VOID_RANGE                   32856
 
 // Next default values for new objects
 // 
 #ifdef APSTUDIO_INVOKED
 #ifndef APSTUDIO_READONLY_SYMBOLS
-#define _APS_NEXT_RESOURCE_VALUE        246
-#define _APS_NEXT_COMMAND_VALUE         32855
-#define _APS_NEXT_CONTROL_VALUE         1118
+#define _APS_NEXT_RESOURCE_VALUE        247
+#define _APS_NEXT_COMMAND_VALUE         32857
+#define _APS_NEXT_CONTROL_VALUE         1119
 #define _APS_NEXT_SYMED_VALUE           108
 #endif
 #endif
