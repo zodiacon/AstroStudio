@@ -227,14 +227,14 @@ private:
 	// the "Step: [count] [unit]" controls, which sit inside the toolbar
 	CStatic m_StepLabel;
 	CComboBox m_StepCount, m_StepUnit, m_StepInterval;
-	bool m_AutoStep{ false };
-	bool m_Live{ false };
-	bool m_ReadOnly{ false };
 	std::set<Planet> m_ExtraAdded;		// the extra bodies put among the chart's planets by the wheel options (not the chart's own: not saved)
 	std::optional<DerivedRecipe> m_Recipe;		// what a read-only chart was made from, if that is known
 	std::optional<ChartOverlay> m_Overlay;
 	CString m_FilePath, m_Title;
-	bool m_Modified{ false };
 	int m_NotModifying{ 0 };		// while above 0, changes (system updates, auto step ticks) don't count as edits
+	bool m_Modified{ false };
 	bool m_PageActive{ false };
+	bool m_AutoStep{ false };
+	bool m_Live{ false };
+	bool m_ReadOnly{ false };
 };

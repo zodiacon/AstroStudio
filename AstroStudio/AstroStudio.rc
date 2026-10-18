@@ -386,7 +386,7 @@ BEGIN
     PUSHBUTTON      "Cancel",IDCANCEL,245,214,50,14
 END
 
-IDD_EPHEMERISOPTIONS DIALOGEX 0, 0, 246, 265
+IDD_EPHEMERISOPTIONS DIALOGEX 0, 0, 246, 270
 STYLE DS_SETFONT | DS_MODALFRAME | DS_CENTER | WS_POPUP | WS_CAPTION | WS_SYSMENU
 CAPTION "Ephemeris Options"
 FONT 9, "Segoe UI", 400, 0, 0x0
@@ -406,11 +406,12 @@ BEGIN
     LTEXT           "Also show:",IDC_STATIC,7,163,45,8
     CONTROL         "Eclipses (in Phenomena)",IDC_EPH_ECLIPSES,"Button",BS_AUTOCHECKBOX | WS_TABSTOP,52,162,100,10
     CONTROL         "Moon void of course",IDC_EPH_VOID,"Button",BS_AUTOCHECKBOX | WS_TABSTOP,52,176,100,10
-    CONTROL         "Transits (exact aspects between the bodies)",IDC_EPH_TRANSITS,"Button",BS_AUTOCHECKBOX | WS_TABSTOP,52,190,180,10
+    CONTROL         "Transits (exact aspects between the bodies)",IDC_EPH_TRANSITS,
+                    "Button",BS_AUTOCHECKBOX | WS_TABSTOP,52,190,180,10
     CONTROL         "Without the Moon",IDC_EPH_TRANSITS_NOMOON,"Button",BS_AUTOCHECKBOX | WS_TABSTOP,64,204,120,10
-    LTEXT           "They need a step of up to 31 days (eclipses) or 7 days (void of course, transits).",IDC_STATIC,16,220,223,13
-    DEFPUSHBUTTON   "OK",IDOK,65,244,50,14
-    PUSHBUTTON      "Cancel",IDCANCEL,131,244,50,14
+    LTEXT           "They need a step of up to 31 days (eclipses) or 7 days (VOC, transits).",IDC_STATIC,16,220,223,13
+    DEFPUSHBUTTON   "OK",IDOK,65,249,50,14
+    PUSHBUTTON      "Cancel",IDCANCEL,131,249,50,14
 END
 
 IDD_WHEELOPTIONS DIALOGEX 0, 0, 250, 332
@@ -610,7 +611,7 @@ BEGIN
 
     IDD_EPHEMERISOPTIONS, DIALOG
     BEGIN
-        BOTTOMMARGIN, 254
+        BOTTOMMARGIN, 259
     END
 
     IDD_WHEELOPTIONS, DIALOG
@@ -776,13 +777,10 @@ BEGIN
     ID_CHART_DERIVED_DAVISON 
                             "Open the chart for the midpoint in time and place of this chart and another open chart \nDavison"
     ID_OPTIONS_WHEEL        "Choose the planets and the aspect lines the chart wheel draws\nChart Wheel"
-    ID_OPTIONS_MIDPOINTS    "Choose the points that make midpoints, and the orb for the midpoint list and tree\nMidpoints"
     ID_OPTIONS_COLORS       "Choose the colours of the chart wheel\nChart Colors"
     ID_CHART_DERIVED_SOLARARC 
                             "Open this chart with every point moved by the solar arc to a date you choose \nSolar Arc Chart"
     ID_TOOL_ANALYSIS        "Find when things happen between a chart and the sky, over a range of dates \nAnalysis"
-    ID_TOOL_VOID            "List the Moon's void of course periods, with the last aspect of each \nMoon Void of Course"
-    ID_VOID_RANGE           "Choose the dates the void of course periods are listed for \nRange"
     ID_ANALYSIS_OPTIONS     "Change what is analysed and for which dates \nOptions"
     ID_ANALYSIS_REFRESH     "Run the analysis again \nRefresh"
     ID_CHART_ANALYSIS       "Find when things happen between this chart and the sky, over a range of dates \nAnalysis"
@@ -798,6 +796,9 @@ BEGIN
                             "Open this chart secondary progressed (a day for a year) to a date you choose  \nProgressed Chart"
     ID_CHART_DERIVED_PRIMARY 
                             "Open this chart with its angles and houses moved on by primary directions to a date you choose  \nPrimary Directions"
+    ID_OPTIONS_MIDPOINTS    "Choose the points that make midpoints, and the orb for the midpoint list and tree\nMidpoints"
+    ID_TOOL_VOID            "List the Moon's void of course periods, with the last aspect of each \nMoon Void of Course"
+    ID_VOID_RANGE           "Choose the dates the void of course periods are listed for \nRange"
 END
 
 STRINGTABLE
