@@ -72,6 +72,9 @@
     <ClCompile Include="TimeStep.cpp">
       <Filter>Views</Filter>
     </ClCompile>
+    <ClCompile Include="ToolbarStrip.cpp">
+      <Filter>Views</Filter>
+    </ClCompile>
     <ClCompile Include="TimeZones.cpp">
       <Filter>Views</Filter>
     </ClCompile>
@@ -258,6 +261,9 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="TimeStep.h">
+      <Filter>Views</Filter>
+    </ClInclude>
+    <ClInclude Include="ToolbarStrip.h">
       <Filter>Views</Filter>
     </ClInclude>
     <ClInclude Include="TimeZones.h">

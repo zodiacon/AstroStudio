@@ -9,6 +9,8 @@
 #include "Interfaces.h"
 #include "Helpers.h"
 #include "WTLHelper.h"
+#include "DpiAware.h"
+#include "ToolbarStrip.h"
 #include "resource.h"
 
 // The "Void of Course Range" dialog: the first and last day (local calendar dates, both included) of the void of course list.
@@ -57,6 +59,7 @@ private:
 // its sign) and ends (when it enters the next sign), in this machine's local time.
 class CVoidView :
 	public CFrameView<CVoidView, IMainFrame>,
+	public CDpiAware<CVoidView>,
 	public IView,
 	public CCustomDraw<CVoidView>,
 	public CVirtualListView<CVoidView> {
@@ -64,6 +67,7 @@ public:
 	using CFrameView::CFrameView;
 
 	CString GetColumnText(HWND, int row, int col);
+	void OnDpiChanged(UINT dpi);
 	bool IsSortable(HWND, int col) const {
 		return false;
 	}
@@ -80,6 +84,7 @@ public:
 		COMMAND_ID_HANDLER(ID_VIEW_GLYPHS, OnViewGlyphs)
 		COMMAND_ID_HANDLER(ID_VOID_RANGE, OnRange)
 		MESSAGE_HANDLER(WM_CREATE, OnCreate)
+		CHAIN_MSG_MAP(CDpiAware<CVoidView>)
 		MESSAGE_HANDLER(WM_TIMER, OnTimer)
 		MESSAGE_HANDLER(WM_DESTROY, OnDestroy)
 		MESSAGE_HANDLER(WTLHelper::ThemeChangedMessage, OnThemeChanged)
@@ -109,7 +114,7 @@ private:
 	// works the periods out for the range and shows them
 	void Calculate();
 	// fontChanged: Options > Font was just used, and its size wins (the ephemeris takes it too)
-	void CreateFonts(bool fontChanged = false);
+	void CreateFonts(bool fontChanged = false, bool keepSize = false);
 	void UpdateViewUI();
 	void AutoSizeColumns();
 	bool Glyphs() const {
@@ -129,5 +134,7 @@ private:
 	DateTime m_From, m_To;		// the first and last day of the range (local dates)
 	std::vector<VoidOfCourseData> m_Periods;
 	CFont m_Font, m_StdFont;
+	ToolbarStrip m_Strip;
+	int m_FontSize{ 0 };	// of the fonts now, tenths of a point
 	bool m_Glyphs{ true };
 };

@@ -90,23 +90,35 @@ void CMidpointListView::SetChartData(ChartData const* chart) {
 }
 
 void CMidpointListView::ApplyTextFont() {
-	if (!Helpers::UserTextFont(m_TextFont))
-		return;
-	m_List.SetFont(m_TextFont);
-	// the glyph font goes with it
+	// the text font the user chose with Options > Font, at the DPI of the window; without one the list keeps its own (which it
+	// scales to a new DPI itself)
+	UINT dpi = DpiHelper::GetDpi(m_hWnd);
+	bool user = Helpers::UserTextFont(m_TextFont, dpi);
+	if (user)
+		m_List.SetFont(m_TextFont);
+	// the glyph font goes with the list's
 	LOGFONT lf;
-	m_TextFont.GetLogFont(lf);
+	CFontHandle(m_List.GetFont()).GetLogFont(lf);
 	wcscpy_s(lf.lfFaceName, L"HamburgSymbols");
 	if (m_Font)
 		m_Font.DeleteObject();
 	m_Font.CreateFontIndirect(&lf);
-	// the columns grow with the text (they were made for 9 points)
-	int size = -MulDiv(lf.lfHeight, 72 * 10, ::GetDeviceCaps(CClientDC(m_hWnd), LOGPIXELSY));
-	double ratio = std::max(1.0, size / 90.0);
-	const int widths[] = { 150, 150, 100, 60, 40, 340 };
-	for (int i = 0; i < _countof(widths); i++)
-		Helpers::SetColumnWidth(m_List, i, static_cast<int>(std::lround(widths[i] * ratio)));
+	if (user) {
+		// the columns grow with the text (they were made for 9 points, at 96 DPI)
+		int size = -MulDiv(lf.lfHeight, 72 * 10, (int)dpi);
+		double ratio = std::max(1.0, size / 90.0);
+		const int widths[] = { 150, 150, 100, 60, 40, 340 };
+		for (int i = 0; i < _countof(widths); i++)
+			Helpers::SetColumnWidth(m_List, i, DpiHelper::Scale(static_cast<int>(std::lround(widths[i] * ratio)), dpi));
+	}
 	m_List.Invalidate();
+}
+
+void CMidpointListView::OnDpiChanged(UINT) {
+	// the list has scaled its font and its columns by now; the fonts made from them follow
+	ApplyTextFont();
+	if (m_Strip.Update())
+		UpdateLayout();
 }
 
 CString CMidpointListView::PointName(ChartPoint const& point) {
@@ -242,14 +254,14 @@ void CMidpointListView::DrawGlyphAndName(LPNMCUSTOMDRAW cd, PCWSTR glyph, PCWSTR
 	dc.SetTextColor(textColor);
 
 	CRect r(rc);
-	r.left += 4;
+	r.left += DpiHelper::Scale(4, m_List);
 
 	// the glyph (HamburgSymbols) and the name (the list's font) can't share a font
 	dc.SelectFont(m_Font);
 	CSize sz;
 	dc.GetTextExtent(glyph, (int)wcslen(glyph), &sz);
 	dc.DrawText(glyph, -1, &r, DT_LEFT | DT_VCENTER | DT_SINGLELINE);
-	r.left += sz.cx + 6;
+	r.left += sz.cx + DpiHelper::Scale(6, m_List);
 
 	dc.SelectFont(m_List.GetFont());
 	dc.DrawText(name, -1, &r, DT_LEFT | DT_VCENTER | DT_SINGLELINE);
@@ -272,8 +284,8 @@ void CMidpointListView::DrawCell(LPNMCUSTOMDRAW cd, PCWSTR text, HFONT font, COL
 	dc.SetTextColor(textColor);
 
 	CRect r(rc);
-	r.left += 4;
-	r.right -= 6;
+	r.left += DpiHelper::Scale(4, m_List);
+	r.right -= DpiHelper::Scale(6, m_List);
 	dc.SelectFont(font);
 	dc.DrawText(text, -1, &r, (right ? DT_RIGHT : DT_LEFT) | DT_VCENTER | DT_SINGLELINE);
 }
@@ -282,11 +294,6 @@ LRESULT CMidpointListView::OnCreate(UINT, WPARAM, LPARAM, BOOL&) {
 	m_hWndClient = m_List.Create(m_hWnd, rcDefault, nullptr,
 		WS_CHILD | WS_VISIBLE | WS_CLIPSIBLINGS | LVS_OWNERDATA | LVS_REPORT | LVS_SHOWSELALWAYS);
 	m_List.SetExtendedListViewStyle(LVS_EX_FULLROWSELECT | LVS_EX_DOUBLEBUFFER);
-
-	LOGFONT lf;
-	CFontHandle(m_List.GetFont()).GetLogFont(lf);
-	wcscpy_s(lf.lfFaceName, L"HamburgSymbols");
-	m_Font.CreateFontIndirect(&lf);
 
 	auto cm = GetColumnManager(m_List);
 	cm->AddColumn(L"Point 1", LVCFMT_LEFT, 150, ColumnType::PointA);
@@ -302,43 +309,27 @@ LRESULT CMidpointListView::OnCreate(UINT, WPARAM, LPARAM, BOOL&) {
 	// rebar, which sizes the band from its buttons).
 	CreateSimpleReBar(ATL_SIMPLE_REBAR_NOBORDER_STYLE);
 	ToolBarButtonInfo buttons[] = { { 0 } };
-	auto tb = ToolbarHelper::CreateAndInitToolBar(m_hWndToolBar, buttons, _countof(buttons), 16);
-	CToolBarCtrl bar(tb);
-	int dpi = CClientDC(m_hWnd).GetDeviceCaps(LOGPIXELSX);
-	auto px = [&](int value) { return MulDiv(value, dpi, 96); };
-	int firstSlot = bar.GetButtonCount();
-	bar.AddSeparator(px(36));		// "Orb:"
-	bar.AddSeparator(px(70));
-	bar.AddSeparator(px(70));		// "Contacts:"
-	bar.AddSeparator(px(250));
+	auto tb = m_Strip.Create(m_hWndToolBar, buttons, _countof(buttons), 16);
+	int orbLabel = m_Strip.AddSeparator(36);		// "Orb:"
+	int orb = m_Strip.AddSeparator(70);
+	int kindLabel = m_Strip.AddSeparator(70);		// "Contacts:"
+	int kind = m_Strip.AddSeparator(250);
 	AddSimpleReBarBand(tb);
 	Frame()->AddToolBarToUI(tb);
 
-	CFontHandle font(AtlGetDefaultGuiFont());
-	const int comboHeight = px(22), dropHeight = px(120);
-	auto slotRect = [&](int slot, int drop) {
-		CRect item;
-		bar.GetItemRect(firstSlot + slot, &item);
-		int top = item.top + (item.Height() - comboHeight) / 2;
-		return CRect(item.left, top, item.right - px(4), top + comboHeight + drop);
-	};
-	CRect slot1 = slotRect(0, 0);
-	m_OrbLabel.Create(tb, slot1, L"Orb:", WS_CHILD | WS_VISIBLE | SS_RIGHT | SS_CENTERIMAGE);
-	m_OrbLabel.SetFont(font);
-	CRect slot2 = slotRect(1, dropHeight);
-	m_Orb.Create(tb, slot2, nullptr, WS_CHILD | WS_VISIBLE | WS_VSCROLL | WS_TABSTOP | CBS_DROPDOWNLIST, 0, IDC_ML_ORB);
-	m_Orb.SetFont(font);
+	m_OrbLabel.Create(tb, rcDefault, L"Orb:", WS_CHILD | WS_VISIBLE | SS_RIGHT | SS_CENTERIMAGE);
+	m_Strip.Place(m_OrbLabel, orbLabel);
+	m_Orb.Create(tb, rcDefault, nullptr, WS_CHILD | WS_VISIBLE | WS_VSCROLL | WS_TABSTOP | CBS_DROPDOWNLIST, 0, IDC_ML_ORB);
+	m_Strip.Place(m_Orb, orb, 22, 120);
 	for (int orb : MidpointSettings::Orbs) {
 		CString text;
 		text.Format(L"%g%c", orb / 100.0, 0xb0);
 		m_Orb.AddString(text);
 	}
-	CRect slot3 = slotRect(2, 0);
-	m_KindLabel.Create(tb, slot3, L"Contacts:", WS_CHILD | WS_VISIBLE | SS_RIGHT | SS_CENTERIMAGE);
-	m_KindLabel.SetFont(font);
-	CRect slot4 = slotRect(3, dropHeight);
-	m_Kind.Create(tb, slot4, nullptr, WS_CHILD | WS_VISIBLE | WS_VSCROLL | WS_TABSTOP | CBS_DROPDOWNLIST, 0, IDC_ML_KIND);
-	m_Kind.SetFont(font);
+	m_KindLabel.Create(tb, rcDefault, L"Contacts:", WS_CHILD | WS_VISIBLE | SS_RIGHT | SS_CENTERIMAGE);
+	m_Strip.Place(m_KindLabel, kindLabel);
+	m_Kind.Create(tb, rcDefault, nullptr, WS_CHILD | WS_VISIBLE | WS_VSCROLL | WS_TABSTOP | CBS_DROPDOWNLIST, 0, IDC_ML_KIND);
+	m_Strip.Place(m_Kind, kind, 22, 120);
 	CString dial;
 	dial.Format(L"90%c dial (on, semi-square, square...)", 0xb0);
 	m_Kind.SetItemData(m_Kind.AddString(dial), static_cast<DWORD_PTR>(ContactKind::Dial90));

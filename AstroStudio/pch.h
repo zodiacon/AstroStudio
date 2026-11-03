@@ -6,8 +6,8 @@
 #pragma once
 
 // Change these values to use different versions
-#define WINVER		0x0603
-#define _WIN32_WINNT	0x0603
+#define WINVER		0x0A00
+#define _WIN32_WINNT	0x0A00
 #define _WIN32_IE	0x0700
 #define _RICHEDIT_VER	0x0500
 #define NOMINMAX
@@ -37,6 +37,7 @@ extern CAppModule _Module;
 #include <winhttp.h>
 #include <wininet.h>
 #include <format>
+#include <DpiHelper.h>
 
 #if defined _M_IX86
   #pragma comment(linker, "/manifestdependency:\"type='win32' name='Microsoft.Windows.Common-Controls' version='6.0.0.0' processorArchitecture='x86' publicKeyToken='6595b64144ccf1df' language='*'\"")

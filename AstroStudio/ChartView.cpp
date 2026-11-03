@@ -125,6 +125,14 @@ void CChartView::TextFontChanged() {
 	m_ChartDrawing.Refresh();
 }
 
+void CChartView::OnDpiChanged(UINT) {
+	// the step toolbar, and the aspect grid's cells (the other pages follow on their own)
+	if (m_Strip.Update())
+		UpdateLayout();
+	m_AspectGrid.Refresh();
+	UpdateAspectGridScrollSize();
+}
+
 void CChartView::AspectSettingsChanged() {
 	UpdateAspects();
 }
@@ -363,50 +371,35 @@ void CChartView::CreateStepToolBar() {
 		{ 0 },
 	};
 	CreateSimpleReBar(ATL_SIMPLE_REBAR_NOBORDER_STYLE);
-	CToolBarCtrl tb(ToolbarHelper::CreateAndInitToolBar(m_hWndToolBar, buttons, _countof(buttons), 16));
+	CToolBarCtrl tb(m_Strip.Create(m_hWndToolBar, buttons, _countof(buttons), 16));
 
 	// The label and the two combo boxes live inside the toolbar, on separators made as wide as they are.
 	// These have to be there before the toolbar joins the rebar, which sizes the band from its buttons.
-	int dpi = CClientDC(m_hWnd).GetDeviceCaps(LOGPIXELSX);
-	auto px = [&](int value) { return MulDiv(value, dpi, 96); };
-	int firstSlot = tb.GetButtonCount();
-	tb.AddSeparator(px(40));	// "Step:"
-	tb.AddSeparator(px(54));	// count
-	tb.AddSeparator(px(94));	// unit
+	int labelSlot = m_Strip.AddSeparator(40);	// "Step:"
+	int countSlot = m_Strip.AddSeparator(54);
+	int unitSlot = m_Strip.AddSeparator(94);
 
 	// then the auto step check button and its interval
-	tb.AddSeparator(px(10));
-	CImageList images = tb.GetImageList();
-	tb.AddButton(ID_CHART_AUTOSTEP, BTNS_CHECK | BTNS_SHOWTEXT, TBSTATE_ENABLED, images.AddIcon(IconHelper::Load(IDI_PLAY, 24)), L"Auto", 0);
-	int intervalSlot = tb.GetButtonCount();
-	tb.AddSeparator(px(84));	// interval
+	m_Strip.AddSeparator(10);
+	m_Strip.AddButton(ID_CHART_AUTOSTEP, IDI_PLAY, BTNS_CHECK | BTNS_SHOWTEXT, L"Auto");
+	int intervalSlot = m_Strip.AddSeparator(84);
 
 	// and Live, which keeps the chart at the current time
-	tb.AddSeparator(px(10));
-	tb.AddButton(ID_CHART_LIVE, BTNS_CHECK | BTNS_SHOWTEXT, TBSTATE_ENABLED, images.AddIcon(IconHelper::Load(IDI_CLOCK_REFRESH, 24)), L"Live", 0);
+	m_Strip.AddSeparator(10);
+	m_Strip.AddButton(ID_CHART_LIVE, IDI_CLOCK_REFRESH, BTNS_CHECK | BTNS_SHOWTEXT, L"Live");
 	// (checked while an overlay is shown; the drop-down is the same choice as the Chart > Overlay menu)
-	tb.AddButton(ID_CHART_OVERLAY, BTNS_CHECK | BTNS_WHOLEDROPDOWN | BTNS_SHOWTEXT, TBSTATE_ENABLED, images.AddIcon(IconHelper::Load(IDI_HOURGLASS, 24)), L"Overlay", 0);
+	m_Strip.AddButton(ID_CHART_OVERLAY, IDI_HOURGLASS, BTNS_CHECK | BTNS_WHOLEDROPDOWN | BTNS_SHOWTEXT, L"Overlay");
 
 	AddSimpleReBarBand(tb);
 	Frame()->AddToolBarToUI(tb);
 
-	CFontHandle font(AtlGetDefaultGuiFont());
-	const int comboHeight = px(22), dropHeight = px(220);
-	// the closed combo box is comboHeight high and centered in the toolbar; dropHeight is room for its list
-	auto slotRect = [&](int slot, int dropHeight) {
-		CRect item;
-		tb.GetItemRect(firstSlot + slot, &item);
-		int top = item.top + (item.Height() - comboHeight) / 2;
-		return CRect(item.left, top, item.right - px(4), top + comboHeight + dropHeight);
-	};
+	// the closed combo boxes are 22 high, centred in the toolbar, with room for their lists below
+	const int dropHeight = 220;
+	m_StepLabel.Create(tb, rcDefault, L"Step:", WS_CHILD | WS_VISIBLE | SS_RIGHT | SS_CENTERIMAGE);
+	m_Strip.Place(m_StepLabel, labelSlot);
 
-	CRect rc = slotRect(0, 0);
-	m_StepLabel.Create(tb, rc, L"Step:", WS_CHILD | WS_VISIBLE | SS_RIGHT | SS_CENTERIMAGE);
-	m_StepLabel.SetFont(font);
-
-	CRect countRect = slotRect(1, dropHeight);
-	m_StepCount.Create(tb, countRect, nullptr, WS_CHILD | WS_VISIBLE | WS_VSCROLL | WS_TABSTOP | CBS_DROPDOWNLIST, 0, IDC_STEPCOUNT);
-	m_StepCount.SetFont(font);
+	m_StepCount.Create(tb, rcDefault, nullptr, WS_CHILD | WS_VISIBLE | WS_VSCROLL | WS_TABSTOP | CBS_DROPDOWNLIST, 0, IDC_STEPCOUNT);
+	m_Strip.Place(m_StepCount, countSlot, 22, dropHeight);
 	for (int i = 1; i <= 30; i++) {
 		CString text;
 		text.Format(L"%d", i);
@@ -422,9 +415,8 @@ void CChartView::CreateStepToolBar() {
 		{ L"Seconds", StepUnit::Second }, { L"Minutes", StepUnit::Minute }, { L"Hours", StepUnit::Hour }, { L"Days", StepUnit::Day },
 		{ L"Weeks", StepUnit::Week }, { L"Months", StepUnit::Month }, { L"Years", StepUnit::Year },
 	};
-	CRect unitRect = slotRect(2, dropHeight);
-	m_StepUnit.Create(tb, unitRect, nullptr, WS_CHILD | WS_VISIBLE | WS_VSCROLL | WS_TABSTOP | CBS_DROPDOWNLIST, 0, IDC_STEPUNIT);
-	m_StepUnit.SetFont(font);
+	m_StepUnit.Create(tb, rcDefault, nullptr, WS_CHILD | WS_VISIBLE | WS_VSCROLL | WS_TABSTOP | CBS_DROPDOWNLIST, 0, IDC_STEPUNIT);
+	m_Strip.Place(m_StepUnit, unitSlot, 22, dropHeight);
 	for (auto const& unit : units) {
 		int n = m_StepUnit.AddString(unit.Text);
 		m_StepUnit.SetItemData(n, (DWORD_PTR)unit.Unit);
@@ -442,9 +434,8 @@ void CChartView::CreateStepToolBar() {
 		{ L"100 msec", 100 }, { L"200 msec", 200 }, { L"500 msec", 500 }, { L"1 sec", 1000 },
 		{ L"2 sec", 2000 }, { L"3 sec", 3000 }, { L"5 sec", 5000 }, { L"10 sec", 10000 },
 	};
-	CRect intervalRect = slotRect(intervalSlot - firstSlot, dropHeight);
-	m_StepInterval.Create(tb, intervalRect, nullptr, WS_CHILD | WS_VISIBLE | WS_VSCROLL | WS_TABSTOP | CBS_DROPDOWNLIST, 0, IDC_STEPINTERVAL);
-	m_StepInterval.SetFont(font);
+	m_StepInterval.Create(tb, rcDefault, nullptr, WS_CHILD | WS_VISIBLE | WS_VSCROLL | WS_TABSTOP | CBS_DROPDOWNLIST, 0, IDC_STEPINTERVAL);
+	m_Strip.Place(m_StepInterval, intervalSlot, 22, dropHeight);
 	for (auto const& interval : intervals) {
 		int n = m_StepInterval.AddString(interval.Text);
 		m_StepInterval.SetItemData(n, interval.Milliseconds);
@@ -1095,11 +1086,12 @@ LRESULT CChartView::OnEditCopy(WORD, WORD, HWND, BOOL&) {
 	// in a text box (the details view has several) Copy is the text box's own
 	HWND focus = ::GetFocus();
 	wchar_t className[16]{};
-	if (focus)
+	if (focus) {
 		::GetClassName(focus, className, _countof(className));
-	if (_wcsicmp(className, L"Edit") == 0) {
-		::SendMessage(focus, WM_COPY, 0, 0);
-		return 0;
+		if (_wcsicmp(className, L"Edit") == 0) {
+			::SendMessage(focus, WM_COPY, 0, 0);
+			return 0;
+		}
 	}
 
 	// on a tab with a list, the selected rows as text

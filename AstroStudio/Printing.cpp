@@ -547,6 +547,7 @@ namespace Printing {
 				MESSAGE_HANDLER(WM_PAINT, OnPaint)
 				MESSAGE_HANDLER(WM_KEYDOWN, OnKeyDown)
 				MESSAGE_HANDLER(WM_GETMINMAXINFO, OnMinMax)
+				MESSAGE_HANDLER(WM_DPICHANGED, OnDpiChanged)
 				COMMAND_ID_HANDLER(IDC_PV_PREV, OnPrev)
 				COMMAND_ID_HANDLER(IDC_PV_NEXT, OnNext)
 				COMMAND_ID_HANDLER(IDC_PV_PRINT, OnPrint)
@@ -555,22 +556,35 @@ namespace Printing {
 
 		private:
 			enum { IDC_PV_PREV = 9001, IDC_PV_NEXT, IDC_PV_PRINT };
-			static constexpr int BarHeight = 40;
+			static constexpr int BarHeight = 40;		// (sizes at 96 DPI, Px for the window's)
+
+			int Px(int value) const {
+				return DpiHelper::Scale(value, m_hWnd);
+			}
+
+			// the buttons and the page label in the font the system uses for its own windows (a new button has the old System font),
+			// at the window's DPI
+			void ApplyFont() {
+				Helpers::MessageFont(m_Font, DpiHelper::GetDpi(m_hWnd));
+				for (auto* button : { &m_Prev, &m_Next, &m_Print, &m_Close })
+					button->SetFont(m_Font);
+			}
+
+			LRESULT OnDpiChanged(UINT, WPARAM, LPARAM lParam, BOOL&) {
+				ApplyFont();
+				auto rc = reinterpret_cast<RECT const*>(lParam);
+				SetWindowPos(nullptr, rc, SWP_NOZORDER | SWP_NOACTIVATE);
+				return 0;
+			}
 
 			LRESULT OnCreate(UINT, WPARAM, LPARAM, BOOL&) {
 				const struct { int Id; PCWSTR Text; CButton* Button; } buttons[] = {
 					{ IDC_PV_PREV, L"&Previous", &m_Prev }, { IDC_PV_NEXT, L"&Next", &m_Next },
 					{ IDC_PV_PRINT, L"P&rint...", &m_Print }, { IDCANCEL, L"&Close", &m_Close },
 				};
-				// the buttons and the page label in the font the system uses for its own windows (a new button has the old System font)
-				NONCLIENTMETRICS metrics{ sizeof(metrics) };
-				if (::SystemParametersInfo(SPI_GETNONCLIENTMETRICS, sizeof(metrics), &metrics, 0))
-					m_Font.CreateFontIndirect(&metrics.lfMessageFont);
-				for (auto const& b : buttons) {
+				for (auto const& b : buttons)
 					b.Button->Create(m_hWnd, rcDefault, b.Text, WS_CHILD | WS_VISIBLE | WS_TABSTOP, 0, b.Id);
-					if (!m_Font.IsNull())
-						b.Button->SetFont(m_Font);
-				}
+				ApplyFont();
 				// (the page count uses a fixed resolution so it doesn't change as the window is resized)
 				Page reference = MakePage(nullptr, 150);
 				HDC screen = ::GetDC(nullptr);
@@ -583,12 +597,12 @@ namespace Printing {
 			LRESULT OnSize(UINT, WPARAM, LPARAM, BOOL&) {
 				CRect rc;
 				GetClientRect(&rc);
-				int x = 8;
+				int x = Px(8);
 				for (auto* button : { &m_Prev, &m_Next, &m_Print }) {
-					button->MoveWindow(x, 6, 90, 28);
-					x += 96;
+					button->MoveWindow(x, Px(6), Px(90), Px(28));
+					x += Px(96);
 				}
-				m_Close.MoveWindow(rc.right - 98, 6, 90, 28);
+				m_Close.MoveWindow(rc.right - Px(98), Px(6), Px(90), Px(28));
 				if (!m_Cache.IsNull())
 					m_Cache.DeleteObject();
 				Invalidate();
@@ -600,7 +614,7 @@ namespace Printing {
 			}
 
 			LRESULT OnMinMax(UINT, WPARAM, LPARAM lParam, BOOL&) {
-				reinterpret_cast<MINMAXINFO*>(lParam)->ptMinTrackSize = { 480, 360 };
+				reinterpret_cast<MINMAXINFO*>(lParam)->ptMinTrackSize = { Px(480), Px(360) };
 				return 0;
 			}
 
@@ -624,16 +638,17 @@ namespace Printing {
 				CRect rc;
 				GetClientRect(&rc);
 				dc.FillSolidRect(&rc, ::GetSysColor(COLOR_APPWORKSPACE));
-				CRect bar(0, 0, rc.right, BarHeight);
+				const int barHeight = Px(BarHeight);
+				CRect bar(0, 0, rc.right, barHeight);
 				dc.FillSolidRect(&bar, ::GetSysColor(COLOR_BTNFACE));
 
 				// the page as large as the window allows
-				int availableWidth = rc.Width() - 40, availableHeight = rc.Height() - BarHeight - 40;
+				int availableWidth = rc.Width() - Px(40), availableHeight = rc.Height() - barHeight - Px(40);
 				int dpi = static_cast<int>(std::min(availableWidth / PaperWidth, availableHeight / PaperHeight));
 				if (dpi < 20)
 					return 0;
 				int width = static_cast<int>(PaperWidth * dpi), height = static_cast<int>(PaperHeight * dpi);
-				CRect paper((rc.Width() - width) / 2, BarHeight + 20 + (availableHeight - height) / 2, 0, 0);
+				CRect paper((rc.Width() - width) / 2, barHeight + Px(20) + (availableHeight - height) / 2, 0, 0);
 				paper.right = paper.left + width;
 				paper.bottom = paper.top + height;
 
@@ -659,7 +674,7 @@ namespace Printing {
 				memory.CreateCompatibleDC(dc);
 				auto old = memory.SelectBitmap(m_Cache);
 				CRect shadow = paper;
-				shadow.OffsetRect(3, 3);
+				shadow.OffsetRect(Px(3), Px(3));
 				dc.FillSolidRect(&shadow, RGB(60, 60, 60));
 				dc.BitBlt(paper.left, paper.top, width, height, memory, 0, 0, SRCCOPY);
 				memory.SelectBitmap(old);
@@ -669,7 +684,7 @@ namespace Printing {
 				dc.SetBkMode(TRANSPARENT);
 				dc.SetTextColor(::GetSysColor(COLOR_BTNTEXT));
 				dc.SelectFont(m_Font.IsNull() ? AtlGetDefaultGuiFont() : m_Font.m_hFont);
-				CRect text(300, 0, rc.right - 110, BarHeight);
+				CRect text(Px(300), 0, rc.right - Px(110), barHeight);
 				dc.DrawText(label, -1, &text, DT_CENTER | DT_VCENTER | DT_SINGLELINE);
 				m_Prev.EnableWindow(m_Page > 0);
 				m_Next.EnableWindow(m_Page + 1 < m_Count);
@@ -738,7 +753,7 @@ namespace Printing {
 		CRect owner_rc;
 		::GetWindowRect(owner, &owner_rc);
 		CRect rc(owner_rc);
-		rc.DeflateRect(40, 30);
+		rc.DeflateRect(DpiHelper::Scale(40, owner), DpiHelper::Scale(30, owner));
 		CString title = L"Print Preview - " + document.Title();
 		if (!wnd.Create(owner, rc, title))
 			return;

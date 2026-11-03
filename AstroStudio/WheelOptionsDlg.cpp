@@ -36,7 +36,7 @@ LRESULT CWheelOptionsDlg::OnInitDialog(UINT, WPARAM, LPARAM, BOOL&) {
 	for (auto* list : { &m_Planets, &m_Aspects }) {
 		CRect rc;
 		list->GetClientRect(&rc);
-		list->SetColumnWidth(0, rc.Width() - ::GetSystemMetrics(SM_CXVSCROLL));
+		list->SetColumnWidth(0, rc.Width() - DpiHelper::GetSystemMetrics(SM_CXVSCROLL, m_hWnd));
 	}
 
 	CheckDlgButton(IDC_WHEEL_BEYOND, m_Options.BeyondPluto);

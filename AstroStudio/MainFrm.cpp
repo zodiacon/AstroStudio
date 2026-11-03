@@ -93,7 +93,7 @@ LRESULT CMainFrame::OnCreate(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/
 		{ ID_NEW_CHARTFORNOW, IDI_CHARTNOW, 0, L"Now" },
 	};
 	CreateSimpleReBar(ATL_SIMPLE_REBAR_NOBORDER_STYLE);
-	auto tb = ToolbarHelper::CreateAndInitToolBar(m_hWnd, buttons, _countof(buttons));
+	auto tb = m_ToolBar.Create(m_hWnd, buttons, _countof(buttons));
 	UIAddToolBar(tb);
 	AddSimpleReBarBand(tb);
 	CreateSimpleStatusBar();
@@ -149,14 +149,7 @@ LRESULT CMainFrame::OnCreate(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/
 	UIEnable(ID_FILE_PRINT_PREVIEW, FALSE);
 	UISetCheck(ID_OPTIONS_DARKMODE, WTLHelper::IsDarkMode());
 
-	CImageList images;
-	images.Create(16, 16, ILC_COLOR32 | ILC_MASK, 8, 4);
-	UINT icons[] = {
-		IDI_EPHEMERIS, IDI_CHART, IDI_EVENT, IDI_CLOCK,
-	};
-	for(auto icon : icons)
-		images.AddIcon(IconHelper::Load(icon, 16));
-	m_Tabs.SetImageList(images);
+	ApplyDpi();
 
 	auto pLoop = _Module.GetMessageLoop();
 	ATLASSERT(pLoop);
@@ -205,9 +198,7 @@ LRESULT CMainFrame::OnCreate(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/
 
 LRESULT CMainFrame::OnDestroy(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, BOOL& bHandled) {
 	// the settings the views and the frame have been keeping up to date go to the Registry now
-	WINDOWPLACEMENT wp{ sizeof(wp) };
-	if (GetWindowPlacement(&wp))
-		AppSettings::Get().MainWindowPlacement(wp);
+	AppSettings::Get().SaveWindowPosition(m_hWnd, L"MainWindowPlacement");
 	if (m_PaneVisible)
 		AppSettings::Get().ProjectPaneWidth(m_Splitter.GetSplitterPos());
 	AppSettings::Get().Save();
@@ -324,7 +315,7 @@ LRESULT CMainFrame::OnFont(WORD, WORD, HWND, BOOL&) {
 		lf.lfHeight = 100;
 	}
 	LOGFONT shown = lf;
-	shown.lfHeight = -MulDiv(lf.lfHeight, CClientDC(m_hWnd).GetDeviceCaps(LOGPIXELSY), 720);
+	shown.lfHeight = -MulDiv(lf.lfHeight, (int)DpiHelper::GetDpi(m_hWnd), 720);
 
 	CFontDialog dlg(&shown, CF_SCREENFONTS | CF_INITTOLOGFONTSTRUCT | CF_NOSCRIPTSEL | CF_NOVERTFONTS, nullptr, m_hWnd);
 	if (!WTLHelper::InvokeFontDialog(dlg))
@@ -635,7 +626,7 @@ void CMainFrame::SetStatusPane(int id, CString const& text, int minWidth) {
 		CSize size;
 		dc.GetTextExtent(text, text.GetLength(), &size);
 		dc.SelectFont(old);
-		width = std::max(minWidth, static_cast<int>(size.cx) + 14);
+		width = std::max(DpiHelper::Scale(minWidth, m_hWnd), static_cast<int>(size.cx) + DpiHelper::Scale(14, m_hWnd));
 	}
 	m_Status.SetPaneWidth(id, width);
 	m_Status.SetPaneText(id, text);
@@ -737,7 +728,7 @@ void CMainFrame::InitMenu(HMENU menu) {
 		{ ID_FILE_SAVE_AS, IDI_SAVEAS },
 		{ ID_FILE_PRINT, IDI_PRINT },
 	};
-	WTLHelper::InitMenu(menu, commands, _countof(commands));
+	WTLHelper::InitMenu(menu, commands, _countof(commands), DpiHelper::SmallIconSize(m_hWnd));
 }
 
 BOOL CMainFrame::AddToolBarToUI(HWND hwnd) {
@@ -759,7 +750,57 @@ CUpdateUIBase& CMainFrame::GetUI() {
 
 LRESULT CMainFrame::OnGetMinMaxInfo(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM lParam, BOOL& /*bHandled*/) {
 	auto mmi = reinterpret_cast<MINMAXINFO*>(lParam);
-	mmi->ptMinTrackSize.x = mmi->ptMinTrackSize.y = 600;
+	mmi->ptMinTrackSize.x = mmi->ptMinTrackSize.y = DpiHelper::Scale(600, m_hWnd);
 	return 0;
+}
+
+// the window moved to a monitor of another DPI (or its monitor's DPI changed): the window takes the size Windows suggests for the
+// new DPI, and its own parts follow; the views follow on their own (WM_DPICHANGED_AFTERPARENT, which comes after this)
+LRESULT CMainFrame::OnDpiChanged(UINT, WPARAM, LPARAM lParam, BOOL&) {
+	// (the toolbar is made again when it has handled the change itself, which comes after this)
+	PostMessage(CDpiAware<CMainFrame>::DpiChangedMessage);
+	ApplyDpi();
+	InitMenu(GetMenu());
+	DrawMenuBar();
+	auto rc = reinterpret_cast<RECT const*>(lParam);
+	SetWindowPos(nullptr, rc, SWP_NOZORDER | SWP_NOACTIVATE);
+	UpdateLayout();
+	return 0;
+}
+
+LRESULT CMainFrame::OnDpiChangedPosted(UINT, WPARAM, LPARAM, BOOL&) {
+	if (m_ToolBar.Update())
+		UpdateLayout();
+	return 0;
+}
+
+void CMainFrame::ApplyDpi() {
+	UINT dpi = DpiHelper::GetDpi(m_hWnd);
+	CImageList images;
+	const int iconSize = DpiHelper::SmallIconSize(dpi);
+	images.Create(iconSize, iconSize, ILC_COLOR32 | ILC_MASK, 8, 4);
+	UINT icons[] = {
+		IDI_EPHEMERIS, IDI_CHART, IDI_EVENT, IDI_CLOCK,
+	};
+	for (auto icon : icons)
+		images.AddIcon(CIcon(IconHelper::Load(icon, iconSize)));
+	CImageList old = m_Tabs.GetImageList();
+	m_Tabs.SetImageList(images);
+	if (old && old != images)
+		old.Destroy();
+
+	// the status bar in the status font of the DPI, and its panes measured again in it
+	auto metrics = DpiHelper::GetNonClientMetrics(dpi);
+	if (m_StatusFont)
+		m_StatusFont.DeleteObject();
+	m_StatusFont.CreateFontIndirect(&metrics.lfStatusFont);
+	if (m_Status.IsWindow()) {
+		m_Status.SetFont(m_StatusFont);
+		for (auto& text : m_PaneText)
+			text.Empty();
+		for (int id : { ID_PANE_NAME, ID_PANE_TIME, ID_PANE_PLACE, ID_PANE_DETAILS })
+			m_Status.SetPaneWidth(id, 0);
+		UpdateStatusPanes();
+	}
 }
 

@@ -59,6 +59,7 @@ void CAspectGridWnd::Refresh() {
 	auto wheel = dark ? ChartDrawingParameters::Dark() : ChartDrawingParameters();
 	ChartColors::Current().Apply(wheel, dark);
 	AspectGridDrawingParameters params;
+	params.CellSize = DpiHelper::Scale(params.CellSize, m_hWnd);	// (the render target is in pixels)
 	params.BackColor = wheel.BackColor;
 	params.GridLineColor = wheel.GridColor;
 	params.AspectColor = wheel.TextColor;

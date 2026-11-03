@@ -23,8 +23,8 @@ LRESULT CChartColorsDlg::OnInitDialog(UINT, WPARAM, LPARAM, BOOL&) {
 
 	m_List = GetDlgItem(IDC_COLOR_LIST);
 	m_List.SetExtendedListViewStyle(LVS_EX_FULLROWSELECT | LVS_EX_DOUBLEBUFFER);
-	m_List.InsertColumn(0, L"Element", LVCFMT_LEFT, 200);
-	m_List.InsertColumn(1, L"Colour", LVCFMT_LEFT, 150);
+	m_List.InsertColumn(0, L"Element", LVCFMT_LEFT, DpiHelper::Scale(200, m_List));
+	m_List.InsertColumn(1, L"Colour", LVCFMT_LEFT, DpiHelper::Scale(150, m_List));
 	for (int i = 0; i < ElementCount; i++)
 		m_List.AddItem(i, 0, ChartColors::Name(static_cast<ChartColor>(i)));
 	RefreshList();

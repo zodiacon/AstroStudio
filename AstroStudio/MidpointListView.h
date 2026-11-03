@@ -6,10 +6,13 @@
 #include "ChartOverlay.h"
 #include "Interfaces.h"
 #include "Helpers.h"
+#include "DpiAware.h"
+#include "ToolbarStrip.h"
 
 // The midpoints of a chart, one row for every pair of its planets and its Ascendant and Midheaven (a tab of the chart view).
 class CMidpointListView :
 	public CFrameView<CMidpointListView, IMainFrame>,
+	public CDpiAware<CMidpointListView>,
 	public CVirtualListView<CMidpointListView>,
 	public CCustomDraw<CMidpointListView> {
 public:
@@ -23,6 +26,7 @@ public:
 	void SetOverlay(ChartOverlay const* overlay);
 	// puts the text font the user chose with Options > Font on the list (nothing if they have not chosen one)
 	void ApplyTextFont();
+	void OnDpiChanged(UINT dpi);
 	// the orb and the kind of contact (MidpointSettings::Current) changed elsewhere (Options > Midpoints): the two boxes show them, and
 	// the list is made again
 	void SyncSettings();
@@ -42,6 +46,7 @@ public:
 
 	BEGIN_MSG_MAP(CMidpointListView)
 		MESSAGE_HANDLER(WM_CREATE, OnCreate)
+		CHAIN_MSG_MAP(CDpiAware<CMidpointListView>)
 		COMMAND_HANDLER(IDC_ML_ORB, CBN_SELCHANGE, OnChoice)
 		COMMAND_HANDLER(IDC_ML_KIND, CBN_SELCHANGE, OnChoice)
 		CHAIN_MSG_MAP(CCustomDraw)
@@ -79,6 +84,7 @@ private:
 	CStatic m_OrbLabel, m_KindLabel;
 	CComboBox m_Orb, m_Kind;
 	CFont m_Font, m_TextFont;
+	ToolbarStrip m_Strip;
 	std::vector<Row> m_Rows;
 	ChartData const* m_Chart{ nullptr };
 	ChartOverlay const* m_Overlay{ nullptr };

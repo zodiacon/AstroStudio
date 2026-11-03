@@ -182,8 +182,36 @@ void CProjectView::BeginRename(ProjectNode const& node) {
 }
 
 void CProjectView::ApplyTextFont() {
-	if (Helpers::UserTextFont(m_TextFont) && m_Tree.m_hWnd)
-		m_Tree.SetFont(m_TextFont);
+	// the text font the user chose with Options > Font, or the one the system uses for its windows; at the window's DPI
+	if (!m_Tree.m_hWnd)
+		return;
+	UINT dpi = DpiHelper::GetDpi(m_hWnd);
+	if (!Helpers::UserTextFont(m_TextFont, dpi))
+		Helpers::MessageFont(m_TextFont, dpi);
+	m_Tree.SetFont(m_TextFont);
+}
+
+void CProjectView::CreateImages() {
+	// icons: the project and the groups are folders; a chart, an analysis, a set of aspects and a set of colours have theirs
+	const UINT dpi = DpiHelper::GetDpi(m_hWnd);
+	const int size = DpiHelper::SmallIconSize(dpi);
+	CImageList old = m_Images.Detach();
+	m_Images.Create(size, size, ILC_COLOR32 | ILC_MASK, 8, 4);
+	HICON folder = IconHelper::GetStockIcon(SIID_FOLDER, false, dpi);
+	m_Images.AddIcon(CIcon(IconHelper::Load(IDI_PROJECT, size)));
+	m_Images.AddIcon(CIcon(folder ? folder : IconHelper::Load(IDI_CHART, size)));
+	for (auto icon : { IDI_CHART, IDI_EVENT, IDI_OPTIONS, IDI_COLORWHEEL })
+		m_Images.AddIcon(CIcon(IconHelper::Load(icon, size)));
+	HICON other = IconHelper::GetStockIcon(SIID_DOCNOASSOC, false, dpi);
+	m_Images.AddIcon(CIcon(other ? other : IconHelper::Load(IDI_CHART, size)));
+	m_Tree.SetImageList(m_Images, TVSIL_NORMAL);
+	if (old)
+		old.Destroy();
+}
+
+void CProjectView::OnDpiChanged(UINT) {
+	ApplyTextFont();
+	CreateImages();
 }
 
 LRESULT CProjectView::OnCreate(UINT, WPARAM, LPARAM, BOOL&) {
@@ -192,24 +220,7 @@ LRESULT CProjectView::OnCreate(UINT, WPARAM, LPARAM, BOOL&) {
 	m_Tree.SetExtendedStyle(TVS_EX_DOUBLEBUFFER | TVS_EX_FADEINOUTEXPANDOS, TVS_EX_DOUBLEBUFFER | TVS_EX_FADEINOUTEXPANDOS);
 	ModifyStyleEx(0, WS_EX_ACCEPTFILES);
 
-	// the tree's font is the one the system uses for its windows
-	NONCLIENTMETRICS metrics{ sizeof(metrics) };
-	if (::SystemParametersInfo(SPI_GETNONCLIENTMETRICS, sizeof(metrics), &metrics, 0)) {
-		m_TextFont.CreateFontIndirect(&metrics.lfMessageFont);
-		m_Tree.SetFont(m_TextFont);
-	}
-
-	// icons: the project and the groups are folders; a chart, an analysis, a set of aspects and a set of colours have theirs
-	m_Images.Create(16, 16, ILC_COLOR32 | ILC_MASK, 8, 4);
-	HICON folder = IconHelper::GetStockIcon(SIID_FOLDER);
-	m_Images.AddIcon(IconHelper::Load(IDI_PROJECT, 16));
-	m_Images.AddIcon(folder ? folder : IconHelper::Load(IDI_CHART, 16));
-	for (auto icon : { IDI_CHART, IDI_EVENT, IDI_OPTIONS, IDI_COLORWHEEL })
-		m_Images.AddIcon(IconHelper::Load(icon, 16));
-	HICON other = IconHelper::GetStockIcon(SIID_DOCNOASSOC);
-	m_Images.AddIcon(other ? other : IconHelper::Load(IDI_CHART, 16));
-	m_Tree.SetImageList(m_Images, TVSIL_NORMAL);
-
+	CreateImages();
 	ApplyTextFont();
 	Refresh();
 	return 0;

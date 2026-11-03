@@ -62,7 +62,21 @@ struct Helpers abstract final {
 	// The text font the user chose with Options > Font (AppSettings::TextFont), as a font of a size in tenths of a point (0: the
 	// size they chose, or 9 points if that wasn't given). False, with nothing made, if they have not chosen one - the views then
 	// keep the fonts they have.
-	static bool UserTextFont(CFont& font, int deciPoints = 0, int* size = nullptr);
+	static bool UserTextFont(CFont& font, UINT dpi, int deciPoints = 0, int* size = nullptr);
+	//
+	// fonts for a DPI (the DPI of the window they are for, DpiHelper::GetDpi): CFont::CreatePointFont measures points with the
+	// screen's DC, which is the system DPI, not the DPI of the monitor a window is on. The font is deleted first if it exists.
+	//
+	// deciPoints: tenths of a point
+	static bool PointFont(CFont& font, int deciPoints, PCWSTR face, UINT dpi, int weight = FW_NORMAL);
+	// lf.lfHeight in tenths of a point, like CreatePointFontIndirect
+	static bool PointFontIndirect(CFont& font, LOGFONT lf, UINT dpi);
+	// the font of the controls in tool bars (DEFAULT_GUI_FONT, which is made for the system DPI)
+	static bool GuiFont(CFont& font, UINT dpi);
+	// the message box font (the system's text font)
+	static bool MessageFont(CFont& font, UINT dpi);
+	// a band of a rebar sized again to its child (a tool bar whose buttons changed size, a strip of another height)
+	static void FitReBarBand(HWND rebar, HWND child, bool fullWidth = false);
 	// sets a column's width even if it is a fixed width one (which the control otherwise leaves as it is)
 	static void SetColumnWidth(CListViewCtrl& list, int column, int width);
 	static COLORREF Darken(COLORREF color, int offset);

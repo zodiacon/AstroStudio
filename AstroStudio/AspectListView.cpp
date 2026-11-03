@@ -10,23 +10,33 @@ CAspectListView::CAspectListView(IMainFrame* frame) : CFrameView(frame) {
 }
 
 void CAspectListView::ApplyTextFont() {
-	if (!Helpers::UserTextFont(m_TextFont))
-		return;
-	m_List.SetFont(m_TextFont);
-	// the glyph font goes with it
+	// the text font the user chose with Options > Font, at the DPI of the window; without one the list keeps its own (which it
+	// scales to a new DPI itself)
+	UINT dpi = DpiHelper::GetDpi(m_hWnd);
+	bool user = Helpers::UserTextFont(m_TextFont, dpi);
+	if (user)
+		m_List.SetFont(m_TextFont);
+	// the glyph font goes with the list's
 	LOGFONT lf;
-	m_TextFont.GetLogFont(lf);
+	CFontHandle(m_List.GetFont()).GetLogFont(lf);
 	wcscpy_s(lf.lfFaceName, L"HamburgSymbols");
 	if (m_Font)
 		m_Font.DeleteObject();
 	m_Font.CreateFontIndirect(&lf);
-	// the columns grow with the text (they were made for 9 points)
-	int size = -MulDiv(lf.lfHeight, 72 * 10, ::GetDeviceCaps(CClientDC(m_hWnd), LOGPIXELSY));
-	double ratio = std::max(1.0, size / 90.0);
-	const int widths[] = { 120, 100, 120, 100, 110, 60, 50 };
-	for (int i = 0; i < _countof(widths); i++)
-		Helpers::SetColumnWidth(m_List, i, static_cast<int>(std::lround(widths[i] * ratio)));
+	if (user) {
+		// the columns grow with the text (they were made for 9 points, at 96 DPI)
+		int size = -MulDiv(lf.lfHeight, 72 * 10, (int)dpi);
+		double ratio = std::max(1.0, size / 90.0);
+		const int widths[] = { 120, 100, 120, 100, 110, 60, 50 };
+		for (int i = 0; i < _countof(widths); i++)
+			Helpers::SetColumnWidth(m_List, i, DpiHelper::Scale(static_cast<int>(std::lround(widths[i] * ratio)), dpi));
+	}
 	m_List.Invalidate();
+}
+
+void CAspectListView::OnDpiChanged(UINT) {
+	// the list has scaled its font and its columns by now; the fonts made from them follow
+	ApplyTextFont();
 }
 
 CString CAspectListView::PlanetLabel(Row const& row, bool first) const {
@@ -181,13 +191,13 @@ void CAspectListView::DrawGlyphAndName(LPNMCUSTOMDRAW cd, PCWSTR glyph, PCWSTR n
 	dc.SetTextColor(textColor);
 
 	CRect r(rc);
-	r.left += 4;
+	r.left += DpiHelper::Scale(4, m_List);
 
 	dc.SelectFont(m_Font);
 	CSize sz;
 	dc.GetTextExtent(glyph, (int)wcslen(glyph), &sz);
 	dc.DrawText(glyph, -1, &r, DT_LEFT | DT_VCENTER | DT_SINGLELINE);
-	r.left += sz.cx + 6;
+	r.left += sz.cx + DpiHelper::Scale(6, m_List);
 
 	dc.SelectFont(m_List.GetFont());
 	dc.DrawText(name, -1, &r, DT_LEFT | DT_VCENTER | DT_SINGLELINE);
@@ -210,7 +220,7 @@ void CAspectListView::DrawCell(LPNMCUSTOMDRAW cd, PCWSTR text, HFONT font, COLOR
 	dc.SetTextColor(textColor);
 
 	CRect r(rc);
-	r.left += 4;
+	r.left += DpiHelper::Scale(4, m_List);
 	dc.SelectFont(font);
 	dc.DrawText(text, -1, &r, DT_LEFT | DT_VCENTER | DT_SINGLELINE);
 }
@@ -271,11 +281,6 @@ LRESULT CAspectListView::OnCreate(UINT, WPARAM, LPARAM, BOOL&) {
 	m_hWndClient = m_List.Create(m_hWnd, rcDefault, nullptr,
 		WS_CHILD | WS_VISIBLE | WS_CLIPSIBLINGS | LVS_OWNERDATA | LVS_REPORT | LVS_SHOWSELALWAYS);
 	m_List.SetExtendedListViewStyle(LVS_EX_FULLROWSELECT | LVS_EX_DOUBLEBUFFER);
-
-	LOGFONT lf;
-	CFontHandle(m_List.GetFont()).GetLogFont(lf);
-	wcscpy_s(lf.lfFaceName, L"HamburgSymbols");
-	m_Font.CreateFontIndirect(&lf);
 
 	auto cm = GetColumnManager(m_List);
 	cm->AddColumn(L"P1", LVCFMT_LEFT, 120, ColumnType::Planet1);

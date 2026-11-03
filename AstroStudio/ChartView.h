@@ -21,9 +21,12 @@
 #include <NativeCustomTabView.h>
 #include <atlscrl.h>
 #include <WTLHelper.h>
+#include "DpiAware.h"
+#include "ToolbarStrip.h"
 
 class CChartView :
 	public CFrameView<CChartView, IMainFrame>,
+	public CDpiAware<CChartView>,
 	public IView,
 	public CVirtualListView<CChartView> {
 public:
@@ -53,10 +56,12 @@ public:
 	bool GetChart(OpenChart& chart) const override;
 	bool GetStatusInfo(StatusInfo& info) const override;
 	bool ShowMoment(DateTime const& ut, MomentKind kind) override;
+	void OnDpiChanged(UINT dpi);
 
 	BEGIN_MSG_MAP(CChartView)
 		MESSAGE_HANDLER(WM_RECALC, OnRecalc)
 		MESSAGE_HANDLER(WM_CREATE, OnCreate)
+		CHAIN_MSG_MAP(CDpiAware<CChartView>)
 		MESSAGE_HANDLER(WM_FORWARDMSG, OnForwardMsg)
 		MESSAGE_HANDLER(WTLHelper::ThemeChangedMessage, OnThemeChanged)
 		MESSAGE_HANDLER(WM_LOCATION_UPDATED, OnLocationUpdated)
@@ -227,6 +232,7 @@ private:
 	// the "Step: [count] [unit]" controls, which sit inside the toolbar
 	CStatic m_StepLabel;
 	CComboBox m_StepCount, m_StepUnit, m_StepInterval;
+	ToolbarStrip m_Strip;
 	std::set<Planet> m_ExtraAdded;		// the extra bodies put among the chart's planets by the wheel options (not the chart's own: not saved)
 	std::optional<DerivedRecipe> m_Recipe;		// what a read-only chart was made from, if that is known
 	std::optional<ChartOverlay> m_Overlay;

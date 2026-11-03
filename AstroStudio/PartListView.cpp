@@ -38,23 +38,33 @@ void CPartListView::SetChartData(ChartData const* chart, AspectSettings const& s
 }
 
 void CPartListView::ApplyTextFont() {
-	if (!Helpers::UserTextFont(m_TextFont))
-		return;
-	m_List.SetFont(m_TextFont);
-	// the glyph font goes with it
+	// the text font the user chose with Options > Font, at the DPI of the window; without one the list keeps its own (which it
+	// scales to a new DPI itself)
+	UINT dpi = DpiHelper::GetDpi(m_hWnd);
+	bool user = Helpers::UserTextFont(m_TextFont, dpi);
+	if (user)
+		m_List.SetFont(m_TextFont);
+	// the glyph font goes with the list's
 	LOGFONT lf;
-	m_TextFont.GetLogFont(lf);
+	CFontHandle(m_List.GetFont()).GetLogFont(lf);
 	wcscpy_s(lf.lfFaceName, L"HamburgSymbols");
 	if (m_Font)
 		m_Font.DeleteObject();
 	m_Font.CreateFontIndirect(&lf);
-	// the columns grow with the text (they were made for 9 points)
-	int size = -MulDiv(lf.lfHeight, 72 * 10, ::GetDeviceCaps(CClientDC(m_hWnd), LOGPIXELSY));
-	double ratio = std::max(1.0, size / 90.0);
-	const int widths[] = { 90, 110, 40, 170, 420 };
-	for (int i = 0; i < _countof(widths); i++)
-		Helpers::SetColumnWidth(m_List, i, static_cast<int>(std::lround(widths[i] * ratio)));
+	if (user) {
+		// the columns grow with the text (they were made for 9 points, at 96 DPI)
+		int size = -MulDiv(lf.lfHeight, 72 * 10, (int)dpi);
+		double ratio = std::max(1.0, size / 90.0);
+		const int widths[] = { 90, 110, 40, 170, 420 };
+		for (int i = 0; i < _countof(widths); i++)
+			Helpers::SetColumnWidth(m_List, i, DpiHelper::Scale(static_cast<int>(std::lround(widths[i] * ratio)), dpi));
+	}
 	m_List.Invalidate();
+}
+
+void CPartListView::OnDpiChanged(UINT) {
+	// the list has scaled its font and its columns by now; the fonts made from them follow
+	ApplyTextFont();
 }
 
 CString CPartListView::GetColumnText(HWND h, int row, int col) const {
@@ -161,7 +171,7 @@ void CPartListView::DrawAspects(LPNMCUSTOMDRAW cd, std::vector<PartAspect> const
 	COLORREF textColor;
 	FillCell(cd, CLR_INVALID, rc, textColor);
 
-	int x = rc.left + 4;
+	int x = rc.left + DpiHelper::Scale(4, m_List);
 	for (auto const& aspect : aspects) {
 		// the two glyphs, then the orb in the list's font
 		auto glyphs = DefaultFont::Get().GetAspectGlyphAsString(aspect.Type) + DefaultFont::Get().GetPlanetGlyphAsString(aspect.Planet.Planet);
@@ -180,7 +190,7 @@ void CPartListView::DrawAspects(LPNMCUSTOMDRAW cd, std::vector<PartAspect> const
 		r = CRect(x + glyphSize.cx, rc.top, rc.right, rc.bottom);
 		dc.SelectFont(m_List.GetFont());
 		dc.DrawText(orb, -1, &r, DT_LEFT | DT_VCENTER | DT_SINGLELINE);
-		x += glyphSize.cx + orbSize.cx + 14;
+		x += glyphSize.cx + orbSize.cx + DpiHelper::Scale(14, m_List);
 	}
 }
 
@@ -191,8 +201,8 @@ void CPartListView::DrawCell(LPNMCUSTOMDRAW cd, PCWSTR text, HFONT font, COLORRE
 	FillCell(cd, backColorOverride, rc, textColor);
 
 	CRect r(rc);
-	r.left += 4;
-	r.right -= 6;
+	r.left += DpiHelper::Scale(4, m_List);
+	r.right -= DpiHelper::Scale(6, m_List);
 	dc.SelectFont(font);
 	dc.DrawText(text, -1, &r, (right ? DT_RIGHT : DT_LEFT) | DT_VCENTER | DT_SINGLELINE);
 }
@@ -201,11 +211,6 @@ LRESULT CPartListView::OnCreate(UINT, WPARAM, LPARAM, BOOL&) {
 	m_hWndClient = m_List.Create(m_hWnd, rcDefault, nullptr,
 		WS_CHILD | WS_VISIBLE | WS_CLIPSIBLINGS | LVS_OWNERDATA | LVS_REPORT | LVS_SHOWSELALWAYS);
 	m_List.SetExtendedListViewStyle(LVS_EX_FULLROWSELECT | LVS_EX_DOUBLEBUFFER);
-
-	LOGFONT lf;
-	CFontHandle(m_List.GetFont()).GetLogFont(lf);
-	wcscpy_s(lf.lfFaceName, L"HamburgSymbols");
-	m_Font.CreateFontIndirect(&lf);
 
 	auto cm = GetColumnManager(m_List);
 	cm->AddColumn(L"Part", LVCFMT_LEFT, 130, ColumnType::Part);

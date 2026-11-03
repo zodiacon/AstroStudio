@@ -5,10 +5,12 @@
 #include "ArabicParts.h"
 #include "Interfaces.h"
 #include "Helpers.h"
+#include "DpiAware.h"
 
 // The Arabic parts of a chart with the aspects each makes to the chart's planets (a tab of the chart view).
 class CPartListView :
 	public CFrameView<CPartListView, IMainFrame>,
+	public CDpiAware<CPartListView>,
 	public CVirtualListView<CPartListView>,
 	public CCustomDraw<CPartListView> {
 public:
@@ -21,6 +23,7 @@ public:
 	void SetChartData(ChartData const* chart, AspectSettings const& settings);
 	// puts the text font the user chose with Options > Font on the list (nothing if they have not chosen one)
 	void ApplyTextFont();
+	void OnDpiChanged(UINT dpi);
 
 	// for Copy and Export: the list as a table of plain words, in the order it is shown now, and its window (for the selection)
 	Helpers::TableSource Table() const;
@@ -37,6 +40,7 @@ public:
 
 	BEGIN_MSG_MAP(CPartListView)
 		MESSAGE_HANDLER(WM_CREATE, OnCreate)
+		CHAIN_MSG_MAP(CDpiAware<CPartListView>)
 		CHAIN_MSG_MAP(CCustomDraw)
 		CHAIN_MSG_MAP(CVirtualListView)
 		CHAIN_MSG_MAP(BaseFrame)

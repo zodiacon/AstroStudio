@@ -48,7 +48,7 @@ LRESULT CMidpointOptionsDlg::OnInitDialog(UINT, WPARAM, LPARAM, BOOL&) {
 	// the column takes the whole width, and leaves room for the scroll bar
 	CRect rc;
 	m_Points.GetClientRect(&rc);
-	m_Points.SetColumnWidth(0, rc.Width() - ::GetSystemMetrics(SM_CXVSCROLL));
+	m_Points.SetColumnWidth(0, rc.Width() - DpiHelper::GetSystemMetrics(SM_CXVSCROLL, m_hWnd));
 
 	CComboBox combo;
 	combo = GetDlgItem(IDC_MP_LIST_ORB);

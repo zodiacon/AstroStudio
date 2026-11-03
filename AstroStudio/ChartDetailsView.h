@@ -6,6 +6,7 @@
 #include <DialogHelper.h>
 #include "LocationControls.h"
 #include "TimeControls.h"
+#include "DpiAware.h"
 
 class ChartData;
 struct PlanetPosition;
@@ -14,6 +15,7 @@ class CChartDetailsView :
 	public CDialogImpl<CChartDetailsView>,
 	public CVirtualListView<CChartDetailsView>,
 	public CDialogHelper<CChartDetailsView>,
+	public CDpiAware<CChartDetailsView>,
 	public CCustomDraw<CChartDetailsView> {
 public:
 	enum { IDD = IDD_CHARTDETAILS };
@@ -32,8 +34,10 @@ public:
 	bool IsLocationEdited() const;
 
 	void UpdateControls(Recalc type = Recalc::All);
-	// puts the text font the user chose with Options > Font on the fields and lists (nothing if they have not chosen one)
+	// puts the text font the user chose with Options > Font on the fields and lists (without one the lists are in the dialog's
+	// font, a fifth larger), for the window's DPI
 	void ApplyTextFont();
+	void OnDpiChanged(UINT dpi);
 	// Turns every field and button off (the two lists stay usable). For good: a read-only chart stays read-only.
 	void SetReadOnly();
 
@@ -70,6 +74,7 @@ public:
 		MESSAGE_HANDLER(WM_FORWARDMSG, OnForwardMsg)
 		MESSAGE_HANDLER(WM_HERE_RESULT, OnHereResult)
 		MESSAGE_HANDLER(WM_LOOKUP_RESULT, OnLookupResult)
+		CHAIN_MSG_MAP(CDpiAware<CChartDetailsView>)
 		CHAIN_MSG_MAP(CCustomDraw)
 		CHAIN_MSG_MAP(CVirtualListView)
 	END_MSG_MAP()

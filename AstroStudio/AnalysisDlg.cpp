@@ -38,7 +38,7 @@ namespace {
 		// the column takes the whole width, and leaves room for the scroll bar
 		CRect rc;
 		list.GetClientRect(&rc);
-		list.SetColumnWidth(0, rc.Width() - ::GetSystemMetrics(SM_CXVSCROLL));
+		list.SetColumnWidth(0, rc.Width() - DpiHelper::GetSystemMetrics(SM_CXVSCROLL, list.m_hWnd));
 	}
 
 	std::vector<Planet> StandardBodies() {
@@ -86,7 +86,7 @@ LRESULT CAnalysisDlg::OnInitDialog(UINT, WPARAM, LPARAM, BOOL&) {
 	}
 	CRect typesRect;
 	m_Types.GetClientRect(&typesRect);
-	m_Types.SetColumnWidth(0, typesRect.Width() - ::GetSystemMetrics(SM_CXVSCROLL));
+	m_Types.SetColumnWidth(0, typesRect.Width() - DpiHelper::GetSystemMetrics(SM_CXVSCROLL, m_hWnd));
 
 	m_PresetBox = GetDlgItem(IDC_AN_PRESET);
 	for (auto name : PresetNames)
@@ -116,7 +116,7 @@ LRESULT CAnalysisDlg::OnInitDialog(UINT, WPARAM, LPARAM, BOOL&) {
 	}
 	CRect rc;
 	m_Aspects.GetClientRect(&rc);
-	m_Aspects.SetColumnWidth(0, rc.Width() - ::GetSystemMetrics(SM_CXVSCROLL));
+	m_Aspects.SetColumnWidth(0, rc.Width() - DpiHelper::GetSystemMetrics(SM_CXVSCROLL, m_hWnd));
 
 	CheckDlgButton(IDC_AN_ASPECTS, m_Settings.AspectEvents);
 	CheckDlgButton(IDC_AN_HOUSES, m_Settings.HouseIngresses);

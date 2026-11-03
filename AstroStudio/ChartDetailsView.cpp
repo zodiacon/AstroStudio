@@ -197,16 +197,6 @@ LRESULT CChartDetailsView::OnInitView(UINT, WPARAM, LPARAM, BOOL&) {
 	m_Location.Init(m_hWnd);
 	m_Time.Init(m_hWnd);
 
-	LOGFONT lf;
-	CFontHandle(m_ctlPlanets.GetFont()).GetLogFont(lf);
-	lf.lfHeight = lf.lfHeight * 120 / 100;
-	CFontHandle local;
-	local.CreateFontIndirect(&lf);
-	m_ctlPlanets.SetFont(local);
-	m_ctlHouses.SetFont(local);
-	wcscpy_s(lf.lfFaceName, L"HamburgSymbols");
-	m_Font.CreateFontIndirect(&lf);
-
 	Helpers::FillHouseSystems(m_ctlHouseSystem);
 
 	auto cm = GetColumnManager(m_ctlPlanets);
@@ -228,15 +218,23 @@ LRESULT CChartDetailsView::OnInitView(UINT, WPARAM, LPARAM, BOOL&) {
 }
 
 void CChartDetailsView::ApplyTextFont() {
+	UINT dpi = DpiHelper::GetDpi(m_hWnd);
 	int size = 0;
 	// the fields and labels only take the family and at most the size they were laid out for (a dialog's controls don't move),
 	// the two lists a fifth larger than the chosen size, as they are made
-	if (!Helpers::UserTextFont(m_TextFont, 0, &size) || !Helpers::UserTextFont(m_ListFont, size * 12 / 10))
-		return;
-	Helpers::UserTextFont(m_TextFont, std::min(size, 90));
-	for (HWND child = GetWindow(GW_CHILD); child; child = ::GetWindow(child, GW_HWNDNEXT))
-		if (child != m_ctlPlanets && child != m_ctlHouses)
-			::SendMessage(child, WM_SETFONT, reinterpret_cast<WPARAM>(m_TextFont.m_hFont), TRUE);
+	bool user = Helpers::UserTextFont(m_TextFont, dpi, 0, &size) && Helpers::UserTextFont(m_ListFont, dpi, size * 12 / 10);
+	if (user) {
+		Helpers::UserTextFont(m_TextFont, dpi, std::min(size, 90));
+		for (HWND child = GetWindow(GW_CHILD); child; child = ::GetWindow(child, GW_HWNDNEXT))
+			if (child != m_ctlPlanets && child != m_ctlHouses)
+				::SendMessage(child, WM_SETFONT, reinterpret_cast<WPARAM>(m_TextFont.m_hFont), TRUE);
+	}
+	else {
+		// the dialog's font (Tahoma 9, as in its template), a fifth larger, at the window's DPI. Made from the template rather than
+		// taken from the dialog: the dialog manager rescales a child dialog's font after a change of DPI later than this runs
+		Helpers::PointFont(m_ListFont, 108, L"Tahoma", dpi);
+		size = 90;
+	}
 	m_ctlPlanets.SetFont(m_ListFont);
 	m_ctlHouses.SetFont(m_ListFont);
 
@@ -247,15 +245,21 @@ void CChartDetailsView::ApplyTextFont() {
 	if (m_Font)
 		m_Font.DeleteObject();
 	m_Font.CreateFontIndirect(&lf);
-	// the columns grow with the text (they were made for 9 points, a fifth larger)
+	// the columns grow with the text (they were made for 9 points, a fifth larger, at 96 DPI)
 	double ratio = std::max(1.0, size * 1.2 / 108);
 	const int planetWidths[] = { 30, 115, 70, 75 }, houseWidths[] = { 40, 90 };
 	for (int i = 0; i < _countof(planetWidths); i++)
-		Helpers::SetColumnWidth(m_ctlPlanets, i, static_cast<int>(std::lround(planetWidths[i] * ratio)));
+		Helpers::SetColumnWidth(m_ctlPlanets, i, DpiHelper::Scale(static_cast<int>(std::lround(planetWidths[i] * ratio)), dpi));
 	for (int i = 0; i < _countof(houseWidths); i++)
-		Helpers::SetColumnWidth(m_ctlHouses, i, static_cast<int>(std::lround(houseWidths[i] * ratio)));
+		Helpers::SetColumnWidth(m_ctlHouses, i, DpiHelper::Scale(static_cast<int>(std::lround(houseWidths[i] * ratio)), dpi));
 	m_ctlPlanets.Invalidate();
 	m_ctlHouses.Invalidate();
+}
+
+void CChartDetailsView::OnDpiChanged(UINT dpi) {
+	// the dialog manager has put its font of the new DPI on the controls by now: the lists' own fonts and the buttons' icons again
+	UpdateIconsForDpi(dpi);
+	ApplyTextFont();
 }
 
 LRESULT CChartDetailsView::OnHouseSystemChanged(WORD, WORD, HWND, BOOL&) {

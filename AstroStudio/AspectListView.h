@@ -5,9 +5,11 @@
 #include "Aspects.h"
 #include "Interfaces.h"
 #include "Helpers.h"
+#include "DpiAware.h"
 
 class CAspectListView :
 	public CFrameView<CAspectListView, IMainFrame>,
+	public CDpiAware<CAspectListView>,
 	public CVirtualListView<CAspectListView>,
 	public CCustomDraw<CAspectListView> {
 public:
@@ -23,6 +25,7 @@ public:
 	void Refresh();
 	// puts the text font the user chose with Options > Font on the list (nothing if they have not chosen one)
 	void ApplyTextFont();
+	void OnDpiChanged(UINT dpi);
 
 	// the colour for a longitude by its element (fire, earth, air, water), for the cells that show one; the midpoint list uses it too
 	static COLORREF GetElementColor(ZodiacSign sign);
@@ -42,6 +45,7 @@ public:
 
 	BEGIN_MSG_MAP(CAspectListView)
 		MESSAGE_HANDLER(WM_CREATE, OnCreate)
+		CHAIN_MSG_MAP(CDpiAware<CAspectListView>)
 		CHAIN_MSG_MAP(CCustomDraw)
 		CHAIN_MSG_MAP(CVirtualListView)
 		CHAIN_MSG_MAP(BaseFrame)

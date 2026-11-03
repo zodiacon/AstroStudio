@@ -97,7 +97,7 @@ LRESULT CEphemerisOptionsDlg::OnInitDialog(UINT, WPARAM, LPARAM, BOOL&) {
 	// the column takes the whole width, and leaves room for the scroll bar
 	CRect rc;
 	m_Bodies.GetClientRect(&rc);
-	m_Bodies.SetColumnWidth(0, rc.Width() - ::GetSystemMetrics(SM_CXVSCROLL));
+	m_Bodies.SetColumnWidth(0, rc.Width() - DpiHelper::GetSystemMetrics(SM_CXVSCROLL, m_hWnd));
 
 	CheckDlgButton(IDC_EPH_ECLIPSES, m_Settings.Eclipses);
 	CheckDlgButton(IDC_EPH_VOID, m_Settings.VoidOfCourse);

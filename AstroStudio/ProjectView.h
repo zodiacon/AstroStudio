@@ -1,6 +1,7 @@
 #pragma once
 
 #include "Project.h"
+#include "DpiAware.h"
 #include <filesystem>
 #include <set>
 #include <vector>
@@ -34,7 +35,9 @@ struct IProjectHost {
 // The pane on the left of the window with the open project: a tree of the project (its name), the groups and the items in them, in the
 // order the project has them. It shows what the project says and reports what the user does; the project itself is changed by the host,
 // which then calls Refresh.
-class CProjectView : public CWindowImpl<CProjectView> {
+class CProjectView :
+	public CWindowImpl<CProjectView>,
+	public CDpiAware<CProjectView> {
 public:
 	DECLARE_WND_CLASS_EX(L"AstroStudioProjectView", CS_DBLCLKS, COLOR_WINDOW)
 
@@ -53,9 +56,11 @@ public:
 	void BeginRename(ProjectNode const& node);
 	// puts the text font the user chose with Options > Font on the tree (nothing if they have not chosen one)
 	void ApplyTextFont();
+	void OnDpiChanged(UINT dpi);
 
 	BEGIN_MSG_MAP(CProjectView)
 		MESSAGE_HANDLER(WM_CREATE, OnCreate)
+		CHAIN_MSG_MAP(CDpiAware<CProjectView>)
 		MESSAGE_HANDLER(WM_SIZE, OnSize)
 		MESSAGE_HANDLER(WM_ERASEBKGND, OnEraseBkgnd)
 		MESSAGE_HANDLER(WM_SETFOCUS, OnSetFocus)
@@ -108,6 +113,7 @@ private:
 	Project const* m_Project{ nullptr };
 	CTreeViewCtrl m_Tree;
 	CImageList m_Images;
+	void CreateImages();
 	CFont m_TextFont;
 	std::vector<ProjectNode> m_Nodes;			// what the items' lParam count as indexes into
 	std::vector<HTREEITEM> m_Items;				// ... and the tree item of each

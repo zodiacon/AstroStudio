@@ -7,6 +7,8 @@
 #include "Analysis.h"
 #include "ChartFile.h"
 #include "WTLHelper.h"
+#include "DpiAware.h"
+#include "ToolbarStrip.h"
 #include <atomic>
 #include <memory>
 #include <thread>
@@ -20,6 +22,7 @@
 // come in.
 class CAnalysisView :
 	public CFrameView<CAnalysisView, IMainFrame>,
+	public CDpiAware<CAnalysisView>,
 	public IView,
 	public CCustomDraw<CAnalysisView>,
 	public CVirtualListView<CAnalysisView> {
@@ -28,6 +31,7 @@ public:
 
 	// Takes a chart (a copy) and the settings, runs the analysis and shows its events. False if the user cancelled a warning.
 	void Analyse(OpenChart chart, AnalysisSettings const& settings);
+	void OnDpiChanged(UINT dpi);
 	// Shows an analysis that was saved (File > Open): its events as they were, without working them out again. The chart is the
 	// tab's own copy, "closed" like one whose tab was closed; Options and Refresh work as ever.
 	void Restore(AnalysisDocument document, PCWSTR path);
@@ -51,6 +55,7 @@ public:
 
 	BEGIN_MSG_MAP(CAnalysisView)
 		MESSAGE_HANDLER(WM_CREATE, OnCreate)
+		CHAIN_MSG_MAP(CDpiAware<CAnalysisView>)
 		COMMAND_ID_HANDLER(ID_ANALYSIS_OPTIONS, OnOptions)
 		COMMAND_ID_HANDLER(ID_ANALYSIS_REFRESH, OnRefresh)
 		COMMAND_ID_HANDLER(ID_ANALYSIS_CANCEL, OnCancel)
@@ -157,6 +162,7 @@ private:
 
 	CListViewCtrl m_List;
 	CFont m_StdFont, m_SymbolFont;
+	ToolbarStrip m_Strip;
 	int m_FontSize{ 90 };			// tenths of a point
 	bool m_Glyphs{ true };
 	bool m_PageActive{ false };

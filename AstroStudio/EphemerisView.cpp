@@ -81,19 +81,19 @@ LRESULT CPlanetStrip::OnPaint(UINT msg, WPARAM wp, LPARAM, BOOL&) {
 		dark ? DarkMode::getCtrlBackgroundColor() : ::GetSysColor(COLOR_BTNFACE));
 	dc.SetBkMode(TRANSPARENT);
 	dc.SetTextColor(dark ? DarkMode::getTextColor() : ::GetSysColor(COLOR_BTNTEXT));
-	rc.left += 6;
+	rc.left += DpiHelper::Scale(6, m_hWnd);
 	const UINT flags = DT_SINGLELINE | DT_VCENTER | DT_NOPREFIX | DT_END_ELLIPSIS;
 	auto old = dc.SelectFont(m_LabelFont ? m_LabelFont : AtlGetDefaultGuiFont());
 	CSize size;
 	dc.GetTextExtent(m_Label, m_Label.GetLength(), &size);
 	dc.DrawText(m_Label, m_Label.GetLength(), &rc, flags);
-	rc.left += size.cx + 16;
+	rc.left += size.cx + DpiHelper::Scale(16, m_hWnd);
 	dc.SelectFont(m_Font ? m_Font : AtlGetDefaultGuiFont());
 	dc.GetTextExtent(m_Text, m_Text.GetLength(), &size);
 	dc.DrawText(m_Text, m_Text.GetLength(), &rc, flags);
 	if (!m_Note.IsEmpty()) {
 		// in the label's font: the glyph font has no letters
-		rc.left += size.cx + 16;
+		rc.left += size.cx + DpiHelper::Scale(16, m_hWnd);
 		dc.SelectFont(m_LabelFont ? m_LabelFont : AtlGetDefaultGuiFont());
 		dc.DrawText(m_Note, m_Note.GetLength(), &rc, flags);
 	}
@@ -220,9 +220,7 @@ void CEphemerisView::TextFontChanged() {
 	// the size of the chosen font becomes the ephemeris's
 	if (int size = AppSettings::Get().TextFont().lfHeight; size > 0)
 		m_FontSize = std::clamp(size, 70, 180);
-	auto images = m_List.GetImageList(LVSIL_SMALL);
-	images.SetIconSize(1, m_FontSize / 6);
-	m_List.SetImageList(images, LVSIL_SMALL);
+	ApplyRowHeight();
 
 	CreateFonts();
 	SaveSettings();
@@ -356,11 +354,9 @@ CString CEphemerisView::GetRowPhenom(int row, bool glyphs) const {
 }
 
 void CEphemerisView::CreateFonts() {
-	if (m_Font)
-		m_Font.DeleteObject();
-	m_Font.CreatePointFont(m_FontSize, L"HamburgSymbols");
-	if (m_StdFont)
-		m_StdFont.DeleteObject();
+	// at the DPI of the window
+	UINT dpi = DpiHelper::GetDpi(m_hWnd);
+	Helpers::PointFont(m_Font, m_FontSize, L"HamburgSymbols", dpi);
 	// the text font the user chose with Options > Font, or Consolas; its size is the toolbar's
 	LOGFONT lf = AppSettings::Get().TextFont();
 	if (lf.lfFaceName[0] == 0) {
@@ -369,7 +365,7 @@ void CEphemerisView::CreateFonts() {
 		lf.lfWeight = FW_NORMAL;
 	}
 	lf.lfHeight = m_FontSize;
-	m_StdFont.CreatePointFontIndirect(&lf);
+	Helpers::PointFontIndirect(m_StdFont, lf, dpi);
 }
 
 void CEphemerisView::UpdateViewUI() {
@@ -445,7 +441,7 @@ void CEphemerisView::UpdateNowStrip() {
 	TEXTMETRIC tm;
 	dc.GetTextMetrics(&tm);
 	dc.SelectFont(old);
-	int height = tm.tmHeight + 8;
+	int height = tm.tmHeight + DpiHelper::Scale(8, m_hWnd);
 	CReBarCtrl rebar(m_hWndToolBar);
 	REBARBANDINFO info{ sizeof(info), RBBIM_CHILDSIZE };
 	rebar.GetBandInfo(NowBand, &info);
@@ -456,13 +452,31 @@ void CEphemerisView::UpdateNowStrip() {
 	}
 }
 
+void CEphemerisView::ApplyRowHeight() {
+	// the rows are as high as the list's (empty) images: a sixth of the font size in tenths of a point, at 96 DPI
+	auto images = m_List.GetImageList(LVSIL_SMALL);
+	images.SetIconSize(1, DpiHelper::Scale(m_FontSize / 6, m_hWnd));
+	m_List.SetImageList(images, LVSIL_SMALL);
+}
+
+void CEphemerisView::OnDpiChanged(UINT) {
+	// the fonts, the rows and the columns for the new DPI, the toolbar and the strip of the planets now
+	CreateFonts();
+	ApplyRowHeight();
+	m_Strip.Update();
+	UpdateNowStrip();
+	AutoSizeColumns();
+	UpdateLayout();
+	m_List.RedrawWindow();
+}
+
 void CEphemerisView::AutoSizeColumns() {
 	m_List.SetRedraw(FALSE);
 	int count = m_List.GetHeader().GetItemCount();
 	for (int i = 0; i < count; i++) {
 		m_List.SetColumnWidth(i, LVSCW_AUTOSIZE);
-		if (m_List.GetColumnWidth(i) < 100)
-			m_List.SetColumnWidth(i, 100);
+		if (int least = DpiHelper::Scale(100, m_hWnd); m_List.GetColumnWidth(i) < least)
+			m_List.SetColumnWidth(i, least);
 	}
 	m_List.SetRedraw(TRUE);
 }
@@ -508,8 +522,9 @@ LRESULT CEphemerisView::OnCreate(UINT, WPARAM, LPARAM, BOOL&) {
 		| LVS_OWNERDATA | LVS_REPORT | LVS_SHOWSELALWAYS | LVS_NOSORTHEADER);
 	m_List.SetExtendedListViewStyle(LVS_EX_FULLROWSELECT | LVS_EX_DOUBLEBUFFER | (settings.EphemerisGridLines() ? LVS_EX_GRIDLINES : 0));
 	CImageList images;
-	images.Create(16, m_FontSize / 6, ILC_COLOR32, 0, 1);
+	images.Create(1, 16, ILC_COLOR32, 0, 1);
 	m_List.SetImageList(images, LVSIL_SMALL);
+	ApplyRowHeight();
 
 	m_ColorOptions = WTLHelper::IsDarkMode() ? DarkColors : ColorOptions();
 
@@ -526,35 +541,23 @@ LRESULT CEphemerisView::OnCreate(UINT, WPARAM, LPARAM, BOOL&) {
 	};
 
 	CreateSimpleReBar(ATL_SIMPLE_REBAR_NOBORDER_STYLE);
-	CToolBarCtrl tb(ToolbarHelper::CreateAndInitToolBar(m_hWndToolBar, buttons, _countof(buttons)));
+	CToolBarCtrl tb(m_Strip.Create(m_hWndToolBar, buttons, _countof(buttons)));
 
 	// The label and the time of day combo box live inside the toolbar, on separators made as wide as they are (made before
 	// the toolbar joins the rebar, which sizes the band from its buttons).
-	int dpi = CClientDC(m_hWnd).GetDeviceCaps(LOGPIXELSX);
-	auto px = [&](int value) { return MulDiv(value, dpi, 96); };
-	tb.AddSeparator(px(10));
-	int firstSlot = tb.GetButtonCount();
-	tb.AddSeparator(px(80));	// "Time of day:"
-	tb.AddSeparator(px(120));	// the choice
+	m_Strip.AddSeparator(10);
+	int labelSlot = m_Strip.AddSeparator(80);	// "Time of day:"
+	int comboSlot = m_Strip.AddSeparator(120);	// the choice
 
 	AddSimpleReBarBand(tb);
 	Frame()->AddToolBarToUI(tb);
 	CreateFonts();
 
 	{
-		CFontHandle font(AtlGetDefaultGuiFont());
-		const int comboHeight = px(22), dropHeight = px(120);
-		auto slotRect = [&](int slot, int drop) {
-			CRect item;
-			tb.GetItemRect(firstSlot + slot, &item);
-			int top = item.top + (item.Height() - comboHeight) / 2;
-			return CRect(item.left, top, item.right - px(4), top + comboHeight + drop);
-		};
-		CRect labelRect = slotRect(0, 0), comboRect = slotRect(1, dropHeight);
-		m_TimeLabel.Create(tb, labelRect, L"Time of day:", WS_CHILD | WS_VISIBLE | SS_RIGHT | SS_CENTERIMAGE);
-		m_TimeLabel.SetFont(font);
-		m_TimeCombo.Create(tb, comboRect, nullptr, WS_CHILD | WS_VISIBLE | WS_TABSTOP | CBS_DROPDOWNLIST, 0, IDC_EPH_TIME);
-		m_TimeCombo.SetFont(font);
+		m_TimeLabel.Create(tb, rcDefault, L"Time of day:", WS_CHILD | WS_VISIBLE | SS_RIGHT | SS_CENTERIMAGE);
+		m_Strip.Place(m_TimeLabel, labelSlot);
+		m_TimeCombo.Create(tb, rcDefault, nullptr, WS_CHILD | WS_VISIBLE | WS_TABSTOP | CBS_DROPDOWNLIST, 0, IDC_EPH_TIME);
+		m_Strip.Place(m_TimeCombo, comboSlot, 22, 120);
 		// in the order of TimeOfDay
 		for (auto text : { L"00:00 UT", L"12:00 UT", L"00:00 local", L"12:00 local" })
 			m_TimeCombo.AddString(text);
@@ -568,7 +571,7 @@ LRESULT CEphemerisView::OnCreate(UINT, WPARAM, LPARAM, BOOL&) {
 		TEXTMETRIC tm;
 		dc.GetTextMetrics(&tm);
 		dc.SelectFont(old);
-		RECT rcStrip{ 0, 0, 100, tm.tmHeight + 8 };
+		RECT rcStrip{ 0, 0, 100, tm.tmHeight + DpiHelper::Scale(8, m_hWnd) };
 		m_NowStrip.Create(m_hWndToolBar, rcStrip, nullptr, WS_CHILD | WS_VISIBLE | WS_CLIPSIBLINGS);
 		AddSimpleReBarBand(m_NowStrip, nullptr, TRUE, 0, TRUE);
 		UpdateNowStrip();
@@ -636,9 +639,7 @@ LRESULT CEphemerisView::OnChangeFontSize(WORD, WORD id, HWND, BOOL&) {
 		m_FontSize = 100;
 	else
 		m_FontSize += id == ID_FONT_BIGGER ? 8 : -8;
-	auto images = m_List.GetImageList(LVSIL_SMALL);
-	images.SetIconSize(1, m_FontSize / 6);
-	m_List.SetImageList(images, LVSIL_SMALL);
+	ApplyRowHeight();
 
 	CreateFonts();
 	SaveSettings();

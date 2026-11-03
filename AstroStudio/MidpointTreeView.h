@@ -4,11 +4,15 @@
 #include "Midpoints.h"
 #include "Helpers.h"
 #include "ChartOverlay.h"
+#include "DpiAware.h"
+#include "ToolbarStrip.h"
 
 // The midpoint tree of a chart (a tab of the chart view): a branch for every point that has a midpoint on it - or at a half or whole
 // square to it, on the 90 degree dial - in the order of the points' places on that dial, and under it the midpoints, the tightest
 // first ("Sun/Moon = 12 Cap 30', 0.42 degrees"). The orb and the kind of contact are chosen at the top of the tab.
-class CMidpointTreeView : public CWindowImpl<CMidpointTreeView> {
+class CMidpointTreeView :
+	public CWindowImpl<CMidpointTreeView>,
+	public CDpiAware<CMidpointTreeView> {
 public:
 	DECLARE_WND_CLASS(L"AstroStudioMidpointTree")
 
@@ -20,6 +24,7 @@ public:
 	void SetOverlay(ChartOverlay const* overlay);
 	// puts the text font the user chose with Options > Font on the tree (nothing if they have not chosen one)
 	void ApplyTextFont();
+	void OnDpiChanged(UINT dpi);
 	// glyphs or names: the tree is written in astrological symbols (the toolbar's Glyphs button)
 	bool Glyphs() const {
 		return m_Glyphs;
@@ -32,6 +37,7 @@ public:
 
 	BEGIN_MSG_MAP(CMidpointTreeView)
 		MESSAGE_HANDLER(WM_CREATE, OnCreate)
+		CHAIN_MSG_MAP(CDpiAware<CMidpointTreeView>)
 		MESSAGE_HANDLER(WM_SIZE, OnSize)
 		MESSAGE_HANDLER(WM_SETFOCUS, OnSetFocus)
 		MESSAGE_HANDLER(WM_ERASEBKGND, OnEraseBkgnd)
@@ -45,9 +51,10 @@ public:
 private:
 	enum { IDC_MT_ORB = 7001, IDC_MT_KIND, IDC_MT_TREE, IDC_MT_PAIRS };
 	int StripHeight() const {
-		return m_Overlay ? 60 : 32;
+		return DpiHelper::Scale(m_Overlay ? 60 : 32, m_hWnd);
 	}
 
+	void ApplyUiFont();
 	LRESULT OnCreate(UINT, WPARAM, LPARAM, BOOL&);
 	LRESULT OnSize(UINT, WPARAM, LPARAM, BOOL&);
 	LRESULT OnSetFocus(UINT, WPARAM, LPARAM, BOOL&);
@@ -85,7 +92,8 @@ private:
 	ChartOverlay const* m_Overlay{ nullptr };
 	CTreeViewCtrl m_Tree;
 	CFont m_UiFont, m_TextFont, m_SymbolFont;
-	CToolBarCtrl m_Toolbar;
+	ToolbarStrip m_Strip;
+	CToolBarCtrl m_Toolbar;		// (the strip's)
 	bool m_HasTextFont{ false };
 	bool m_Glyphs{ false };
 	std::vector<Entry> m_Entries;

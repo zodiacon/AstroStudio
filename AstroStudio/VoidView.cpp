@@ -153,7 +153,7 @@ LRESULT CVoidView::OnCreate(UINT, WPARAM, LPARAM, BOOL&) {
 		{ ID_VOID_RANGE, IDI_OPTIONS, 0, L"Range" },
 	};
 	CreateSimpleReBar(ATL_SIMPLE_REBAR_NOBORDER_STYLE);
-	CToolBarCtrl tb(ToolbarHelper::CreateAndInitToolBar(m_hWndToolBar, buttons, _countof(buttons)));
+	CToolBarCtrl tb(m_Strip.Create(m_hWndToolBar, buttons, _countof(buttons)));
 	AddSimpleReBarBand(tb);
 	Frame()->AddToolBarToUI(tb);
 	// The toolbars share one UI map, which updates a button only when its state there changes: if another tab left Glyphs in
@@ -222,18 +222,17 @@ void CVoidView::Calculate() {
 		}
 }
 
-void CVoidView::CreateFonts(bool fontChanged) {
+void CVoidView::CreateFonts(bool fontChanged, bool keepSize) {
 	// the size of the text font, if the user chose one
 	// the ephemeris's size (its A+/A- buttons, or the size chosen with Options > Font), so that the two lists look alike
-	int size = std::clamp(AppSettings::Get().EphemerisFontSize(), 70, 180);
+	// (keepSize: the size they have, at another DPI)
+	int size = keepSize && m_FontSize ? m_FontSize : std::clamp(AppSettings::Get().EphemerisFontSize(), 70, 180);
 	if (fontChanged)
 		if (int chosen = AppSettings::Get().TextFont().lfHeight; chosen > 0)
 			size = std::clamp(chosen, 70, 180);
-	if (m_Font)
-		m_Font.DeleteObject();
-	m_Font.CreatePointFont(size, L"HamburgSymbols");
-	if (m_StdFont)
-		m_StdFont.DeleteObject();
+	m_FontSize = size;
+	UINT dpi = DpiHelper::GetDpi(m_hWnd);
+	Helpers::PointFont(m_Font, size, L"HamburgSymbols", dpi);
 	// the text font the user chose with Options > Font, or the system's (as the analysis view does)
 	LOGFONT lf = AppSettings::Get().TextFont();
 	if (lf.lfFaceName[0] == 0) {
@@ -241,8 +240,16 @@ void CVoidView::CreateFonts(bool fontChanged) {
 		lf.lfWeight = FW_NORMAL;
 	}
 	lf.lfHeight = size;
-	m_StdFont.CreatePointFontIndirect(&lf);
+	Helpers::PointFontIndirect(m_StdFont, lf, dpi);
 	m_List.SetFont(m_StdFont);
+}
+
+void CVoidView::OnDpiChanged(UINT) {
+	CreateFonts(false, true);
+	m_Strip.Update();
+	AutoSizeColumns();
+	UpdateLayout();
+	m_List.RedrawWindow();
 }
 
 void CVoidView::AutoSizeColumns() {
@@ -270,7 +277,7 @@ void CVoidView::AutoSizeColumns() {
 		int width = measure(name, m_StdFont);
 		for (int row = 0; row < (int)m_Periods.size(); row++)
 			width = std::max(width, measure(CellText(row, type, m_Glyphs), glyphColumn ? m_Font : m_StdFont));
-		m_List.SetColumnWidth(i, width + 24);		// the cell's margins
+		m_List.SetColumnWidth(i, width + DpiHelper::Scale(24, m_List));		// the cell's margins
 	}
 	dc.SelectFont(old);
 	m_List.SetRedraw(TRUE);

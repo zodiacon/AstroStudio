@@ -12,6 +12,8 @@
 #include <NativeCustomTabView.h>
 #include <TabViewHelper.h>
 #include "resource.h"
+#include "ToolbarStrip.h"
+#include "DpiAware.h"
 
 // the projects opened lately, in a submenu of the Project menu (as the recent files are in the File menu's)
 class CRecentProjectList : public CRecentDocumentListBase<CRecentProjectList, MAX_PATH, ID_PROJECT_MRU_FIRST, ID_PROJECT_MRU_LAST> {
@@ -59,6 +61,8 @@ protected:
 		COMMAND_ID_HANDLER(ID_OPTIONS_ALWAYSONTOP, OnAlwaysOnTop)
 		COMMAND_ID_HANDLER(ID_OPTIONS_FONT, OnFont)
 		MESSAGE_HANDLER(WM_GETMINMAXINFO, OnGetMinMaxInfo)
+		MESSAGE_HANDLER(WM_DPICHANGED, OnDpiChanged)
+		MESSAGE_HANDLER(CDpiAware<CMainFrame>::DpiChangedMessage, OnDpiChangedPosted)
 		MESSAGE_HANDLER(WM_LOCATION_READY, OnLocationReady)
 		COMMAND_ID_HANDLER(ID_WINDOW_CLOSE_ALL, OnWindowCloseAll)
 		MESSAGE_HANDLER(WM_CREATE, OnCreate)
@@ -108,6 +112,10 @@ private:
 	LRESULT OnCreate(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, BOOL& /*bHandled*/);
 	LRESULT OnDestroy(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, BOOL& bHandled);
 	LRESULT OnGetMinMaxInfo(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, BOOL& /*bHandled*/);
+	LRESULT OnDpiChanged(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, BOOL& /*bHandled*/);
+	LRESULT OnDpiChangedPosted(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, BOOL& /*bHandled*/);
+	// the tab icons and the status bar font for the window's DPI
+	void ApplyDpi();
 	LRESULT OnFileExit(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/);
 	LRESULT OnToolEphemeris(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/);
 	LRESULT OnToolVoid(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/);
@@ -190,6 +198,8 @@ private:
 	void SetStatusPane(int id, CString const& text, int minWidth);
 	CMultiPaneStatusBarCtrl m_Status;
 	CString m_PaneText[4];
+	ToolbarStrip m_ToolBar;
+	CFont m_StatusFont;
 
 	CNativeCustomTabView m_Tabs;
 	ChartInfo m_DefaultChartInfo{};

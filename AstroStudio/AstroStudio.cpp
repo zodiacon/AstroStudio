@@ -27,9 +27,11 @@ int Run(LPTSTR /*lpstrCmdLine*/ = nullptr, int nCmdShow = SW_SHOWDEFAULT) {
 	// where the window was when the program was last closed, if that place is still on a screen
 	auto wp = AppSettings::Get().MainWindowPlacement();
 	if (wp.length == sizeof(wp) && ::MonitorFromRect(&wp.rcNormalPosition, MONITOR_DEFAULTTONULL)) {
-		if (wp.showCmd == SW_SHOWMINIMIZED)
+		if (wp.showCmd == SW_SHOWMINIMIZED) {
 			wp.showCmd = SW_SHOWNORMAL;
-		wndMain.SetWindowPlacement(&wp);
+			AppSettings::Get().MainWindowPlacement(wp);
+		}
+		AppSettings::Get().LoadWindowPosition(wndMain, L"MainWindowPlacement");
 	}
 	else {
 		wndMain.ShowWindow(nCmdShow);

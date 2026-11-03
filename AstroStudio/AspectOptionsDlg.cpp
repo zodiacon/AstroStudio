@@ -48,14 +48,14 @@ LRESULT CAspectOptionsDlg::OnInitDialog(UINT, WPARAM, LPARAM, BOOL&) {
 
 	m_Aspects = GetDlgItem(IDC_ASP_ASPECTS);
 	m_Aspects.SetExtendedListViewStyle(LVS_EX_CHECKBOXES | LVS_EX_FULLROWSELECT);
-	m_Aspects.InsertColumn(0, L"Aspect", LVCFMT_LEFT, 88);
-	m_Aspects.InsertColumn(1, L"Angle", LVCFMT_RIGHT, 56);
-	m_Aspects.InsertColumn(2, L"Orb", LVCFMT_RIGHT, 40);
+	m_Aspects.InsertColumn(0, L"Aspect", LVCFMT_LEFT, DpiHelper::Scale(88, m_Aspects));
+	m_Aspects.InsertColumn(1, L"Angle", LVCFMT_RIGHT, DpiHelper::Scale(56, m_Aspects));
+	m_Aspects.InsertColumn(2, L"Orb", LVCFMT_RIGHT, DpiHelper::Scale(40, m_Aspects));
 
 	m_Planets = GetDlgItem(IDC_ASP_PLANETS);
 	m_Planets.SetExtendedListViewStyle(LVS_EX_CHECKBOXES | LVS_EX_FULLROWSELECT);
-	m_Planets.InsertColumn(0, L"Planet", LVCFMT_LEFT, 96);
-	m_Planets.InsertColumn(1, L"Extra orb", LVCFMT_RIGHT, 60);
+	m_Planets.InsertColumn(0, L"Planet", LVCFMT_LEFT, DpiHelper::Scale(96, m_Planets));
+	m_Planets.InsertColumn(1, L"Extra orb", LVCFMT_RIGHT, DpiHelper::Scale(60, m_Planets));
 
 	GetDlgItem(IDC_ASP_MAJORORB).SendMessage(EM_LIMITTEXT, 6);
 	GetDlgItem(IDC_ASP_MINORORB).SendMessage(EM_LIMITTEXT, 6);

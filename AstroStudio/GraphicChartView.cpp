@@ -229,7 +229,6 @@ CString CGraphicChartView::AspectTip(int index) const {
 void CGraphicChartView::ShowTip(POINT pt, PCWSTR text) {
 	if (!m_Tip) {
 		m_Tip.Create(m_hWnd, nullptr, nullptr, WS_POPUP | TTS_ALWAYSTIP | TTS_NOPREFIX);
-		m_Tip.SetMaxTipWidth(450);
 		m_TipTool.cbSize = sizeof(TOOLINFO);
 		m_TipTool.uFlags = TTF_TRACK | TTF_ABSOLUTE;
 		m_TipTool.hwnd = m_hWnd;
@@ -247,12 +246,11 @@ void CGraphicChartView::ShowTip(POINT pt, PCWSTR text) {
 	CPoint screen(pt);
 	ClientToScreen(&screen);
 	if (screen != m_TipPoint) {
-		m_Tip.TrackPosition(screen.x + 16, screen.y + 20);
+		m_Tip.TrackPosition(screen.x + DpiHelper::Scale(16, m_hWnd), screen.y + DpiHelper::Scale(20, m_hWnd));
 		m_TipPoint = screen;
 	}
 	if (!m_TipShown) {
-		// (dark or light, whichever the program is in right now)
-		DarkMode::setDarkTooltips(m_Tip, static_cast<int>(DarkMode::ToolTipsType::tooltip));
+		m_Tip.SetMaxTipWidth(DpiHelper::Scale(450, m_hWnd));
 		m_Tip.TrackActivate(&m_TipTool, TRUE);
 		m_TipShown = true;
 	}
@@ -294,7 +292,7 @@ LRESULT CGraphicChartView::OnMouseMove(UINT, WPARAM, LPARAM lp, BOOL&) {
 	}
 
 	if (m_MouseDown) {
-		if (!m_Dragging && (abs(pt.x - m_DownPoint.x) > 4 || abs(pt.y - m_DownPoint.y) > 4)) {
+		if (!m_Dragging && (abs(pt.x - m_DownPoint.x) > DpiHelper::GetSystemMetrics(SM_CXDRAG, m_hWnd) || abs(pt.y - m_DownPoint.y) > DpiHelper::GetSystemMetrics(SM_CYDRAG, m_hWnd))) {
 			m_Dragging = true;
 			m_Hover = {};
 			HideTip();
@@ -350,7 +348,7 @@ LRESULT CGraphicChartView::OnLButtonUp(UINT, WPARAM, LPARAM lp, BOOL&) {
 		m_Selected.reset();
 		// two clicks on an empty spot turn the wheel back
 		DWORD now = ::GetMessageTime();
-		if (now - m_LastClickTime <= ::GetDoubleClickTime() && abs(pt.x - m_LastClickPoint.x) <= 4 && abs(pt.y - m_LastClickPoint.y) <= 4) {
+		if (now - m_LastClickTime <= ::GetDoubleClickTime() && abs(pt.x - m_LastClickPoint.x) <= DpiHelper::GetSystemMetrics(SM_CXDOUBLECLK, m_hWnd) / 2 && abs(pt.y - m_LastClickPoint.y) <= DpiHelper::GetSystemMetrics(SM_CYDOUBLECLK, m_hWnd) / 2) {
 			m_Rotation = 0;
 			m_LastClickTime = 0;
 		}

@@ -14,6 +14,8 @@
 #include "resource.h"
 #include "Interfaces.h"
 #include "WTLHelper.h"
+#include "DpiAware.h"
+#include "ToolbarStrip.h"
 
 struct EphemerisSettings;
 
@@ -56,6 +58,7 @@ private:
 
 class CEphemerisView : 
 	public CFrameView<CEphemerisView, IMainFrame>,
+	public CDpiAware<CEphemerisView>,
 	public IView,
 	public CCustomDraw<CEphemerisView>,
 	public CVirtualListView<CEphemerisView> {
@@ -63,6 +66,7 @@ public:
 	using CFrameView::CFrameView;
 
 	CString GetColumnText(HWND, int row, int col);
+	void OnDpiChanged(UINT dpi);
 	bool IsSortable(HWND, int col) const;
 	bool OnRightClickList(HWND, int row, int col, POINT const& pt);
 
@@ -81,6 +85,7 @@ protected:
 		COMMAND_ID_HANDLER(ID_EPHEMERIS_OPTIONS, OnOptions)
 		COMMAND_HANDLER(IDC_EPH_TIME, CBN_SELCHANGE, OnTimeOfDayChanged)
 		MESSAGE_HANDLER(WM_CREATE, OnCreate)
+		CHAIN_MSG_MAP(CDpiAware<CEphemerisView>)
 		MESSAGE_HANDLER(WM_DESTROY, OnDestroy)
 		MESSAGE_HANDLER(WM_TIMER, OnTimer)
 		MESSAGE_HANDLER(WTLHelper::ThemeChangedMessage, OnThemeChanged)
@@ -121,6 +126,7 @@ private:
 	// the order they are shown in.
 	CString BuildTable(std::vector<int> const& rows, bool csv);
 	void CreateFonts();
+	void ApplyRowHeight();
 	void UpdateViewUI();
 	void AutoSizeColumns();
 	void UpdateNowStrip();
@@ -186,6 +192,7 @@ private:
 	DateTime m_StartTime;
 	double m_Increment{ 1 };
 	CFont m_Font, m_StdFont;
+	ToolbarStrip m_Strip;
 	FormatOptions m_FormatOptions;
 	ColorOptions m_ColorOptions;
 	int m_FontSize{ 100 };

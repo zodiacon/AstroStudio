@@ -205,19 +205,76 @@ void Helpers::SetColumnWidth(CListViewCtrl& list, int column, int width) {
 	list.SetColumn(column, &info);
 }
 
-bool Helpers::UserTextFont(CFont& font, int deciPoints, int* size) {
+bool Helpers::UserTextFont(CFont& font, UINT dpi, int deciPoints, int* size) {
 	LOGFONT lf = AppSettings::Get().TextFont();
 	if (lf.lfFaceName[0] == 0)
 		return false;
 	if (deciPoints <= 0)
 		deciPoints = lf.lfHeight > 0 ? lf.lfHeight : 90;
 	lf.lfHeight = deciPoints;
-	if (font)
-		font.DeleteObject();
-	font.CreatePointFontIndirect(&lf);
 	if (size)
 		*size = deciPoints;
+	return PointFontIndirect(font, lf, dpi);
+}
+
+bool Helpers::PointFont(CFont& font, int deciPoints, PCWSTR face, UINT dpi, int weight) {
+	LOGFONT lf{};
+	lf.lfHeight = deciPoints;
+	lf.lfWeight = weight;
+	lf.lfCharSet = DEFAULT_CHARSET;
+	wcscpy_s(lf.lfFaceName, face);
+	return PointFontIndirect(font, lf, dpi);
+}
+
+bool Helpers::PointFontIndirect(CFont& font, LOGFONT lf, UINT dpi) {
+	if (font)
+		font.DeleteObject();
+	lf.lfHeight = -::MulDiv(lf.lfHeight, (int)dpi, 720);
+	lf.lfWidth = 0;
+	return font.CreateFontIndirect(&lf) != nullptr;
+}
+
+bool Helpers::GuiFont(CFont& font, UINT dpi) {
+	if (font)
+		font.DeleteObject();
+	font.Attach(DpiHelper::ScaleFont(AtlGetDefaultGuiFont(), dpi, ::GetDpiForSystem()));
 	return font != nullptr;
+}
+
+bool Helpers::MessageFont(CFont& font, UINT dpi) {
+	if (font)
+		font.DeleteObject();
+	font.Attach(DpiHelper::CreateMessageFont(dpi));
+	return font != nullptr;
+}
+
+void Helpers::FitReBarBand(HWND rebar, HWND child, bool fullWidth) {
+	CReBarCtrl rb(rebar);
+	for (int i = 0; i < (int)rb.GetBandCount(); i++) {
+		REBARBANDINFO band{ sizeof(band), RBBIM_CHILD };
+		if (!rb.GetBandInfo(i, &band) || band.hwndChild != child)
+			continue;
+		// as WTL's AddSimpleReBarBandCtrl works the sizes out when it adds the band
+		band.fMask = RBBIM_CHILDSIZE | RBBIM_SIZE | RBBIM_IDEALSIZE;
+		int buttons = (int)::SendMessage(child, TB_BUTTONCOUNT, 0, 0);
+		RECT rc{};
+		if (buttons > 0) {
+			::SendMessage(child, TB_GETITEMRECT, buttons - 1, (LPARAM)&rc);
+			band.cx = rc.right;
+			band.cyMinChild = rc.bottom - rc.top;
+			::SendMessage(child, TB_GETITEMRECT, 0, (LPARAM)&rc);
+			band.cxMinChild = fullWidth ? band.cx : rc.right;
+		}
+		else {
+			::GetWindowRect(child, &rc);
+			band.cx = rc.right - rc.left;
+			band.cxMinChild = fullWidth ? band.cx : 0;
+			band.cyMinChild = rc.bottom - rc.top;
+		}
+		band.cxIdeal = band.cx;
+		rb.SetBandInfo(i, &band);
+		break;
+	}
 }
 
 COLORREF Helpers::Darken(COLORREF color, int offset) {

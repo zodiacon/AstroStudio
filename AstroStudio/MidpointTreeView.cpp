@@ -216,16 +216,25 @@ Helpers::TableSource CMidpointTreeView::Table() const {
 }
 
 void CMidpointTreeView::ApplyTextFont() {
-	m_HasTextFont = Helpers::UserTextFont(m_TextFont);
+	m_HasTextFont = Helpers::UserTextFont(m_TextFont, DpiHelper::GetDpi(m_hWnd));
 	ApplyTreeFont();
 }
 
-LRESULT CMidpointTreeView::OnCreate(UINT, WPARAM, LPARAM, BOOL&) {
-	// the strip's controls in the font the system uses for its windows (a new control has the old System font)
-	NONCLIENTMETRICS metrics{ sizeof(metrics) };
-	if (::SystemParametersInfo(SPI_GETNONCLIENTMETRICS, sizeof(metrics), &metrics, 0))
-		m_UiFont.CreateFontIndirect(&metrics.lfMessageFont);
+void CMidpointTreeView::ApplyUiFont() {
+	// the strip's controls in the font the system uses for its windows (a new control has the old System font), at the window's DPI
+	Helpers::MessageFont(m_UiFont, DpiHelper::GetDpi(m_hWnd));
+	for (CWindow* control : { (CWindow*)&m_OrbLabel, (CWindow*)&m_Orb, (CWindow*)&m_KindLabel, (CWindow*)&m_Kind, (CWindow*)&m_PairsLabel, (CWindow*)&m_Pairs, (CWindow*)&m_Tree })
+		control->SetFont(m_UiFont);
+}
 
+void CMidpointTreeView::OnDpiChanged(UINT) {
+	ApplyUiFont();
+	ApplyTextFont();
+	m_Strip.Update();
+	Layout();
+}
+
+LRESULT CMidpointTreeView::OnCreate(UINT, WPARAM, LPARAM, BOOL&) {
 	m_OrbLabel.Create(m_hWnd, rcDefault, L"Orb:", WS_CHILD | WS_VISIBLE | SS_LEFT | SS_CENTERIMAGE);
 	m_Orb.Create(m_hWnd, rcDefault, nullptr, WS_CHILD | WS_VISIBLE | WS_TABSTOP | WS_VSCROLL | CBS_DROPDOWNLIST, 0, IDC_MT_ORB);
 	m_KindLabel.Create(m_hWnd, rcDefault, L"Contacts:", WS_CHILD | WS_VISIBLE | SS_LEFT | SS_CENTERIMAGE);
@@ -237,11 +246,9 @@ LRESULT CMidpointTreeView::OnCreate(UINT, WPARAM, LPARAM, BOOL&) {
 	// the Glyphs button: symbols or names
 	ToolBarButtonInfo buttons[] = { { ID_VIEW_GLYPHS, IDI_GLYPH, BTNS_CHECK, L"Glyphs" } };
 	m_Glyphs = AppSettings::Get().MidpointTreeGlyphs() != 0;
-	m_Toolbar = ToolbarHelper::CreateAndInitToolBar(m_hWnd, buttons, _countof(buttons), 16);
+	m_Toolbar = m_Strip.Create(m_hWnd, buttons, _countof(buttons), 16);
 	m_Toolbar.CheckButton(ID_VIEW_GLYPHS, m_Glyphs);
-	if (!m_UiFont.IsNull())
-		for (CWindow* control : { (CWindow*)&m_OrbLabel, (CWindow*)&m_Orb, (CWindow*)&m_KindLabel, (CWindow*)&m_Kind, (CWindow*)&m_PairsLabel, (CWindow*)&m_Pairs, (CWindow*)&m_Tree })
-			control->SetFont(m_UiFont);
+	ApplyUiFont();
 
 	auto& settings = MidpointSettings::Current();
 	for (int orb : MidpointSettings::Orbs) {
@@ -273,19 +280,21 @@ void CMidpointTreeView::Layout() {
 		return;
 	CRect rc;
 	GetClientRect(&rc);
-	int x = 8, y = 4, h = 24;
-	m_OrbLabel.MoveWindow(x, y, 32, h);
-	m_Orb.MoveWindow(x + 34, y, 64, 200);
-	m_KindLabel.MoveWindow(x + 112, y, 62, h);
-	m_Kind.MoveWindow(x + 176, y, 210, 200);
+	// (sizes at 96 DPI)
+	auto px = [this](int value) { return DpiHelper::Scale(value, m_hWnd); };
+	int x = px(8), y = px(4), h = px(24);
+	m_OrbLabel.MoveWindow(x, y, px(32), h);
+	m_Orb.MoveWindow(x + px(34), y, px(64), px(200));
+	m_KindLabel.MoveWindow(x + px(112), y, px(62), h);
+	m_Kind.MoveWindow(x + px(176), y, px(210), px(200));
 	if (m_Toolbar.m_hWnd) {
 		CSize size;
 		m_Toolbar.GetMaxSize(&size);
-		m_Toolbar.MoveWindow(x + 394, y, size.cx + 4, h);
+		m_Toolbar.MoveWindow(x + px(394), y, size.cx + px(4), std::max<int>(h, size.cy));
 	}
 	// (with an overlay a second row: whose midpoints)
-	m_PairsLabel.MoveWindow(x, y + 28, 80, h);
-	m_Pairs.MoveWindow(x + 84, y + 28, 302, 200);
+	m_PairsLabel.MoveWindow(x, y + px(28), px(80), h);
+	m_Pairs.MoveWindow(x + px(84), y + px(28), px(302), px(200));
 	m_Tree.MoveWindow(0, StripHeight(), rc.Width(), std::max<int>(0, rc.Height() - StripHeight()));
 }
 

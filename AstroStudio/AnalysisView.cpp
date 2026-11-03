@@ -41,24 +41,16 @@ LRESULT CAnalysisView::OnCreate(UINT, WPARAM, LPARAM, BOOL&) {
 		{ ID_ANALYSIS_CANCEL, IDI_STOP, 0, L"Cancel" },
 	};
 	CreateSimpleReBar(ATL_SIMPLE_REBAR_NOBORDER_STYLE);
-	auto tb = ToolbarHelper::CreateAndInitToolBar(m_hWndToolBar, buttons, _countof(buttons), 16);
+	auto tb = m_Strip.Create(m_hWndToolBar, buttons, _countof(buttons), 16);
 	// a box for filtering the events sits in the toolbar, on a separator made as wide as it is (created before the toolbar joins the
 	// rebar, which sizes the band from its buttons)
-	CToolBarCtrl bar(tb);
-	int dpi = CClientDC(m_hWnd).GetDeviceCaps(LOGPIXELSX);
-	auto px = [&](int value) { return MulDiv(value, dpi, 96); };
-	bar.AddSeparator(px(8));
-	int filterSlot = bar.GetButtonCount();
-	bar.AddSeparator(px(190));
+	m_Strip.AddSeparator(8);
+	int filterSlot = m_Strip.AddSeparator(190);
 	AddSimpleReBarBand(tb);
 	Frame()->AddToolBarToUI(tb);
 
-	CRect item;
-	bar.GetItemRect(filterSlot, &item);
-	int height = px(22), top = item.top + (item.Height() - height) / 2;
-	CRect box(item.left, top, item.right - px(4), top + height);
-	m_Filter.Create(tb, box, nullptr, WS_CHILD | WS_VISIBLE | WS_TABSTOP | ES_AUTOHSCROLL, WS_EX_CLIENTEDGE, IDC_AN_FILTER);
-	m_Filter.SetFont(AtlGetDefaultGuiFont());
+	m_Filter.Create(tb, rcDefault, nullptr, WS_CHILD | WS_VISIBLE | WS_TABSTOP | ES_AUTOHSCROLL, WS_EX_CLIENTEDGE, IDC_AN_FILTER);
+	m_Strip.Place(m_Filter, filterSlot);
 	m_Filter.SetCueBannerText(L"Filter: square saturn", TRUE);
 
 	auto cm = GetColumnManager(m_List);
@@ -84,20 +76,27 @@ LRESULT CAnalysisView::OnCreate(UINT, WPARAM, LPARAM, BOOL&) {
 }
 
 void CAnalysisView::CreateFonts() {
-	if (m_SymbolFont)
-		m_SymbolFont.DeleteObject();
-	m_SymbolFont.CreatePointFont(m_FontSize, L"HamburgSymbols");
+	// at the DPI of the window
+	UINT dpi = DpiHelper::GetDpi(m_hWnd);
+	Helpers::PointFont(m_SymbolFont, m_FontSize, L"HamburgSymbols", dpi);
 
 	// the text font the user chose with Options > Font, or the system's; its size is the toolbar's
-	if (m_StdFont)
-		m_StdFont.DeleteObject();
 	LOGFONT lf = AppSettings::Get().TextFont();
 	if (lf.lfFaceName[0] == 0) {
 		CFontHandle(AtlGetDefaultGuiFont()).GetLogFont(lf);
 		lf.lfWeight = FW_NORMAL;
 	}
 	lf.lfHeight = m_FontSize;
-	m_StdFont.CreatePointFontIndirect(&lf);
+	Helpers::PointFontIndirect(m_StdFont, lf, dpi);
+}
+
+void CAnalysisView::OnDpiChanged(UINT) {
+	// the fonts for the new DPI (the list has scaled its columns itself), the toolbar and its filter box
+	CreateFonts();
+	m_List.SetFont(m_StdFont);
+	m_Strip.Update();
+	UpdateLayout();
+	m_List.Invalidate();
 }
 
 void CAnalysisView::ApplyFontSize(int oldSize) {
@@ -182,7 +181,7 @@ void CAnalysisView::UpdateHeaders(bool resetWidths) {
 		target = AnalysisNames::TargetLabel(types[0]);
 		target.SetAt(0, static_cast<WCHAR>(towupper(target[0])));
 	}
-	m_List.SetColumnWidth(AnalysisColumn, several ? 170 : 0);
+	m_List.SetColumnWidth(AnalysisColumn, several ? DpiHelper::Scale(170, m_List) : 0);
 	auto set = [&](int index, CString const& text) {
 		LVCOLUMN column{ LVCF_TEXT };
 		column.pszText = const_cast<LPWSTR>((PCWSTR)text);
@@ -196,12 +195,12 @@ void CAnalysisView::UpdateHeaders(bool resetWidths) {
 	CString aspect = ColumnNames[AspectColumn];
 	for (auto const& sizing : { Sizing{ MoverColumn, mover, 130 }, Sizing{ AspectColumn, aspect, 110 }, Sizing{ TargetColumn, target, 150 } }) {
 		if (m_Glyphs) {
-			int needed = std::max(44, m_List.GetStringWidth(sizing.Header) + 28);
+			int needed = std::max(DpiHelper::Scale(44, m_List), m_List.GetStringWidth(sizing.Header) + DpiHelper::Scale(28, m_List));
 			if (resetWidths || m_List.GetColumnWidth(sizing.Column) < needed)
 				m_List.SetColumnWidth(sizing.Column, needed);
 		}
 		else if (resetWidths)
-			m_List.SetColumnWidth(sizing.Column, sizing.Words);
+			m_List.SetColumnWidth(sizing.Column, DpiHelper::Scale(sizing.Words, m_List));
 	}
 }
 
