@@ -103,6 +103,7 @@ LRESULT CEphemerisOptionsDlg::OnInitDialog(UINT, WPARAM, LPARAM, BOOL&) {
 	CheckDlgButton(IDC_EPH_VOID, m_Settings.VoidOfCourse);
 	CheckDlgButton(IDC_EPH_TRANSITS, m_Settings.Transits);
 	CheckDlgButton(IDC_EPH_TRANSITS_NOMOON, m_Settings.TransitsNoMoon);
+	CheckDlgButton(IDC_EPH_TRANSITS_SUNMOON, m_Settings.TransitsSunMoon);
 	UpdateExtras();
 	return TRUE;
 }
@@ -122,7 +123,9 @@ void CEphemerisOptionsDlg::UpdateExtras() {
 	::EnableWindow(GetDlgItem(IDC_EPH_ECLIPSES), step > 0 && step <= EphemerisSettings::MaxEclipseStep);
 	::EnableWindow(GetDlgItem(IDC_EPH_VOID), step > 0 && step <= EphemerisSettings::MaxVoidStep);
 	::EnableWindow(GetDlgItem(IDC_EPH_TRANSITS), step > 0 && step <= EphemerisSettings::MaxTransitStep);
-	::EnableWindow(GetDlgItem(IDC_EPH_TRANSITS_NOMOON), step > 0 && step <= EphemerisSettings::MaxTransitStep && IsDlgButtonChecked(IDC_EPH_TRANSITS) == BST_CHECKED);
+	bool transits = step > 0 && step <= EphemerisSettings::MaxTransitStep && IsDlgButtonChecked(IDC_EPH_TRANSITS) == BST_CHECKED;
+	::EnableWindow(GetDlgItem(IDC_EPH_TRANSITS_NOMOON), transits);
+	::EnableWindow(GetDlgItem(IDC_EPH_TRANSITS_SUNMOON), transits);
 }
 
 void CEphemerisOptionsDlg::CheckBodies(bool all) {
@@ -172,6 +175,7 @@ LRESULT CEphemerisOptionsDlg::OnOK(WORD, WORD, HWND, BOOL&) {
 	settings.VoidOfCourse = IsDlgButtonChecked(IDC_EPH_VOID) == BST_CHECKED && settings.Step <= EphemerisSettings::MaxVoidStep;
 	settings.Transits = IsDlgButtonChecked(IDC_EPH_TRANSITS) == BST_CHECKED && settings.Step <= EphemerisSettings::MaxTransitStep;
 	settings.TransitsNoMoon = IsDlgButtonChecked(IDC_EPH_TRANSITS_NOMOON) == BST_CHECKED;
+	settings.TransitsSunMoon = IsDlgButtonChecked(IDC_EPH_TRANSITS_SUNMOON) == BST_CHECKED;
 
 	m_Settings = settings;
 	EndDialog(IDOK);

@@ -14,6 +14,7 @@ struct EphemerisSettings {
 	bool VoidOfCourse{ false };		// and one with the Moon's void of course periods
 	bool Transits{ false };			// and one with the exact aspects between the bodies
 	bool TransitsNoMoon{ false };	// leaving out the Moon's
+	bool TransitsSunMoon{ false };	// but always the Sun/Moon aspects (the lunar phases), even without the Moon
 
 	// the extra columns only make sense while a row is a short stretch of time
 	static constexpr double MaxEclipseStep = 31, MaxVoidStep = 7, MaxTransitStep = 7;

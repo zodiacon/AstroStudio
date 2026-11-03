@@ -481,6 +481,7 @@ LRESULT CEphemerisView::OnCreate(UINT, WPARAM, LPARAM, BOOL&) {
 	m_ShowVoid = settings.EphemerisVoid() && m_Increment <= EphemerisSettings::MaxVoidStep;
 	m_ShowTransits = settings.EphemerisTransits() && m_Increment <= EphemerisSettings::MaxTransitStep;
 	m_TransitsNoMoon = settings.EphemerisTransitsNoMoon();
+	m_TransitsSunMoon = settings.EphemerisTransitsSunMoon();
 	m_TimeOfDay = static_cast<TimeOfDay>(std::clamp(settings.EphemerisTime(), 0, 3));
 	// the bodies: numbers of Planet values separated by commas
 	m_Planets.clear();
@@ -597,6 +598,7 @@ void CEphemerisView::SaveSettings() {
 	settings.EphemerisVoid(m_ShowVoid ? 1 : 0);
 	settings.EphemerisTransits(m_ShowTransits ? 1 : 0);
 	settings.EphemerisTransitsNoMoon(m_TransitsNoMoon ? 1 : 0);
+	settings.EphemerisTransitsSunMoon(m_TransitsSunMoon ? 1 : 0);
 	settings.EphemerisTime(static_cast<int>(m_TimeOfDay));
 	std::wstring bodies;
 	for (auto planet : m_Planets) {
@@ -746,6 +748,7 @@ void CEphemerisView::ApplySettings(EphemerisSettings const& settings) {
 	m_ShowVoid = settings.VoidOfCourse;
 	m_ShowTransits = settings.Transits;
 	m_TransitsNoMoon = settings.TransitsNoMoon;
+	m_TransitsSunMoon = settings.TransitsSunMoon;
 	SaveSettings();
 
 	m_Items.clear();
@@ -778,6 +781,7 @@ LRESULT CEphemerisView::OnTimeOfDayChanged(WORD, WORD, HWND, BOOL&) {
 	settings.VoidOfCourse = m_ShowVoid;
 	settings.Transits = m_ShowTransits;
 	settings.TransitsNoMoon = m_TransitsNoMoon;
+	settings.TransitsSunMoon = m_TransitsSunMoon;
 	ApplySettings(settings);
 	m_List.SetFocus();
 	return 0;
@@ -792,6 +796,7 @@ LRESULT CEphemerisView::OnOptions(WORD, WORD, HWND, BOOL&) {
 	settings.VoidOfCourse = m_ShowVoid;
 	settings.Transits = m_ShowTransits;
 	settings.TransitsNoMoon = m_TransitsNoMoon;
+	settings.TransitsSunMoon = m_TransitsSunMoon;
 
 	CEphemerisOptionsDlg dlg;
 	dlg.SetSettings(settings);
@@ -895,7 +900,16 @@ void CEphemerisView::CalcExtras(int row) const {
 		auto bodies = m_Planets;
 		if (m_TransitsNoMoon)
 			std::erase(bodies, Planet::Moon);
-		for (auto const& aspect : m_Calc.CalcExactAspects(bodies, FromJd(from), FromJd(to))) {
+		auto aspects = m_Calc.CalcExactAspects(bodies, FromJd(from), FromJd(to));
+		// the Sun/Moon aspects (the lunar phases) if asked for, when the list above doesn't have them already:
+		// the Moon left out, or the Sun or the Moon not among the columns
+		auto has = [&](Planet p) { return std::find(bodies.begin(), bodies.end(), p) != bodies.end(); };
+		if (m_TransitsSunMoon && !(has(Planet::Sun) && has(Planet::Moon))) {
+			auto lunar = m_Calc.CalcExactAspects({ Planet::Sun, Planet::Moon }, FromJd(from), FromJd(to));
+			aspects.insert(aspects.end(), lunar.begin(), lunar.end());
+			std::stable_sort(aspects.begin(), aspects.end(), [](auto const& x, auto const& y) { return x.Time.Julian() < y.Time.Julian(); });
+		}
+		for (auto const& aspect : aspects) {
 			auto type = MajorAspectType(aspect.Angle);
 			auto when = L" (" + stamp(aspect.Time.Julian()) + L")";
 			if (!item.TransitText.IsEmpty()) {

@@ -191,7 +191,7 @@ private:
 	int m_FontSize{ 100 };
 	std::vector<RowData> m_Items;
 	std::vector<Planet> m_Planets;
-	bool m_ShowEclipses{ false }, m_ShowVoid{ false }, m_ShowTransits{ false }, m_TransitsNoMoon{ false };
+	bool m_ShowEclipses{ false }, m_ShowVoid{ false }, m_ShowTransits{ false }, m_TransitsNoMoon{ false }, m_TransitsSunMoon{ false };
 	mutable std::vector<EclipseData> m_Eclipses;
 	mutable double m_EclipsesUntil{ 0 };
 	mutable std::vector<VoidOfCourseData> m_Voids;

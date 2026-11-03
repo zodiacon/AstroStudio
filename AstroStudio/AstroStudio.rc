@@ -386,7 +386,7 @@ BEGIN
     PUSHBUTTON      "Cancel",IDCANCEL,245,214,50,14
 END
 
-IDD_EPHEMERISOPTIONS DIALOGEX 0, 0, 246, 270
+IDD_EPHEMERISOPTIONS DIALOGEX 0, 0, 246, 284
 STYLE DS_SETFONT | DS_MODALFRAME | DS_CENTER | WS_POPUP | WS_CAPTION | WS_SYSMENU
 CAPTION "Ephemeris Options"
 FONT 9, "Segoe UI", 400, 0, 0x0
@@ -409,9 +409,11 @@ BEGIN
     CONTROL         "Transits (exact aspects between the bodies)",IDC_EPH_TRANSITS,
                     "Button",BS_AUTOCHECKBOX | WS_TABSTOP,52,190,180,10
     CONTROL         "Without the Moon",IDC_EPH_TRANSITS_NOMOON,"Button",BS_AUTOCHECKBOX | WS_TABSTOP,64,204,120,10
-    LTEXT           "They need a step of up to 31 days (eclipses) or 7 days (VOC, transits).",IDC_STATIC,16,220,223,13
-    DEFPUSHBUTTON   "OK",IDOK,65,249,50,14
-    PUSHBUTTON      "Cancel",IDCANCEL,131,249,50,14
+    CONTROL         "Sun / Moon aspects (even without the Moon)",IDC_EPH_TRANSITS_SUNMOON,
+                    "Button",BS_AUTOCHECKBOX | WS_TABSTOP,64,218,175,10
+    LTEXT           "They need a step of up to 31 days (eclipses) or 7 days (VOC, transits).",IDC_STATIC,16,234,223,13
+    DEFPUSHBUTTON   "OK",IDOK,65,263,50,14
+    PUSHBUTTON      "Cancel",IDCANCEL,131,263,50,14
 END
 
 IDD_WHEELOPTIONS DIALOGEX 0, 0, 250, 332
@@ -611,7 +613,7 @@ BEGIN
 
     IDD_EPHEMERISOPTIONS, DIALOG
     BEGIN
-        BOTTOMMARGIN, 259
+        BOTTOMMARGIN, 273
     END
 
     IDD_WHEELOPTIONS, DIALOG
