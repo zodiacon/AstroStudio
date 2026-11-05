@@ -19,17 +19,25 @@
 // A chart worked out from others (a composite, a Davison chart, a solar arc, progressed or primary directions chart) is saved as its *recipe*: the charts it was
 // made from, each in the four sections above under a prefix, and what was chosen. Loading rebuilds the chart from them.
 //
-//   [Derived]        Version, Kind (Composite, Davison, SolarArc, Progressed or Primary), Houses (MidpointMC or MidpointARMC:
+//   [Derived]        Version, Id, Kind (Composite, Davison, SolarArc, Progressed or Primary), Houses (MidpointMC or MidpointARMC:
 //                    composite), ArcKey (Actual, Naibod or Ptolemy: solar arc and primary), Angles (Calculated, SolarArc or
-//                    Natal: progressed)
+//                    Natal: progressed), ASource and BSource (the files of the charts it was made from, relative to this
+//                    file's folder when they are on the same drive)
 //   [Derived.Time]   solar arc, progressed, primary: the date it is moved to, like [Time]
 //   [A.Chart] [A.Person] [A.Time] [A.Location]     the first chart (the only one when a chart is moved on to a date)
 //   [B.Chart] [B.Person] [B.Time] [B.Location]     the second chart (composite and Davison)
+//
+// Every file has an id (a GUID), [Chart] Id, [Derived] Id or [Analysis] Id, given when it is first saved and kept after that, so
+// that a file can be recognised after it has been moved or renamed (a chart saved under another name gets a new one).
+// A derived chart is *linked* to the charts it was made from: on loading, a source chart is read from its own file if that is where
+// ASource says (and has the id the copy has), or - if it was moved - from a chart file with that id in the derived file's folder or
+// the folder ASource names. The copies in [A.*] and [B.*] are used only when the file can't be found.
 
 // An analysis on disk (.analysis): what it was made of - the chart, the kinds of analysis, the range, the movers, targets, aspects
 // and orbs - and the events it found, so that it can be opened and looked at without running it again. The same INI text as a chart
 // file, with the chart under the prefix Natal., and the events after a line #EVENTS (see Analysis::EventsToText).
 struct AnalysisDocument {
+	std::wstring Id;			// the file's ([Analysis] Id)
 	std::wstring ChartName;
 	ChartData Chart;
 	AnalysisSettings Settings;
@@ -49,6 +57,7 @@ struct ChartFile abstract final {
 		bool Derived{ false };
 		ChartData Chart;			// a plain chart
 		DerivedRecipe Recipe;		// a derived one: build it with DerivedCharts::Build
+		std::vector<std::wstring> Unlinked;		// a derived one: the source charts whose files weren't found (their copies are used)
 	};
 
 	// On failure they return false and say why in error (a message fit to show the user).

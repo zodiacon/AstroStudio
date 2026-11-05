@@ -383,7 +383,14 @@ bool CVoidView::GetStatusInfo(StatusInfo& info) const {
 	info.Name = L"Moon void of course";
 	info.Time = RangeText() + L" (local time)";
 	info.Details.Format(L"%d periods", (int)m_Periods.size());
+	if (int zodiac = AstroCalculator::DefaultZodiac(); Zodiac::IsValid(zodiac))
+		info.Details += L"  |  " + Helpers::ZodiacText(zodiac);
 	return true;
+}
+
+void CVoidView::ZodiacChanged() {
+	// the Moon's signs are the zodiac's
+	Calculate();
 }
 
 LRESULT CVoidView::OnViewGlyphs(WORD, WORD, HWND, BOOL&) {

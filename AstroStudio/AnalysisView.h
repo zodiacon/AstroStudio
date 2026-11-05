@@ -46,6 +46,7 @@ public:
 	void PageActivated(bool active) override;
 	bool GetStatusInfo(StatusInfo& info) const override;
 	void TextFontChanged() override;
+	void ZodiacChanged() override;
 	// the aspect settings (orbs) changed: what the tab shows was found with the old ones
 	void AspectSettingsChanged() override;
 
@@ -153,6 +154,7 @@ private:
 	struct Job {
 		OpenChart Chart;
 		AnalysisSettings Settings;
+		int Zodiac{ AstroCalculator::DefaultZodiac() };		// the whole run is in this one
 		std::atomic<bool> Cancel{ false };
 		std::atomic<int> Percent{ 0 };
 		AnalysisResult Result;
@@ -169,12 +171,14 @@ private:
 	CEdit m_Filter;
 	std::vector<CString> m_Terms;		// the filter's words, in lower case
 	std::vector<int> m_Shown;			// what the list shows: indexes into m_Events
-	bool m_Stale{ false };				// the aspect settings changed since the events were found
+	bool m_Stale{ false };				// the aspect settings or the zodiac changed since the events were found
+	int m_Zodiac{ AstroCalculator::DefaultZodiac() };		// the zodiac the chart copy's positions are in
 	std::shared_ptr<Job> m_Job;
 	std::thread m_Worker;
 	WPARAM m_JobId{ 0 };
 	OpenChart m_Chart;
 	CString m_FilePath;
+	std::wstring m_FileId;		// the file's id ([Analysis] Id)
 	AnalysisSettings m_Settings;
 	std::vector<AnalysisEvent> m_Events;
 };

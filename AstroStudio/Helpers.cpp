@@ -106,6 +106,12 @@ std::tuple<int, int, int> Helpers::GetDegMinSec(double angle, bool sign) {
 	return { deg, min, 0 };
 }
 
+CString Helpers::ZodiacText(int zodiac) {
+	if (!Zodiac::IsValid(zodiac))
+		return L"Tropical";
+	return L"Sidereal (" + CString(Zodiac::Name(zodiac).c_str()) + L")";
+}
+
 PCWSTR Helpers::GetPlanetName(Planet type) {
 	static PCWSTR names[] = {
 		L"Sun", L"Moon", L"Mercury", L"Venus", L"Mars", L"Jupiter", L"Saturn", L"Uranus", L"Neptune", L"Pluto",

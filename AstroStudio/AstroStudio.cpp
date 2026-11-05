@@ -53,6 +53,7 @@ int WINAPI _tWinMain(HINSTANCE hInstance, HINSTANCE /*hPrevInstance*/, LPTSTR lp
 	ATLASSERT(SUCCEEDED(hRes));
 
 	AppSettings::Get().Load(AppSettings::RegistryKey);
+	AstroCalculator::SetDefaultZodiac(AppSettings::Get().ZodiacMode());
 	AspectOptions::LoadFromSettings();
 	WheelOptions::LoadFromSettings();
 	MidpointSettings::LoadFromSettings();

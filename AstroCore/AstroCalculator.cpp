@@ -6,6 +6,7 @@
 #include <utility>
 #include <optional>
 #include <algorithm>
+#include <atomic>
 
 static char s_error[256];
 
@@ -49,11 +50,69 @@ AstroCalculator::AstroCalculator() : m_SweFlags(SEFLG_MOSEPH) {
 	}
 }
 
+std::string Zodiac::Name(int zodiac) {
+	if (!IsValid(zodiac))
+		return "Tropical";
+	auto name = swe_get_ayanamsa_name(zodiac);
+	return name ? name : "Sidereal";
+}
+
+bool Zodiac::IsValid(int zodiac) {
+	return zodiac >= 0 && zodiac < SE_NSIDM_PREDEF;
+}
+
+void AstroCalculator::SetDefaultZodiac(int zodiac) noexcept {
+	s_defaultZodiac = Zodiac::IsValid(zodiac) ? zodiac : Zodiac::Tropical;
+}
+
+int AstroCalculator::DefaultZodiac() noexcept {
+	return s_defaultZodiac;
+}
+
+void AstroCalculator::SetZodiac(int zodiac) noexcept {
+	m_Zodiac = zodiac == FollowDefault || Zodiac::IsValid(zodiac) ? zodiac : Zodiac::Tropical;
+}
+
+int AstroCalculator::GetZodiac() const noexcept {
+	return m_Zodiac == FollowDefault ? DefaultZodiac() : m_Zodiac;
+}
+
+int AstroCalculator::Flags() const {
+	int zodiac = GetZodiac();
+	if (zodiac == Zodiac::Tropical)
+		return m_SweFlags;
+	// the ayanamsa is part of the library's (per thread) state
+	if (s_sidMode != zodiac) {
+		swe_set_sid_mode(zodiac, 0, 0);
+		s_sidMode = zodiac;
+	}
+	return m_SweFlags | SEFLG_SIDEREAL;
+}
+
+double AstroCalculator::Ayanamsa(double jd) const {
+	int flags = Flags();
+	if ((flags & SEFLG_SIDEREAL) == 0)
+		return 0;
+	double ayanamsa = 0;
+	char error[256];
+	swe_get_ayanamsa_ex_ut(jd, flags & ~SEFLG_SIDEREAL, &ayanamsa, error);
+	return ayanamsa;
+}
+
+double AstroCalculator::ZodiacDifference(int from, int to, double jd) {
+	if (from == to)
+		return 0;
+	AstroCalculator a, b;
+	a.SetZodiac(from);
+	b.SetZodiac(to);
+	return a.Ayanamsa(jd) - b.Ayanamsa(jd);
+}
+
 PlanetPosition AstroCalculator::CalcPlanet(Planet planet, DateTime const& dt, int harmonic, bool withSpeed) const {
 	double xx[6]{};		// stays zero if the ephemeris can't give the body (its file is missing, or the year is outside it)
 	// (the Part of Fortune has no body: the number would be another one of the ephemeris's - ChartData works it out)
 	if (planet != Planet::PartOfFortune)
-		swe_calc_ut(dt, (int)planet, m_SweFlags | (withSpeed ? SEFLG_SPEED : 0), xx, s_error);
+		swe_calc_ut(dt, (int)planet, Flags() | (withSpeed ? SEFLG_SPEED : 0), xx, s_error);
 	PlanetPosition pp;
 	pp.Planet = planet;
 	pp.Longitude = xx[0] * harmonic;
@@ -165,7 +224,7 @@ std::vector<EclipseData> AstroCalculator::CalcEclipses(DateTime const& from, Dat
 double AstroCalculator::Longitude(int planet, double jd) const {
 	double xx[6]{};
 	char error[256];
-	swe_calc_ut(jd, planet, m_SweFlags, xx, error);
+	swe_calc_ut(jd, planet, Flags(), xx, error);
 	return xx[0];
 }
 
@@ -372,10 +431,18 @@ namespace {
 	}
 }
 
-HouseData AstroCalculator::CalcHousesFromArmc(double armc, double latitude, double obliquity, HouseSystem system) const {
+HouseData AstroCalculator::CalcHousesFromArmc(double armc, double latitude, double obliquity, HouseSystem system, double jd) const {
 	double ascmc[10]{};
 	double cusps[13]{};
 	swe_houses_armc(armc, latitude, obliquity, (int)system, cusps, ascmc);
+	// the library works these out in the tropical zodiac; the ARMC (ascmc[2]) is a right ascension, in no zodiac
+	if (double ayanamsa = Ayanamsa(jd); ayanamsa != 0) {
+		auto shift = [&](double& value) { value = AstroPoint(value - ayanamsa).Value; };
+		for (int i = 1; i <= 12; i++)
+			shift(cusps[i]);
+		for (int i : { 0, 1, 3, 4, 5, 6, 7 })
+			shift(ascmc[i]);
+	}
 	return FillHouses(cusps, ascmc);
 }
 
@@ -388,9 +455,9 @@ double AstroCalculator::Obliquity(double jd) const {
 
 HouseData AstroCalculator::CalcHouses(DateTime dt, double latitude, double longitude, HouseSystem system) {
 	HouseData houses;
-	double ascmc[10];
-	double cusps[13];
-	swe_houses(dt, latitude, longitude, (int)system, cusps, ascmc);
+	double ascmc[10]{};
+	double cusps[13]{};
+	swe_houses_ex(dt, Flags() & SEFLG_SIDEREAL, latitude, longitude, (int)system, cusps, ascmc);
 	for (int i = 0; i < 12; i++)
 		houses.Cusps[i] = cusps[i + 1];
 

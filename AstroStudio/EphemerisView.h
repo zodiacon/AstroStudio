@@ -83,6 +83,7 @@ protected:
 		COMMAND_ID_HANDLER(ID_FONT_SIZE_DEFAULT, OnChangeFontSize)
 		COMMAND_ID_HANDLER(ID_VIEW_GRIDLINES, OnViewGridLines)
 		COMMAND_ID_HANDLER(ID_EPHEMERIS_OPTIONS, OnOptions)
+		COMMAND_ID_HANDLER(ID_EPHEMERIS_EVENTSONLY, OnEventsOnly)
 		COMMAND_HANDLER(IDC_EPH_TIME, CBN_SELCHANGE, OnTimeOfDayChanged)
 		MESSAGE_HANDLER(WM_CREATE, OnCreate)
 		CHAIN_MSG_MAP(CDpiAware<CEphemerisView>)
@@ -109,6 +110,8 @@ protected:
 	// the menu and shared toolbar show this view's state while it is the page showing
 	void PageActivated(bool active) override;
 	void TextFontChanged() override;
+	void ZodiacChanged() override;
+	bool GetStatusInfo(StatusInfo& info) const override;
 
 private:
 	void UpdateList();
@@ -141,6 +144,10 @@ private:
 	void CalcExtras(int row) const;
 	void EnsureEclipses(double until) const;
 	void EnsureVoids(double until) const;
+	// The rows the list shows: all of them, or with Events only those whose Phenomena cell has something in it.
+	// A list index goes through DataRow to become the index of the row's date (m_Items, RowTime).
+	void ApplyFilter();
+	int DataRow(int listRow) const { return m_EventsOnly && listRow < (int)m_Shown.size() ? m_Shown[listRow] : listRow; }
 
 	struct PlanetData {
 		Planet Planet;
@@ -170,6 +177,7 @@ private:
 	LRESULT OnViewGridLines(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/);
 	LRESULT OnEditCopy(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/);
 	LRESULT OnOptions(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/);
+	LRESULT OnEventsOnly(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/);
 	LRESULT OnTimeOfDayChanged(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/);
 	LRESULT OnExport(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/);
 	LRESULT OnPrint(WORD /*wNotifyCode*/, WORD wID, HWND /*hWndCtl*/, BOOL& /*bHandled*/);
@@ -181,6 +189,7 @@ private:
 	static constexpr UINT_PTR NowTimerId = 1;
 	static constexpr UINT NowIntervalMs = 30 * 1000;
 	static constexpr int NowBand = 1;		// the rebar band of the strip
+	static constexpr int RowCount = 2000;	// the dates the list runs through
 
 	CListViewCtrl m_List;
 	CPlanetStrip m_NowStrip;
@@ -199,6 +208,8 @@ private:
 	std::vector<RowData> m_Items;
 	std::vector<Planet> m_Planets;
 	bool m_ShowEclipses{ false }, m_ShowVoid{ false }, m_ShowTransits{ false }, m_TransitsNoMoon{ false }, m_TransitsSunMoon{ false };
+	bool m_EventsOnly{ false };
+	std::vector<int> m_Shown;		// with Events only: the dates (rows of m_Items) the list shows
 	mutable std::vector<EclipseData> m_Eclipses;
 	mutable double m_EclipsesUntil{ 0 };
 	mutable std::vector<VoidOfCourseData> m_Voids;

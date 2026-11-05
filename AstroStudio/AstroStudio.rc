@@ -151,6 +151,18 @@ BEGIN
         MENUITEM "&Midpoints...",               ID_OPTIONS_MIDPOINTS
         MENUITEM "Chart &Colors...",            ID_OPTIONS_COLORS
         MENUITEM "Show &Part of Fortune",       ID_OPTIONS_FORTUNE
+        POPUP "&Zodiac"
+        BEGIN
+            MENUITEM "&Tropical",                   ID_ZODIAC_TROPICAL
+            MENUITEM SEPARATOR
+            MENUITEM "Sidereal: &Fagan/Bradley",    ID_ZODIAC_FAGAN
+            MENUITEM "Sidereal: &Lahiri",           ID_ZODIAC_LAHIRI
+            MENUITEM "Sidereal: &Raman",            ID_ZODIAC_RAMAN
+            MENUITEM "Sidereal: &Krishnamurti",     ID_ZODIAC_KRISHNAMURTI
+            MENUITEM "Sidereal: &Yukteshwar",       ID_ZODIAC_YUKTESHWAR
+            MENUITEM "Sidereal: True &Chitrapaksha", ID_ZODIAC_TRUECHITRA
+            MENUITEM "Sidereal: &De Luce",          ID_ZODIAC_DELUCE
+        END
         MENUITEM "Open Last Project at &Start", ID_PROJECT_AUTOOPEN
         MENUITEM SEPARATOR
         MENUITEM "&Always On Top",              ID_OPTIONS_ALWAYSONTOP
@@ -273,7 +285,7 @@ IDD_CHARTDETAILS DIALOGEX 0, 0, 440, 327
 STYLE DS_SETFONT | DS_CONTROL | WS_CHILD | WS_VISIBLE | WS_CLIPSIBLINGS | WS_CLIPCHILDREN
 FONT 9, "Tahoma", 400, 0, 0x0
 BEGIN
-    LTEXT           "House System:",IDC_STATIC,7,49,54,8,SS_LEFTNOWORDWRAP
+    CONTROL         "House System:",IDC_STATIC,"Static",SS_LEFTNOWORDWRAP | WS_GROUP,7,49,54,8
     COMBOBOX        IDC_HOUSESYSTEM,63,47,73,109,CBS_DROPDOWNLIST | CBS_SORT | WS_VSCROLL | WS_TABSTOP
     LTEXT           "Date:",IDC_STATIC,144,49,18,8
     COMBOBOX        IDC_DAY,168,46,28,120,CBS_DROPDOWNLIST | WS_VSCROLL | WS_TABSTOP
@@ -386,7 +398,7 @@ BEGIN
     PUSHBUTTON      "Cancel",IDCANCEL,245,214,50,14
 END
 
-IDD_EPHEMERISOPTIONS DIALOGEX 0, 0, 246, 284
+IDD_EPHEMERISOPTIONS DIALOGEX 0, 0, 453, 191
 STYLE DS_SETFONT | DS_MODALFRAME | DS_CENTER | WS_POPUP | WS_CAPTION | WS_SYSMENU
 CAPTION "Ephemeris Options"
 FONT 9, "Segoe UI", 400, 0, 0x0
@@ -394,26 +406,26 @@ BEGIN
     LTEXT           "Start date:",IDC_STATIC,7,9,38,8
     COMBOBOX        IDC_DAY,52,7,30,120,CBS_DROPDOWNLIST | WS_VSCROLL | WS_TABSTOP
     COMBOBOX        IDC_MONTH,85,7,66,150,CBS_DROPDOWNLIST | WS_VSCROLL | WS_TABSTOP
-    EDITTEXT        IDC_YEAR,154,7,36,14,ES_AUTOHSCROLL
-    PUSHBUTTON      "Today",IDC_EPH_TODAY,196,7,40,14
+    EDITTEXT        IDC_YEAR,154,6,33,12,ES_AUTOHSCROLL
+    PUSHBUTTON      "Today",IDC_EPH_TODAY,192,6,40,12
     LTEXT           "Step:",IDC_STATIC,7,29,38,8
-    EDITTEXT        IDC_EPH_STEP,52,27,32,14,ES_AUTOHSCROLL | ES_NUMBER
+    EDITTEXT        IDC_EPH_STEP,52,27,32,12,ES_AUTOHSCROLL | ES_NUMBER
     LTEXT           "days between rows (1 to 366)",IDC_STATIC,90,29,140,8
-    LTEXT           "Bodies:",IDC_STATIC,7,51,38,8
-    CONTROL         "",IDC_EPH_BODIES,"SysListView32",LVS_REPORT | LVS_SINGLESEL | LVS_SHOWSELALWAYS | LVS_NOCOLUMNHEADER | WS_BORDER | WS_TABSTOP,52,49,110,108
-    PUSHBUTTON      "Standard",IDC_EPH_STANDARD,170,49,50,14
-    PUSHBUTTON      "All",IDC_EPH_ALL,170,67,50,14
-    LTEXT           "Also show:",IDC_STATIC,7,163,45,8
-    CONTROL         "Eclipses (in Phenomena)",IDC_EPH_ECLIPSES,"Button",BS_AUTOCHECKBOX | WS_TABSTOP,52,162,100,10
-    CONTROL         "Moon void of course",IDC_EPH_VOID,"Button",BS_AUTOCHECKBOX | WS_TABSTOP,52,176,100,10
+    LTEXT           "Bodies:",IDC_STATIC,7,49,38,8
+    CONTROL         "",IDC_EPH_BODIES,"SysListView32",LVS_REPORT | LVS_SINGLESEL | LVS_SHOWSELALWAYS | LVS_NOCOLUMNHEADER | WS_BORDER | WS_TABSTOP,52,47,110,112
+    PUSHBUTTON      "Standard",IDC_EPH_STANDARD,170,47,50,14
+    PUSHBUTTON      "All",IDC_EPH_ALL,170,65,50,14
+    GROUPBOX        "Also show",IDC_STATIC,246,4,200,150
+    CONTROL         "Eclipses (in Phenomena)",IDC_EPH_ECLIPSES,"Button",BS_AUTOCHECKBOX | WS_TABSTOP,256,20,180,10
+    CONTROL         "Moon void of course",IDC_EPH_VOID,"Button",BS_AUTOCHECKBOX | WS_TABSTOP,256,34,180,10
     CONTROL         "Transits (exact aspects, in Phenomena)",IDC_EPH_TRANSITS,
-                    "Button",BS_AUTOCHECKBOX | WS_TABSTOP,52,190,180,10
-    CONTROL         "Without the Moon",IDC_EPH_TRANSITS_NOMOON,"Button",BS_AUTOCHECKBOX | WS_TABSTOP,64,204,120,10
+                    "Button",BS_AUTOCHECKBOX | WS_TABSTOP,256,48,180,10
+    CONTROL         "Without the Moon",IDC_EPH_TRANSITS_NOMOON,"Button",BS_AUTOCHECKBOX | WS_TABSTOP,268,62,168,10
     CONTROL         "Sun / Moon aspects (even without the Moon)",IDC_EPH_TRANSITS_SUNMOON,
-                    "Button",BS_AUTOCHECKBOX | WS_TABSTOP,64,218,175,10
-    LTEXT           "They need a step of up to 31 days (eclipses) or 7 days (VOC, transits).",IDC_STATIC,16,234,223,13
-    DEFPUSHBUTTON   "OK",IDOK,65,263,50,14
-    PUSHBUTTON      "Cancel",IDCANCEL,131,263,50,14
+                    "Button",BS_AUTOCHECKBOX | WS_TABSTOP,268,76,168,10
+    LTEXT           "They need a step of up to 31 days (eclipses) or 7 days (VOC, transits).",IDC_STATIC,256,96,180,18
+    DEFPUSHBUTTON   "OK",IDOK,168,170,50,14
+    PUSHBUTTON      "Cancel",IDCANCEL,234,170,50,14
 END
 
 IDD_WHEELOPTIONS DIALOGEX 0, 0, 250, 332
@@ -613,7 +625,7 @@ BEGIN
 
     IDD_EPHEMERISOPTIONS, DIALOG
     BEGIN
-        BOTTOMMARGIN, 273
+        BOTTOMMARGIN, 184
     END
 
     IDD_WHEELOPTIONS, DIALOG
@@ -769,6 +781,30 @@ END
 
 STRINGTABLE
 BEGIN
+    ID_CHART_DERIVED_PROGRESSED 
+                            "Open this chart secondary progressed (a day for a year) to a date you choose  \nProgressed Chart"
+    ID_CHART_DERIVED_PRIMARY 
+                            "Open this chart with its angles and houses moved on by primary directions to a date you choose  \nPrimary Directions"
+    ID_OPTIONS_MIDPOINTS    "Choose the points that make midpoints, and the orb for the midpoint list and tree\nMidpoints"
+    ID_TOOL_VOID            "List the Moon's void of course periods, with the last aspect of each \nMoon Void of Course"
+    ID_VOID_RANGE           "Choose the dates the void of course periods are listed for \nRange"
+    ID_EPHEMERIS_EVENTSONLY "Show only the rows with something in the Phenomena column\nEvents only"
+    ID_ZODIAC_TROPICAL      "Measure positions from the equinox (the tropical zodiac)"
+    ID_ZODIAC_FAGAN         "Measure positions in the sidereal zodiac, with the Fagan/Bradley ayanamsa"
+    ID_ZODIAC_LAHIRI        "Measure positions in the sidereal zodiac, with the Lahiri ayanamsa"
+    ID_ZODIAC_RAMAN         "Measure positions in the sidereal zodiac, with the Raman ayanamsa"
+    ID_ZODIAC_KRISHNAMURTI  "Measure positions in the sidereal zodiac, with the Krishnamurti ayanamsa"
+    ID_ZODIAC_YUKTESHWAR    "Measure positions in the sidereal zodiac, with the Yukteshwar ayanamsa"
+END
+
+STRINGTABLE
+BEGIN
+    ID_ZODIAC_TRUECHITRA    "Measure positions in the sidereal zodiac, with Spica at 0 Libra (true Chitrapaksha)"
+    ID_ZODIAC_DELUCE        "Measure positions in the sidereal zodiac, with the De Luce ayanamsa"
+END
+
+STRINGTABLE
+BEGIN
     ID_CHART_OVERLAY        "Choose what to show around the chart \nOverlay"
     ID_CHART_DERIVED_SOLARRETURN 
                             "Open the chart for the Sun's return to its place in this chart, for a date near the moment shown \nSolar Return"
@@ -790,17 +826,6 @@ BEGIN
     ID_CHART_OVERLAY_DATE   "Choose the moment the transits or progressions are shown for"
     ID_OPTIONS_FORTUNE      "Show the Part of Fortune among the planets of the charts and on their wheels"
     ID_PROJECT_NEW          "Start a project: a set of links to charts and analyses, kept together in one file"
-END
-
-STRINGTABLE
-BEGIN
-    ID_CHART_DERIVED_PROGRESSED 
-                            "Open this chart secondary progressed (a day for a year) to a date you choose  \nProgressed Chart"
-    ID_CHART_DERIVED_PRIMARY 
-                            "Open this chart with its angles and houses moved on by primary directions to a date you choose  \nPrimary Directions"
-    ID_OPTIONS_MIDPOINTS    "Choose the points that make midpoints, and the orb for the midpoint list and tree\nMidpoints"
-    ID_TOOL_VOID            "List the Moon's void of course periods, with the last aspect of each \nMoon Void of Course"
-    ID_VOID_RANGE           "Choose the dates the void of course periods are listed for \nRange"
 END
 
 STRINGTABLE

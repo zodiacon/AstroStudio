@@ -31,6 +31,8 @@ struct Helpers abstract final {
 	static CString FormatLatitude(double lat);
 	static std::tuple<int, int, int> GetDegMinSec(double angle, bool sign = false);
 	static PCWSTR GetPlanetName(Planet type);
+	// "Tropical" or "Sidereal (Lahiri)" for a zodiac (AstroCalculator's numbers)
+	static CString ZodiacText(int zodiac);
 	static PCWSTR GetAspectName(AspectType type);
 	static CString GetZodiacSignName(ZodiacSign sign);
 	static std::vector<Planet> GetStandardPlanets();

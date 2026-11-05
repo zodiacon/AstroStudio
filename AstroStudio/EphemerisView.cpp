@@ -102,6 +102,7 @@ LRESULT CPlanetStrip::OnPaint(UINT msg, WPARAM wp, LPARAM, BOOL&) {
 }
 
 CString CEphemerisView::GetColumnText(HWND h, int row, int col) {
+	row = DataRow(row);
 	auto type = GetColumnManager(h)->GetColumnTag<ColumnType>(col);
 	CString text;
 	switch (type) {
@@ -150,22 +151,23 @@ DWORD CEphemerisView::OnSubItemPrePaint(int, LPNMCUSTOMDRAW cd) {
 	auto lv = (NMLVCUSTOMDRAW*)cd;
 	auto colType = GetColumnManager(m_List)->GetColumnTag<ColumnType>(lv->iSubItem);
 	const bool glyphs = (m_FormatOptions & FormatOptions::UseGlyphs) == FormatOptions::UseGlyphs;
+	const int row = DataRow((int)cd->dwItemSpec);
 	// which rows have an eclipse or a void has to be known before the cell is drawn, which may be before its text was asked for
 	if (m_ShowEclipses && colType == ColumnType::Phenom) {
-		EnsureRows((size_t)cd->dwItemSpec + 2);
-		GetRowPhenom((int)cd->dwItemSpec, glyphs);
+		EnsureRows((size_t)row + 2);
+		GetRowPhenom(row, glyphs);
 	}
 	if (m_ShowVoid && colType == ColumnType::MoonVoid) {
-		EnsureRows((size_t)cd->dwItemSpec + 2);
-		CalcExtras((int)cd->dwItemSpec);
+		EnsureRows((size_t)row + 2);
+		CalcExtras(row);
 	}
-	if ((int)cd->dwItemSpec >= m_Items.size())
+	if (row >= (int)m_Items.size())
 		return CDRF_DODEFAULT;
 
 	CDCHandle dc(cd->hdc);
 
 	lv->clrTextBk = CLR_INVALID;
-	auto& item = m_Items[(int)cd->dwItemSpec];
+	auto& item = m_Items[row];
 	// "today" is a local calendar date; the row's own date is UT, so it is converted before the two are compared
 	auto localDate = ToLocal(item.Date);
 	auto today = DateTime::Today(true);
@@ -224,6 +226,34 @@ void CEphemerisView::TextFontChanged() {
 	AutoSizeColumns();
 	m_List.RedrawWindow();
 	UpdateViewUI();
+}
+
+void CEphemerisView::ZodiacChanged() {
+	// every position and sign ingress is different: start the list over
+	EphemerisSettings settings;
+	settings.Start = m_StartTime;
+	settings.Step = m_Increment;
+	settings.Planets = m_Planets;
+	settings.Eclipses = m_ShowEclipses;
+	settings.VoidOfCourse = m_ShowVoid;
+	settings.Transits = m_ShowTransits;
+	settings.TransitsNoMoon = m_TransitsNoMoon;
+	settings.TransitsSunMoon = m_TransitsSunMoon;
+	int top = m_List.GetTopIndex();
+	ApplySettings(settings);
+	if (int count = m_List.GetItemCount(); count > 0 && !m_EventsOnly) {
+		m_List.EnsureVisible(count - 1, FALSE);
+		m_List.EnsureVisible(std::min(top, count - 1), FALSE);
+	}
+}
+
+bool CEphemerisView::GetStatusInfo(StatusInfo& info) const {
+	// only the zodiac, and only when it isn't the usual one
+	int zodiac = AstroCalculator::DefaultZodiac();
+	if (!Zodiac::IsValid(zodiac))
+		return false;
+	info.Details = Helpers::ZodiacText(zodiac);
+	return true;
 }
 
 void CEphemerisView::PageActivated(bool active) {
@@ -389,6 +419,7 @@ void CEphemerisView::UpdateViewUI() {
 	ui.UIEnable(ID_FILE_PRINT, TRUE);
 	ui.UIEnable(ID_FILE_PRINT_PREVIEW, TRUE);
 	ui.UISetCheck(ID_VIEW_GRIDLINES, (m_List.GetExtendedListViewStyle() & LVS_EX_GRIDLINES) != 0);
+	ui.UISetCheck(ID_EPHEMERIS_EVENTSONLY, m_EventsOnly);
 }
 
 void CEphemerisView::UpdateNowStrip() {
@@ -548,6 +579,7 @@ LRESULT CEphemerisView::OnCreate(UINT, WPARAM, LPARAM, BOOL&) {
 		{ ID_FONT_SIZE_DEFAULT, IDI_FONT_SIZE_DEFAULT },
 		{ ID_VIEW_GRIDLINES, IDI_GRID, BTNS_CHECK },
 		{ 0 },
+		{ ID_EPHEMERIS_EVENTSONLY, IDI_EVENT, BTNS_CHECK, L"Events only" },
 		{ ID_EPHEMERIS_OPTIONS, IDI_OPTIONS, 0, L"Options" },
 	};
 
@@ -593,8 +625,10 @@ LRESULT CEphemerisView::OnCreate(UINT, WPARAM, LPARAM, BOOL&) {
 
 	m_StartTime = DateTime::Today();
 	m_StartTime = m_StartTime.AddDays(-30);
-	m_Items.reserve(2000);
-	m_List.SetItemCount(2000);
+	m_Items.reserve(RowCount + 1);
+	m_EventsOnly = settings.EphemerisEventsOnly() != 0;
+	tb.CheckButton(ID_EPHEMERIS_EVENTSONLY, m_EventsOnly);	// the shared UI map may already think it is in this state
+	ApplyFilter();
 
 	DarkMode::setDarkWndNotifySafe(m_hWnd);
 
@@ -606,6 +640,7 @@ void CEphemerisView::SaveSettings() {
 	settings.EphemerisGlyphs((m_FormatOptions & FormatOptions::UseGlyphs) == FormatOptions::UseGlyphs ? 1 : 0);
 	settings.EphemerisSeconds((m_FormatOptions & FormatOptions::ShowSeconds) == FormatOptions::ShowSeconds ? 1 : 0);
 	settings.EphemerisGridLines((m_List.GetExtendedListViewStyle() & LVS_EX_GRIDLINES) ? 1 : 0);
+	settings.EphemerisEventsOnly(m_EventsOnly ? 1 : 0);
 	settings.EphemerisFontSize(m_FontSize);
 	settings.EphemerisStep((int)std::lround(m_Increment));
 	settings.EphemerisEclipses(m_ShowEclipses ? 1 : 0);
@@ -725,7 +760,7 @@ CString CEphemerisView::BuildTable(std::vector<int> const& rows, bool csv) {
 		for (int i = 0; i < count; i++) {
 			if (i > 0)
 				table += separator;
-			table += cell(PlainCellText(row, columns->GetColumnTag<ColumnType>(order[i])));
+			table += cell(PlainCellText(DataRow(row), columns->GetColumnTag<ColumnType>(order[i])));
 		}
 		table += L"\r\n";
 	}
@@ -758,7 +793,7 @@ void CEphemerisView::ApplySettings(EphemerisSettings const& settings) {
 	SaveSettings();
 
 	m_Items.clear();
-	m_Items.reserve(2000);
+	m_Items.reserve(RowCount + 1);
 	m_Eclipses.clear();
 	m_EclipsesUntil = 0;
 	m_Voids.clear();
@@ -766,7 +801,7 @@ void CEphemerisView::ApplySettings(EphemerisSettings const& settings) {
 
 	m_List.SetItemCount(0);
 	RebuildColumns();
-	m_List.SetItemCount(2000);
+	ApplyFilter();
 	m_List.EnsureVisible(0, FALSE);
 	m_List.RedrawWindow();
 	UpdateNowStrip();
@@ -992,11 +1027,49 @@ LRESULT CEphemerisView::OnNewChart(WORD, WORD, HWND, BOOL&) {
 
 	// A chart from an ephemeris row is for the moment the row is for (see RowTime).
 	// The dialog shows it, like any time, as local time in this machine's zone; UT is calculated from that.
+	selected = DataRow(selected);
+	if (selected >= (int)m_Items.size()) {
+		Frame()->NewChartWithDialog();
+		return 0;
+	}
 	auto info = Frame()->DefaultChartInfo();
 	info.Time = m_Items[selected].Date;
 	info.TimeZone = TimeZones::Machine();
 	Frame()->NewChartWithDialog(&info);
 
+	return 0;
+}
+
+void CEphemerisView::ApplyFilter() {
+	m_Shown.clear();
+	if (m_EventsOnly) {
+		// every row's phenomena have to be known: with transits on this takes a moment
+		CWaitCursor wait;
+		EnsureRows(RowCount + 1);
+		for (int row = 0; row < RowCount; row++)
+			if (!GetRowPhenom(row, false).IsEmpty())
+				m_Shown.push_back(row);
+	}
+	m_List.SetItemCount(m_EventsOnly ? (int)m_Shown.size() : RowCount);
+	m_List.RedrawWindow();
+}
+
+LRESULT CEphemerisView::OnEventsOnly(WORD, WORD, HWND, BOOL&) {
+	// keep the date at the top of the list in view as far as it can be
+	int top = DataRow(m_List.GetTopIndex());
+	m_EventsOnly = !m_EventsOnly;
+	SaveSettings();
+	ApplyFilter();
+	int index = top;
+	if (m_EventsOnly)
+		index = (int)(std::lower_bound(m_Shown.begin(), m_Shown.end(), top) - m_Shown.begin());
+	if (int count = m_List.GetItemCount(); count > 0) {
+		index = std::min(index, count - 1);
+		// to the end first, so that the row comes up at the top rather than at the bottom
+		m_List.EnsureVisible(count - 1, FALSE);
+		m_List.EnsureVisible(index, FALSE);
+	}
+	UpdateViewUI();
 	return 0;
 }
 

@@ -250,13 +250,22 @@
 #define IDD_VOIDRANGE                   246
 #define ID_TOOL_VOID                    32855
 #define ID_VOID_RANGE                   32856
+#define ID_EPHEMERIS_EVENTSONLY         32857
+#define ID_ZODIAC_TROPICAL              32858
+#define ID_ZODIAC_FAGAN                 32859
+#define ID_ZODIAC_LAHIRI                32860
+#define ID_ZODIAC_RAMAN                 32861
+#define ID_ZODIAC_KRISHNAMURTI          32862
+#define ID_ZODIAC_YUKTESHWAR            32863
+#define ID_ZODIAC_TRUECHITRA            32864
+#define ID_ZODIAC_DELUCE                32865
 
 // Next default values for new objects
 // 
 #ifdef APSTUDIO_INVOKED
 #ifndef APSTUDIO_READONLY_SYMBOLS
 #define _APS_NEXT_RESOURCE_VALUE        247
-#define _APS_NEXT_COMMAND_VALUE         32857
+#define _APS_NEXT_COMMAND_VALUE         32866
 #define _APS_NEXT_CONTROL_VALUE         1120
 #define _APS_NEXT_SYMED_VALUE           108
 #endif

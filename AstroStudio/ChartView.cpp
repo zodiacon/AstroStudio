@@ -1,5 +1,6 @@
 #include "pch.h"
 #include "ChartView.h"
+#include "Project.h"
 #include "TimeZones.h"
 #include "DirectionsDlg.h"
 #include "Helpers.h"
@@ -113,6 +114,35 @@ void CChartView::WheelOptionsChanged() {
 void CChartView::MidpointOptionsChanged() {
 	m_MidpointList.SyncSettings();
 	m_MidpointTree.SyncSettings();		// (the tab's two boxes show the new orb and kind, and it makes its tree again)
+}
+
+void CChartView::ZodiacChanged() {
+	int old = m_Zodiac;
+	m_Zodiac = AstroCalculator::DefaultZodiac();
+	if (old == m_Zodiac || m_Data.AllPlanets().empty())
+		return;
+
+	if (!m_ReadOnly) {
+		// an ordinary chart is calculated again; it hasn't changed, so it isn't modified
+		m_Data.CalcPlanets(m_Calc);
+		m_Data.CalcHouses(m_Calc);
+	}
+	else if (m_Recipe) {
+		// made again from what it was made of, which is what opening its file would do
+		DerivedChart(DerivedCharts::Build(m_Calc, *m_Recipe));
+		if (m_Overlay && m_Overlay->Kind == OverlayKind::Synastry)
+			m_Overlay->Data.ShiftLongitudes(AstroCalculator::ZodiacDifference(old, m_Zodiac, m_Overlay->Data.Info().Time.Julian()));
+		m_DetailsView.UpdateControls(Recalc::All);
+		UpdateAspects();
+		return;
+	}
+	else
+		m_Data.ShiftLongitudes(AstroCalculator::ZodiacDifference(old, m_Zodiac, m_Data.Info().Time.Julian()));
+	// a synastry overlay is a copy of another chart (which may be one made from others): moved like one
+	if (m_Overlay && m_Overlay->Kind == OverlayKind::Synastry)
+		m_Overlay->Data.ShiftLongitudes(AstroCalculator::ZodiacDifference(old, m_Zodiac, m_Overlay->Data.Info().Time.Julian()));
+	m_DetailsView.UpdateControls(Recalc::All);
+	UpdateAspects();		// (and the overlay's planets, worked out again for a transit or a progression)
 }
 
 void CChartView::TextFontChanged() {
@@ -320,6 +350,24 @@ bool CChartView::Save(bool saveAs) {
 			return false;
 		path = dlg.m_szFileName;
 	}
+
+	// The id belongs to the file: a chart saved to a file of its own for the first time (a new one, or Save As) gets a new one.
+	bool newFile = m_FilePath.IsEmpty() || path.CompareNoCase(m_FilePath) != 0;
+	if (m_Recipe) {
+		if (newFile || m_Recipe->Id.empty())
+			m_Recipe->Id = Project::NewId();
+		// the charts it is made from as their pages have them now (they may have been saved, or saved elsewhere, since)
+		for (int i = 0; i < 2; i++) {
+			OpenChart source;
+			if (m_Sources[i] && m_Sources[i]->GetChart(source)) {
+				(i == 0 ? m_Recipe->A : m_Recipe->B) = std::move(source.Data);
+				auto file = m_Sources[i]->FilePath();
+				(i == 0 ? m_Recipe->APath : m_Recipe->BPath) = file ? file : L"";
+			}
+		}
+	}
+	else if (newFile || m_Data.FileId().empty())
+		m_Data.SetFileId(Project::NewId());
 
 	// (what the wheel options added to the planets is not the chart's)
 	ChartData toSave = m_Data;
@@ -555,6 +603,8 @@ bool CChartView::GetStatusInfo(StatusInfo& status) const {
 		harmonic.Format(L"Harmonic %d", m_Data.Harmonic());
 		add(harmonic);
 	}
+	if (Zodiac::IsValid(m_Zodiac))
+		add(Helpers::ZodiacText(m_Zodiac));
 	if (m_ReadOnly)
 		add(L"Read-only");
 	if (m_Live)
@@ -674,13 +724,15 @@ void CChartView::NewDirectedChart(DerivedKind kind) {
 		recipe.Angles = dlg.Angles();
 	else
 		recipe.Key = dlg.Key();
+	recipe.APath = m_FilePath;
 	auto chart = DerivedCharts::Build(m_Calc, recipe);
 
 	int shown = dlg.Zone().OffsetUT;
 	auto local = TimeZones::UtToLocal(dlg.Target(), dlg.Zone(), &shown);
 	CString title;
 	title.Format(L"%s %04ld/%02ld/%02ld: %s", name, local.Year, local.Month, local.Day, (PCWSTR)m_Title);
-	Frame()->AddDerivedChartView(std::move(chart), title, &recipe);
+	if (auto view = Frame()->AddDerivedChartView(std::move(chart), title, &recipe))
+		view->LinkSources(this, nullptr);
 }
 
 void CChartView::NewPairChart(bool davison) {
@@ -691,10 +743,14 @@ void CChartView::NewPairChart(bool davison) {
 	recipe.Kind = davison ? DerivedKind::Davison : DerivedKind::Composite;
 	recipe.A = m_Data;
 	recipe.B = std::move(other.Data);
+	recipe.APath = m_FilePath;
+	if (other.View && other.View->FilePath())
+		recipe.BPath = other.View->FilePath();
 	ChartData chart = DerivedCharts::Build(m_Calc, recipe);
 	CString title;
 	title.Format(L"%s: %s + %s", davison ? L"Davison" : L"Composite", (PCWSTR)m_Title, (PCWSTR)other.Name);
-	Frame()->AddDerivedChartView(std::move(chart), title, &recipe);
+	if (auto view = Frame()->AddDerivedChartView(std::move(chart), title, &recipe))
+		view->LinkSources(this, other.View);
 }
 
 LRESULT CChartView::OnAnalysis(WORD, WORD, HWND, BOOL&) {
@@ -1142,6 +1198,7 @@ std::unique_ptr<Printing::Document> CChartView::MakePrintDocument() {
 	line.Format(L"House system: %s", StringHelper::HouseSystemToString(m_Data.GetHouseSystem()));
 	if (m_Data.Harmonic() > 1)
 		line.AppendFormat(L"   Harmonic: %d", m_Data.Harmonic());
+	line.AppendFormat(L"   Zodiac: %s", (PCWSTR)Helpers::ZodiacText(m_Zodiac));
 	sheet.Lines.push_back(line);
 	if (m_Overlay)
 		sheet.Lines.push_back(CString(m_Overlay->Caption.c_str()));
@@ -1256,7 +1313,8 @@ LRESULT CChartView::OnRecalc(UINT, WPARAM wp, LPARAM, BOOL&) {
 		UpdateAspects();
 		return 0;
 	}
-	if (m_NotModifying == 0) {
+	const bool edit = m_NotModifying == 0;
+	if (edit) {
 		SetModified(true);
 		if (m_Live)
 			SetLive(false);		// the user took over the time, or the place
@@ -1276,6 +1334,54 @@ LRESULT CChartView::OnRecalc(UINT, WPARAM wp, LPARAM, BOOL&) {
 		break;
 	}
 	UpdateAspects();
+	Frame()->ChartChanged(this, edit);		// (the charts made from this one follow it)
 	return 0;
+}
+
+LRESULT CChartView::OnDestroy(UINT, WPARAM, LPARAM, BOOL& handled) {
+	Frame()->ChartClosing(this);
+	handled = FALSE;
+	return 0;
+}
+
+void CChartView::LinkSources(IView* a, IView* b) {
+	m_Sources[0] = a;
+	m_Sources[1] = m_Recipe && m_Recipe->IsPair() ? b : nullptr;
+}
+
+void CChartView::SourceChartClosing(IView* chart) {
+	for (auto& source : m_Sources)
+		if (source == chart)
+			source = nullptr;		// (the recipe keeps the copy it had, and the file's path)
+}
+
+void CChartView::SourceChartChanged(IView* chart, bool edit) {
+	if (!m_Recipe || !chart)
+		return;
+	bool changed = false;
+	for (int i = 0; i < (m_Recipe->IsPair() ? 2 : 1); i++) {
+		// a page this chart was made from, or (for a chart opened from its file) the page of the source's file
+		if (!m_Sources[i]) {
+			auto const& path = i == 0 ? m_Recipe->APath : m_Recipe->BPath;
+			auto file = chart->FilePath();
+			if (path.empty() || !file || _wcsicmp(path.c_str(), file) != 0)
+				continue;
+			m_Sources[i] = chart;
+		}
+		if (m_Sources[i] != chart)
+			continue;
+		OpenChart source;
+		if (!chart->GetChart(source))
+			continue;
+		(i == 0 ? m_Recipe->A : m_Recipe->B) = std::move(source.Data);
+		changed = true;
+	}
+	if (!changed)
+		return;
+	DerivedChart(DerivedCharts::Build(m_Calc, *m_Recipe));
+	m_DetailsView.UpdateControls(Recalc::All);
+	// its file has the copies of the sources: out of date now, if the user changed them
+	if (edit && !m_FilePath.IsEmpty())
+		SetModified(true);
 }
 

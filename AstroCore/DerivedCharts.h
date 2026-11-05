@@ -70,6 +70,10 @@ struct DerivedRecipe {
 	TimeZoneInfo Zone;						// ... and the zone it is shown in
 	ArcKey Key{ ArcKey::Actual };			// solar arc and primary directions
 	ProgressedAngles Angles{ ProgressedAngles::Calculated };		// progressed
+	// The files A and B are kept in (full paths; empty: a chart that had no file, of which the copy is all there is), so that the
+	// chart is made from them as they are now. Their ids are A's and B's FileId. Id is the derived chart's own file's.
+	std::wstring APath, BPath;
+	std::wstring Id;
 
 	// made of two charts (A and B) rather than moved on to a date from one (A)
 	bool IsPair() const {

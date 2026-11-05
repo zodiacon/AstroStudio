@@ -51,6 +51,10 @@ public:
 	void AspectSettingsChanged() override;
 	void WheelOptionsChanged() override;
 	void MidpointOptionsChanged() override;
+	void ZodiacChanged() override;
+	void SourceChartChanged(IView* chart, bool edit) override;
+	void SourceChartClosing(IView* chart) override;
+	void LinkSources(IView* a, IView* b) override;
 	void PartOfFortuneChanged() override;
 	void TextFontChanged() override;
 	bool GetChart(OpenChart& chart) const override;
@@ -61,6 +65,7 @@ public:
 	BEGIN_MSG_MAP(CChartView)
 		MESSAGE_HANDLER(WM_RECALC, OnRecalc)
 		MESSAGE_HANDLER(WM_CREATE, OnCreate)
+		MESSAGE_HANDLER(WM_DESTROY, OnDestroy)
 		CHAIN_MSG_MAP(CDpiAware<CChartView>)
 		MESSAGE_HANDLER(WM_FORWARDMSG, OnForwardMsg)
 		MESSAGE_HANDLER(WTLHelper::ThemeChangedMessage, OnThemeChanged)
@@ -206,6 +211,7 @@ private:
 	// out from others has no ephemeris to ask.
 	bool SyncExtraBodies();
 	LRESULT OnRecalc(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, BOOL& /*bHandled*/);
+	LRESULT OnDestroy(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, BOOL& /*bHandled*/);
 	LRESULT OnForwardMsg(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM lParam, BOOL& /*bHandled*/);
 	LRESULT OnThemeChanged(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, BOOL& /*bHandled*/);
 	LRESULT OnLocationUpdated(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, BOOL& /*bHandled*/);
@@ -235,8 +241,10 @@ private:
 	ToolbarStrip m_Strip;
 	std::set<Planet> m_ExtraAdded;		// the extra bodies put among the chart's planets by the wheel options (not the chart's own: not saved)
 	std::optional<DerivedRecipe> m_Recipe;		// what a read-only chart was made from, if that is known
+	IView* m_Sources[2]{};		// the open pages of the recipe's A and B, which this chart follows (null: not open, or not known)
 	std::optional<ChartOverlay> m_Overlay;
 	CString m_FilePath, m_Title;
+	int m_Zodiac{ AstroCalculator::DefaultZodiac() };		// the zodiac the chart's positions are in
 	int m_NotModifying{ 0 };		// while above 0, changes (system updates, auto step ticks) don't count as edits
 	bool m_Modified{ false };
 	bool m_PageActive{ false };

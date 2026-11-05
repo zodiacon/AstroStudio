@@ -122,6 +122,7 @@ LRESULT CMainFrame::OnCreate(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/
 	}
 	UISetCheck(ID_VIEW_STATUS_BAR, 1);
 	UISetCheck(ID_OPTIONS_FORTUNE, AppSettings::Get().ShowPartOfFortune() != 0);
+	UpdateZodiacUI();
 	if (!AppSettings::Get().ViewStatusBar()) {
 		::ShowWindow(m_hWndStatusBar, SW_HIDE);
 		UISetCheck(ID_VIEW_STATUS_BAR, 0);
@@ -197,6 +198,7 @@ LRESULT CMainFrame::OnCreate(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/
 }
 
 LRESULT CMainFrame::OnDestroy(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, BOOL& bHandled) {
+	m_Destroying = true;		// (the pages go after this, and tell nobody)
 	// the settings the views and the frame have been keeping up to date go to the Registry now
 	AppSettings::Get().SaveWindowPosition(m_hWnd, L"MainWindowPlacement");
 	if (m_PaneVisible)
@@ -360,6 +362,27 @@ LRESULT CMainFrame::OnPartOfFortune(WORD, WORD, HWND, BOOL&) {
 	return 0;
 }
 
+void CMainFrame::UpdateZodiacUI() {
+	// the menu items are in the order of Zodiac::Offered
+	int zodiac = AstroCalculator::DefaultZodiac();
+	for (int i = 0; i < (int)std::size(Zodiac::Offered); i++)
+		UISetCheck(ID_ZODIAC_TROPICAL + i, Zodiac::Offered[i] == zodiac);
+}
+
+LRESULT CMainFrame::OnZodiac(WORD, WORD id, HWND, BOOL&) {
+	int zodiac = Zodiac::Offered[id - ID_ZODIAC_TROPICAL];
+	if (zodiac == AstroCalculator::DefaultZodiac())
+		return 0;
+	CWaitCursor wait;
+	AstroCalculator::SetDefaultZodiac(zodiac);
+	AppSettings::Get().ZodiacMode(zodiac);
+	UpdateZodiacUI();
+	for (int i = 0; i < m_Tabs.GetPageCount(); i++)
+		if (auto view = ViewOfPage(i))
+			view->ZodiacChanged();
+	return 0;
+}
+
 LRESULT CMainFrame::OnWheelOptions(WORD, WORD, HWND, BOOL&) {
 	CWheelOptionsDlg dlg;
 	dlg.SetOptions(WheelOptions::Current());
@@ -483,6 +506,13 @@ bool CMainFrame::OpenChartFile(PCWSTR path) {
 		// a chart worked out from others: made again from the charts stored with it
 		AstroCalculator calc;
 		AddDerivedChartView(DerivedCharts::Build(calc, loaded.Recipe), title.c_str(), &loaded.Recipe, path);
+		if (!loaded.Unlinked.empty()) {
+			CString message;
+			message.Format(L"%s was made from charts that weren't found where they were, so the copies saved with it are used:\n", path);
+			for (auto const& name : loaded.Unlinked)
+				message += CString(L"\n    ") + name.c_str();
+			AtlMessageBox(m_hWnd, (PCWSTR)message, L"Astro Studio", MB_ICONINFORMATION);
+		}
 	}
 	else
 		AddChartView(std::move(loaded.Chart), title.c_str(), path);
@@ -533,6 +563,20 @@ IView* CMainFrame::AddDerivedChartView(ChartData data, PCWSTR title, DerivedReci
 	pView->DerivedChart(std::move(data), recipe);
 	pView->SetFile(title, filePath);
 	return pView;
+}
+
+void CMainFrame::ChartChanged(IView* chart, bool edit) {
+	for (int i = 0; i < m_Tabs.GetPageCount(); i++)
+		if (auto view = ViewOfPage(i); view && view != chart)
+			view->SourceChartChanged(chart, edit);
+}
+
+void CMainFrame::ChartClosing(IView* chart) {
+	if (m_Destroying || !m_Tabs.IsWindow())
+		return;		// (everything is going)
+	for (int i = 0; i < m_Tabs.GetPageCount(); i++)
+		if (auto view = ViewOfPage(i); view && view != chart)
+			view->SourceChartClosing(chart);
 }
 
 IView* CMainFrame::NewChartWithDialog(ChartInfo const* initial, HouseSystem const* houseSystem) {

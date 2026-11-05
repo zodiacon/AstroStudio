@@ -73,7 +73,9 @@ double DerivedCharts::Arc(AstroCalculator const& calc, ChartData const& natal, D
 
 HouseData DerivedCharts::HousesFromMC(AstroCalculator const& calc, double midheaven, double latitude, DateTime const& time, HouseSystem system) {
 	double obliquity = calc.Obliquity(time.Julian());
-	return calc.CalcHousesFromArmc(RightAscension(midheaven, obliquity), latitude, obliquity, system);
+	// the right ascension is of the tropical longitude
+	double tropical = AstroPoint(midheaven + calc.Ayanamsa(time.Julian())).Value;
+	return calc.CalcHousesFromArmc(RightAscension(tropical, obliquity), latitude, obliquity, system, time.Julian());
 }
 
 ChartData DerivedCharts::Progress(AstroCalculator& calc, ChartData const& natal, DateTime const& target, ProgressionOptions const& options) {
@@ -107,7 +109,7 @@ ChartData DerivedCharts::Progress(AstroCalculator& calc, ChartData const& natal,
 			// the arc of right ascension the sky has turned by; the Naibod arc if the key is the true solar arc
 			double arc = Arc(calc, natal, target, options.Key == ArcKey::Actual ? ArcKey::Naibod : options.Key);
 			double armc = AstroPoint(natal.Houses().Armc.Value + arc).Value;
-			chart.Houses() = calc.CalcHousesFromArmc(armc, info.Latitude, calc.Obliquity(info.Time.Julian()), system);
+			chart.Houses() = calc.CalcHousesFromArmc(armc, info.Latitude, calc.Obliquity(info.Time.Julian()), system, info.Time.Julian());
 			break;
 		}
 
@@ -252,7 +254,7 @@ ChartData DerivedCharts::Composite(AstroCalculator& calc, ChartData const& a, Ch
 	}
 	else {
 		double armc = AstroPoint::MidPoint(a.Houses().Armc, b.Houses().Armc).Value;
-		chart.Houses() = calc.CalcHousesFromArmc(armc, info.Latitude, calc.Obliquity(info.Time.Julian()), chart.GetHouseSystem());
+		chart.Houses() = calc.CalcHousesFromArmc(armc, info.Latitude, calc.Obliquity(info.Time.Julian()), chart.GetHouseSystem(), info.Time.Julian());
 	}
 	chart.UpdatePartOfFortune(&calc);		// (worked out from the composite's own Sun, Moon and Ascendant)
 	return chart;

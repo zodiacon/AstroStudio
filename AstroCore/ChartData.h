@@ -52,6 +52,13 @@ public:
 	// the Part of Fortune is among its planets - so it has to come after the planets and the houses. In a harmonic chart it is the
 	// harmonic of the real one (the sect comes from the real Sun, which the calculator, if given, supplies).
 	void UpdatePartOfFortune(AstroCalculator const* calc = nullptr) noexcept;
+	// Adds degrees to every longitude - the planets (times the harmonic) and the angles and cusps, not the ARMC, which is
+	// a right ascension: how a chart that can't be calculated again (one made from other charts) moves to another zodiac.
+	void ShiftLongitudes(double degrees) noexcept;
+	// The id kept in the chart's file ([Chart] Id), which tells the file from others even when it was moved or renamed; empty
+	// for a chart that has never been saved. Copies of the chart (in a derived chart's recipe, in an analysis) carry it along.
+	std::wstring const& FileId() const noexcept { return m_FileId; }
+	void SetFileId(std::wstring id) { m_FileId = std::move(id); }
 
 private:
 	HouseSystem m_HouseSystem{ HouseSystem::Koch };
@@ -59,4 +66,5 @@ private:
 	std::vector<PlanetPosition> m_Planets;
 	int m_Harmonic{ 1 };
 	ChartInfo m_Info{};
+	std::wstring m_FileId;
 };

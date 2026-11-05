@@ -78,6 +78,7 @@ public:
 
 	void PageActivated(bool active) override;
 	void TextFontChanged() override;
+	void ZodiacChanged() override;
 	bool GetStatusInfo(StatusInfo& info) const override;
 
 	BEGIN_MSG_MAP(CVoidView)

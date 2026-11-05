@@ -286,3 +286,56 @@ TEST_CASE("Calculating on several threads at once gives the same answers as on o
 		thread.join();
 	CHECK(wrong == 0);
 }
+
+TEST_CASE("Sidereal zodiac", "[Calculator][Zodiac]") {
+	const DateTime j2000(2000, 1, 1, 12, 0, 0);
+	AstroCalculator tropical;
+	tropical.SetZodiac(Zodiac::Tropical);
+	AstroCalculator lahiri;
+	lahiri.SetZodiac(Zodiac::Lahiri);
+
+	SECTION("the Lahiri ayanamsa at J2000 is about 23 degrees 51 minutes") {
+		CHECK(lahiri.Ayanamsa(j2000.Julian()) == Approx(23.85).margin(0.02));
+		CHECK(tropical.Ayanamsa(j2000.Julian()) == 0);
+	}
+	SECTION("a sidereal position is the tropical one less the ayanamsa") {
+		double ayanamsa = lahiri.Ayanamsa(j2000.Julian());
+		for (auto planet : { Planet::Sun, Planet::Moon, Planet::Mars, Planet::Saturn }) {
+			double t = tropical.CalcPlanet(planet, j2000).Longitude.Value, s = lahiri.CalcPlanet(planet, j2000).Longitude.Value;
+			CHECK(Diff(t - ayanamsa, s) < 0.001);
+		}
+		// the Sun at 280 tropical (Capricorn) is in sidereal Sagittarius
+		CHECK(lahiri.CalcPlanet(Planet::Sun, j2000).Longitude.Sign() == ZodiacSign::Sagittarius);
+	}
+	SECTION("houses, from the moment and from the ARMC") {
+		auto t = tropical.CalcHouses(j2000, 51.5, 0, HouseSystem::Placidus);
+		auto s = lahiri.CalcHouses(j2000, 51.5, 0, HouseSystem::Placidus);
+		double ayanamsa = lahiri.Ayanamsa(j2000.Julian());
+		CHECK(Diff(t.Asc.Value - ayanamsa, s.Asc.Value) < 0.001);
+		CHECK(Diff(t.MC.Value - ayanamsa, s.MC.Value) < 0.001);
+		for (int i = 0; i < 12; i++)
+			CHECK(Diff(t.Cusps[i].Value - ayanamsa, s.Cusps[i].Value) < 0.001);
+		CHECK(Diff(t.Armc.Value, s.Armc.Value) < 1e-6);		// a right ascension, in no zodiac
+
+		auto fromArmc = lahiri.CalcHousesFromArmc(s.Armc.Value, 51.5, lahiri.Obliquity(j2000.Julian()), HouseSystem::Placidus, j2000.Julian());
+		CHECK(Diff(fromArmc.Asc.Value, s.Asc.Value) < 0.001);
+		CHECK(Diff(fromArmc.Cusps[4].Value, s.Cusps[4].Value) < 0.001);
+	}
+	SECTION("calculators follow the program's zodiac unless they have their own") {
+		AstroCalculator follower;
+		CHECK(follower.GetZodiac() == Zodiac::Tropical);
+		AstroCalculator::SetDefaultZodiac(Zodiac::FaganBradley);
+		CHECK(follower.GetZodiac() == Zodiac::FaganBradley);
+		CHECK(lahiri.GetZodiac() == Zodiac::Lahiri);
+		CHECK(Diff(follower.CalcPlanet(Planet::Sun, j2000).Longitude.Value,
+			tropical.CalcPlanet(Planet::Sun, j2000).Longitude.Value - follower.Ayanamsa(j2000.Julian())) < 0.001);
+		// two calculators in different zodiacs on one thread don't disturb each other
+		double a = lahiri.CalcPlanet(Planet::Sun, j2000).Longitude.Value;
+		follower.CalcPlanet(Planet::Sun, j2000);
+		CHECK(lahiri.CalcPlanet(Planet::Sun, j2000).Longitude.Value == a);
+		AstroCalculator::SetDefaultZodiac(Zodiac::Tropical);
+		CHECK(follower.GetZodiac() == Zodiac::Tropical);
+		CHECK(Zodiac::Name(Zodiac::Tropical) == "Tropical");
+		CHECK(Zodiac::Name(Zodiac::Lahiri).find("Lahiri") != std::string::npos);
+	}
+}

@@ -57,6 +57,7 @@ protected:
 		COMMAND_ID_HANDLER(ID_OPTIONS_WHEEL, OnWheelOptions)
 		COMMAND_ID_HANDLER(ID_OPTIONS_MIDPOINTS, OnMidpointOptions)
 		COMMAND_ID_HANDLER(ID_OPTIONS_FORTUNE, OnPartOfFortune)
+		COMMAND_RANGE_HANDLER(ID_ZODIAC_TROPICAL, ID_ZODIAC_DELUCE, OnZodiac)
 		COMMAND_ID_HANDLER(ID_OPTIONS_COLORS, OnChartColors)
 		COMMAND_ID_HANDLER(ID_OPTIONS_ALWAYSONTOP, OnAlwaysOnTop)
 		COMMAND_ID_HANDLER(ID_OPTIONS_FONT, OnFont)
@@ -103,6 +104,8 @@ private:
 	bool IsLocationPending() const override;
 	std::vector<OpenChart> OpenCharts(IView* except = nullptr) override;
 	void NewAnalysis(IView* chart = nullptr) override;
+	void ChartChanged(IView* chart, bool edit) override;
+	void ChartClosing(IView* chart) override;
 
 	// Handler prototypes (uncomment arguments if needed):
 	//	LRESULT MessageHandler(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/, BOOL& /*bHandled*/)
@@ -137,6 +140,9 @@ private:
 	LRESULT OnWheelOptions(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/);
 	LRESULT OnMidpointOptions(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/);
 	LRESULT OnPartOfFortune(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/);
+	LRESULT OnZodiac(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/);
+	// checks the zodiac in use in the Options > Zodiac menu
+	void UpdateZodiacUI();
 	LRESULT OnChartColors(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/);
 	LRESULT OnAlwaysOnTop(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/);
 	LRESULT OnFont(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/);
@@ -191,6 +197,7 @@ private:
 	std::unique_ptr<Project> m_Project;
 	CRecentProjectList m_RecentProjects;
 	bool m_PaneVisible{ false };
+	bool m_Destroying{ false };		// the frame is being destroyed (its pages next)
 	// ---- the status bar's panes: the active tab's name, moment, place and details (IView::GetStatusInfo), refreshed by a timer
 	static constexpr UINT_PTR StatusTimer = 1;
 	LRESULT OnTimer(UINT, WPARAM, LPARAM, BOOL&);

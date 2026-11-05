@@ -94,6 +94,23 @@ void ChartData::CalcPlanets(AstroCalculator& calc) noexcept {
     UpdatePartOfFortune(&calc);
 }
 
+void ChartData::ShiftLongitudes(double degrees) noexcept {
+	if (degrees == 0)
+		return;
+	auto shift = [](AstroPoint& point, double by) {
+		auto flags = point.Flags;
+		point = AstroPoint(point.Value + by);
+		point.Flags = flags;
+	};
+	for (auto& planet : m_Planets)
+		shift(planet.Longitude, degrees * m_Harmonic);
+	auto& h = m_Houses;
+	for (auto& cusp : h.Cusps)
+		shift(cusp, degrees);
+	for (auto* point : { &h.Asc, &h.MC, &h.Vertex, &h.EquAsc, &h.CoAsc1, &h.CoAsc2, &h.PolarAsc })
+		shift(*point, degrees);
+}
+
 void ChartData::UpdatePartOfFortune(AstroCalculator const* calc) noexcept {
     auto find = [&](Planet planet) {
         return std::find_if(m_Planets.begin(), m_Planets.end(), [&](auto const& p) { return p.Planet == planet; });

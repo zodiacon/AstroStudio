@@ -2,6 +2,8 @@
 
 #include "AstroPoint.h"
 #include "DateTime.h"
+#include <atomic>
+#include <string>
 
 struct PlanetPosition {
 	AstroPoint Longitude;
@@ -87,14 +89,39 @@ struct HouseData {
 
 class ChartData;
 
+// The zodiac positions are measured in: the tropical one (from the equinox), or a sidereal one (from the stars), which is
+// the tropical zodiac less an ayanamsa. A zodiac is a number: Tropical, or one of the ephemeris's SE_SIDM_* ayanamsas.
+namespace Zodiac {
+	inline constexpr int Tropical = -1;
+	inline constexpr int FaganBradley = 0, Lahiri = 1, DeLuce = 2, Raman = 3, Krishnamurti = 5, Yukteshwar = 7, TrueChitra = 27;
+	// the ones the program offers, in the order it offers them (Tropical first)
+	inline constexpr int Offered[] = { Tropical, FaganBradley, Lahiri, Raman, Krishnamurti, Yukteshwar, TrueChitra, DeLuce };
+	// "Tropical", or the ayanamsa's name as the ephemeris has it ("Lahiri")
+	std::string Name(int zodiac);
+	bool IsValid(int zodiac);
+}
+
 class AstroCalculator {
 public:
 	AstroCalculator();
+	// The zodiac every calculator follows unless it was given one of its own (SetZodiac): one for the whole program, so
+	// that every chart, ephemeris and analysis is in the same zodiac. Tropical to begin with.
+	static void SetDefaultZodiac(int zodiac) noexcept;
+	static int DefaultZodiac() noexcept;
+	// This calculator's own zodiac (FollowDefault: the program's), for work that must not change zodiac halfway (a worker thread).
+	static constexpr int FollowDefault = -2;
+	void SetZodiac(int zodiac) noexcept;
+	int GetZodiac() const noexcept;		// the zodiac in use now (never FollowDefault)
+	// the ayanamsa at a moment (degrees): what is taken off a tropical longitude; 0 in the tropical zodiac
+	double Ayanamsa(double jd) const;
+	// what to add to a longitude in zodiac 'from' to have it in zodiac 'to', at a moment
+	static double ZodiacDifference(int from, int to, double jd);
+
 	PlanetPosition CalcPlanet(Planet planet, DateTime const& dt, int harmonic = 1, bool withSpeed = true) const;
 	HouseData CalcHouses(DateTime dt, double latitude, double longitude, HouseSystem system);
 	// Houses for a sidereal time at the Midheaven (armc, degrees), a latitude and the obliquity of the ecliptic - for charts
-	// whose angles aren't those of a moment (directions, composites).
-	HouseData CalcHousesFromArmc(double armc, double latitude, double obliquity, HouseSystem system) const;
+	// whose angles aren't those of a moment (directions, composites). jd is the moment whose ayanamsa a sidereal zodiac takes off.
+	HouseData CalcHousesFromArmc(double armc, double latitude, double obliquity, HouseSystem system, double jd) const;
 	// the true obliquity of the ecliptic (degrees) at a Julian day
 	double Obliquity(double jd) const;
 
@@ -120,9 +147,14 @@ private:
 	// the time the Moon changes sign after (forward) or before jd
 	double MoonSignChange(double jd, bool forward) const;
 	VoidOfCourseData CalcVoid(double entered, double left, bool outerPlanets) const;
+	// the ephemeris flags for a position in this calculator's zodiac (and the thread's ayanamsa set to it)
+	int Flags() const;
 
 	// (the library's state is per thread, so the ephemeris path is set once for each thread that calculates)
 	static inline thread_local bool s_init{ false };
+	static inline thread_local int s_sidMode{ -100 };	// the ayanamsa the thread's ephemeris was last set to
+	static inline std::atomic<int> s_defaultZodiac{ Zodiac::Tropical };
 	int m_SweFlags;
+	int m_Zodiac{ FollowDefault };
 };
 

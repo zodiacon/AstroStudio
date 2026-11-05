@@ -6,6 +6,8 @@
 #include "TimeControls.h"
 #include <IniDocument.h>
 #include "AspectOptions.h"
+#include "Project.h"
+#include <filesystem>
 #include <cmath>
 #include <fstream>
 #include <iterator>
@@ -202,6 +204,8 @@ namespace {
 		auto section = [&](PCWSTR name) { return prefix + name; };
 
 		ini.SetInt(section(L"Chart"), L"Version", CurrentVersion);
+		if (!chart.FileId().empty())
+			ini.SetString(section(L"Chart"), L"Id", chart.FileId());
 		ini.SetString(section(L"Chart"), L"HouseSystem", StringHelper::HouseSystemToString(chart.GetHouseSystem()));
 		ini.SetInt(section(L"Chart"), L"Harmonic", chart.Harmonic());
 		std::wstring planets;
@@ -339,8 +343,64 @@ namespace {
 		data.SetHouseSystem(houseSystem);
 		data.Harmonic(harmonic);
 		data.AddPlanets(planets);
+		data.SetFileId(Normalize(ini.GetString(chartSection, L"Id")));
 		chart = std::move(data);
 		return true;
+	}
+
+	// a source chart's path as a derived file keeps it: relative to the derived file's folder if it can be
+	std::wstring RelativeTo(std::filesystem::path const& file, std::wstring const& source) {
+		namespace fs = std::filesystem;
+		fs::path path(source), base = fs::path(file).parent_path();
+		if (path.empty() || base.empty() || _wcsicmp(path.root_name().c_str(), base.root_name().c_str()) != 0)
+			return source;
+		auto relative = path.lexically_normal().lexically_relative(base.lexically_normal());
+		return relative.empty() ? source : relative.wstring();
+	}
+
+	std::wstring Resolve(std::filesystem::path const& file, std::wstring const& source) {
+		namespace fs = std::filesystem;
+		fs::path path(source);
+		if (path.empty() || path.is_absolute())
+			return source;
+		return (fs::path(file).parent_path() / path).lexically_normal().wstring();
+	}
+
+	// A derived chart's source as it is now: from the file at path if it holds that chart (the same id, or no id to tell), or from a
+	// chart file with the id in one of the folders. False if it isn't found; chart and path are then as they were.
+	bool FindSource(std::filesystem::path const& derivedFile, ChartData& chart, std::wstring& path) {
+		namespace fs = std::filesystem;
+		auto const& id = chart.FileId();
+		auto tryFile = [&](fs::path const& candidate) {
+			ChartData loaded;
+			std::wstring ignored;
+			std::error_code ec;
+			if (!fs::is_regular_file(candidate, ec) || !ChartFile::Load(candidate.c_str(), loaded, ignored))
+				return false;
+			if (!id.empty() && !loaded.FileId().empty() && _wcsicmp(id.c_str(), loaded.FileId().c_str()) != 0)
+				return false;		// another chart has taken the name
+			chart = std::move(loaded);
+			path = candidate.wstring();
+			return true;
+		};
+		if (!path.empty() && tryFile(path))
+			return true;
+		if (id.empty())
+			return false;
+		std::vector<fs::path> folders{ fs::path(derivedFile).parent_path() };
+		if (!path.empty())
+			folders.push_back(fs::path(path).parent_path());
+		for (auto const& folder : folders) {
+			std::error_code ec;
+			for (fs::directory_iterator it(folder, ec), end; !ec && it != end; it.increment(ec)) {
+				auto const& entry = it->path();
+				if (_wcsicmp(entry.extension().c_str(), L".chart") != 0 || _wcsicmp(Project::ReadFileId(entry).c_str(), id.c_str()) != 0)
+					continue;
+				if (tryFile(entry))
+					return true;
+			}
+		}
+		return false;
 	}
 
 	constexpr PCWSTR ChartHeader = L"Astro Studio chart\n"
@@ -388,6 +448,12 @@ bool ChartFile::SaveDerived(DerivedRecipe const& recipe, PCWSTR path, std::wstri
 		L"A chart worked out from other charts: they are stored below (as in an ordinary chart file, with the prefix A. or B.) and\n"
 		L"the chart is made from them again when this file is opened.");
 	ini.SetInt(L"Derived", L"Version", CurrentVersion);
+	if (!recipe.Id.empty())
+		ini.SetString(L"Derived", L"Id", recipe.Id);
+	if (!recipe.APath.empty())
+		ini.SetString(L"Derived", L"ASource", RelativeTo(path, recipe.APath));
+	if (recipe.IsPair() && !recipe.BPath.empty())
+		ini.SetString(L"Derived", L"BSource", RelativeTo(path, recipe.BPath));
 	for (auto const& kind : Kinds)
 		if (kind.Kind == recipe.Kind)
 			ini.SetString(L"Derived", L"Kind", kind.Name);
@@ -490,10 +556,28 @@ bool ChartFile::LoadFile(PCWSTR path, Loaded& loaded, std::wstring& error) {
 		return false;
 	if (recipe.IsPair() && !ReadChart(r, L"B.", recipe.B))
 		return false;
+	recipe.Id = Normalize(ini.GetString(L"Derived", L"Id"));
+
+	// the charts it was made from, as their files have them now
+	std::vector<std::wstring> unlinked;
+	auto link = [&](ChartData& chart, std::wstring& sourcePath, PCWSTR key) {
+		sourcePath = Resolve(path, Normalize(ini.GetString(L"Derived", key)));
+		if (sourcePath.empty() && chart.FileId().empty())
+			return;		// a chart that had no file: the copy is all there is
+		if (!FindSource(path, chart, sourcePath)) {
+			auto const& info = chart.Info();
+			std::wstring name = info.FirstName + (info.LastName.empty() ? L"" : L" " + info.LastName);
+			unlinked.push_back(sourcePath.empty() ? (name.empty() ? std::wstring(L"a chart") : name) : sourcePath);
+		}
+	};
+	link(recipe.A, recipe.APath, L"ASource");
+	if (recipe.IsPair())
+		link(recipe.B, recipe.BPath, L"BSource");
 
 	loaded = {};
 	loaded.Derived = true;
 	loaded.Recipe = std::move(recipe);
+	loaded.Unlinked = std::move(unlinked);
 	return true;
 }
 
@@ -542,6 +626,8 @@ bool ChartFile::SaveAnalysis(AnalysisDocument const& document, PCWSTR path, std:
 		L"working them out. [Analysis] says what was analysed and [Natal.*] is the chart (as in a chart file); the events follow the\n"
 		L"line #EVENTS at the end, one to a line - see Analysis::EventsToText. Refresh in the analysis view runs the analysis again.");
 	ini.SetInt(L"Analysis", L"Version", CurrentVersion);
+	if (!document.Id.empty())
+		ini.SetString(L"Analysis", L"Id", document.Id);
 	ini.SetString(L"Analysis", L"ChartName", document.ChartName);
 	ini.SetString(L"Analysis", L"Settings", document.Settings.ToText());
 	ini.SetInt(L"Analysis", L"ArcKey", static_cast<int>(document.Settings.Key));
@@ -606,6 +692,7 @@ bool ChartFile::LoadAnalysis(PCWSTR path, AnalysisDocument& document, std::wstri
 	}
 
 	AnalysisDocument loaded;
+	loaded.Id = Normalize(ini.GetString(L"Analysis", L"Id"));
 	loaded.ChartName = ini.GetString(L"Analysis", L"ChartName", L"Chart");
 	if (!ReadChart(r, L"Natal.", loaded.Chart))
 		return false;

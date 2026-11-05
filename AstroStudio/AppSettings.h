@@ -20,6 +20,7 @@ struct AppSettings : Settings {
 		SETTING(ProjectPaneWidth, 240, SettingType::Int32);		// the width of the pane with the project, in pixels
 		SETTING(OpenLastProject, 1, SettingType::Bool);		// open the last project again at the start (its path is kept either way)
 		SETTING_STRING(LastProject, L"");		// the project that was open when the program was closed, opened again at the start
+		SETTING(ZodiacMode, -1, SettingType::Int32);		// -1 tropical, otherwise the sidereal zodiac of that ayanamsa (SE_SIDM_*, Zodiac::Offered)
 		SETTING(ShowPartOfFortune, 0, SettingType::Bool);		// the charts have the Part of Fortune among their planets (and on the wheel)
 		SETTING(LastHouseSystem, (int)'K', SettingType::Int32);		// the last one used for a chart (Koch to begin with)
 
@@ -35,6 +36,7 @@ struct AppSettings : Settings {
 		SETTING(AnalysisGlyphs, 1, SettingType::Bool);		// the analysis view shows glyphs rather than names
 		SETTING(EphemerisSeconds, 0, SettingType::Bool);
 		SETTING(EphemerisGridLines, 0, SettingType::Bool);
+		SETTING(EphemerisEventsOnly, 0, SettingType::Bool);	// only the rows with phenomena
 		SETTING(EphemerisFontSize, 100, SettingType::Int32);
 		SETTING(EphemerisStep, 1, SettingType::Int32);		// days between rows
 		SETTING(EphemerisEclipses, 0, SettingType::Bool);
@@ -58,6 +60,7 @@ struct AppSettings : Settings {
 	DEF_SETTING(TextFont, LOGFONT)
 	DEF_SETTING(LastHouseSystem, int)
 	DEF_SETTING(ShowPartOfFortune, int)
+	DEF_SETTING(ZodiacMode, int)
 	DEF_SETTING(ProjectPaneWidth, int)
 	DEF_SETTING(OpenLastProject, int)
 	DEF_SETTING_STRING(LastProject)
@@ -72,6 +75,7 @@ struct AppSettings : Settings {
 	DEF_SETTING(AnalysisGlyphs, int)
 	DEF_SETTING(EphemerisSeconds, int)
 	DEF_SETTING(EphemerisGridLines, int)
+	DEF_SETTING(EphemerisEventsOnly, int)
 	DEF_SETTING(EphemerisFontSize, int)
 	DEF_SETTING(EphemerisStep, int)
 	DEF_SETTING(EphemerisEclipses, int)

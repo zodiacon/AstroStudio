@@ -1,5 +1,6 @@
 #include "pch.h"
 #include "AnalysisView.h"
+#include "Project.h"
 #include "ChartFile.h"
 #include "Printing.h"
 #include "AnalysisDlg.h"
@@ -215,10 +216,12 @@ void CAnalysisView::Restore(AnalysisDocument document, PCWSTR path) {
 	m_Chart.Data = std::move(document.Chart);
 	AstroCalculator calc;
 	calc.Calculate(m_Chart.Data);		// (the positions aren't in the file)
+	m_Zodiac = calc.GetZodiac();
 	m_Settings = std::move(document.Settings);
 	m_Events = std::move(document.Events);
 	m_Stale = false;
 	m_FilePath = path;
+	m_FileId = document.Id;
 	ApplyFilter();
 	UpdateHeaders(false);
 	UpdateTitle();
@@ -262,7 +265,11 @@ bool CAnalysisView::Save(bool saveAs) {
 		path = dlg.m_szFileName;
 	}
 
+	// a file of its own (the first save, or Save As) gets an id of its own
+	if (m_FileId.empty() || m_FilePath.IsEmpty() || path.CompareNoCase(m_FilePath) != 0)
+		m_FileId = Project::NewId();
 	AnalysisDocument document;
+	document.Id = m_FileId;
 	document.ChartName = (PCWSTR)m_Chart.Name;
 	document.Chart = m_Chart.Data;
 	document.Settings = m_Settings;
@@ -315,6 +322,7 @@ void CAnalysisView::Start(OpenChart chart, AnalysisSettings settings) {
 	m_Worker = std::thread([job, id, hwnd = m_hWnd] {
 		// the ephemeris keeps its state per thread, so this calculator is the thread's own
 		AstroCalculator calc;
+		calc.SetZodiac(job->Zodiac);		// (the program's zodiac may change while it runs)
 		job->Result = Analysis::RunAll(calc, job->Chart.Data, job->Settings, [&](double fraction) {
 			job->Percent = static_cast<int>(fraction * 100);
 			return !job->Cancel;
@@ -359,7 +367,14 @@ LRESULT CAnalysisView::OnDone(UINT, WPARAM id, LPARAM, BOOL&) {
 	m_Chart = std::move(job->Chart);
 	m_Settings = std::move(job->Settings);
 	m_Events = std::move(job->Result.Events);
+	m_Zodiac = job->Zodiac;
 	m_Stale = false;
+	if (int zodiac = AstroCalculator::DefaultZodiac(); zodiac != m_Zodiac) {
+		// the zodiac changed while it ran: the copy follows, the events wait for Refresh
+		m_Chart.Data.ShiftLongitudes(AstroCalculator::ZodiacDifference(m_Zodiac, zodiac, m_Chart.Data.Info().Time.Julian()));
+		m_Zodiac = zodiac;
+		m_Stale = true;
+	}
 	ApplyFilter();
 	UpdateHeaders(false);
 	UpdateTitle();
@@ -409,6 +424,21 @@ LRESULT CAnalysisView::OnDoubleClick(int, LPNMHDR pnmh, BOOL& handled) {
 	if (!chart->ShowMoment(event->Time, kind))
 		AtlMessageBox(m_hWnd, L"That chart can't show this moment around it.", L"Astro Studio", MB_ICONINFORMATION);
 	return 0;
+}
+
+void CAnalysisView::ZodiacChanged() {
+	// The tab's copy of the chart moves to the new zodiac (so that Refresh on a closed chart's copy is right); the events stay
+	// as they were found until Refresh.
+	int zodiac = AstroCalculator::DefaultZodiac();
+	if (zodiac == m_Zodiac)
+		return;
+	if (!m_Chart.Data.AllPlanets().empty())
+		m_Chart.Data.ShiftLongitudes(AstroCalculator::ZodiacDifference(m_Zodiac, zodiac, m_Chart.Data.Info().Time.Julian()));
+	m_Zodiac = zodiac;
+	if (!m_Events.empty()) {
+		m_Stale = true;
+		ShowCount();
+	}
 }
 
 void CAnalysisView::AspectSettingsChanged() {
@@ -493,7 +523,7 @@ void CAnalysisView::ShowCount() {
 	else
 		status.Format(L"%d of %d events", static_cast<int>(m_Shown.size()), static_cast<int>(m_Events.size()));
 	if (m_Stale)
-		status += L"     The aspect settings have changed since: Refresh runs it again with them";
+		status += L"     The aspect settings or the zodiac have changed since: Refresh runs it again with them";
 	SetStatus(status);
 }
 

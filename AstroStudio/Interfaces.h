@@ -59,6 +59,10 @@ struct IMainFrame abstract {
 	// Asks what to analyse (the analysis dialog, starting on this chart - or on the one showing, if none is given) and opens the
 	// result in a new tab.
 	virtual void NewAnalysis(IView* chart = nullptr) = 0;
+	// A chart page's chart changed (edit = by the user, rather than a Live tick): the charts made from it follow (IView::SourceChartChanged).
+	virtual void ChartChanged(IView* chart, bool edit) = 0;
+	// a chart page is closing: nothing may keep pointing at it (IView::SourceChartClosing)
+	virtual void ChartClosing(IView* chart) = 0;
 };
 
 struct IView {
@@ -81,6 +85,13 @@ struct IView {
 	virtual void WheelOptionsChanged() {}
 	// what the midpoint list and tree work with (MidpointSettings::Current) changed
 	virtual void MidpointOptionsChanged() {}
+	// the program's zodiac (AstroCalculator::DefaultZodiac) changed: positions have to be worked out again
+	virtual void ZodiacChanged() {}
+	// another page's chart changed, or is closing: a chart made from it (a composite, a progressed chart...) is made again or lets go
+	virtual void SourceChartChanged(IView* chart, bool edit) {}
+	virtual void SourceChartClosing(IView* chart) {}
+	// the pages a derived chart was just made from (either may be null), so that it follows them
+	virtual void LinkSources(IView* a, IView* b) {}
 	// changed since it was last saved or opened (what the project pane marks with a *); a view with nothing to save says no
 	virtual bool IsModified() const {
 		return false;
