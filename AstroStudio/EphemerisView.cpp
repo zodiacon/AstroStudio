@@ -110,10 +110,6 @@ CString CEphemerisView::GetColumnText(HWND h, int row, int col) {
 			EnsureRows(row + 2);
 			CalcExtras(row);
 			return (m_FormatOptions & FormatOptions::UseGlyphs) == FormatOptions::UseGlyphs ? m_Items[row].VoidGlyph : m_Items[row].VoidText;
-		case ColumnType::Transits:
-			EnsureRows(row + 2);
-			CalcExtras(row);
-			return (m_FormatOptions & FormatOptions::UseGlyphs) == FormatOptions::UseGlyphs ? m_Items[row].TransitGlyph : m_Items[row].TransitText;
 		case ColumnType::Phenom: return GetRowPhenom(row, (m_FormatOptions & FormatOptions::UseGlyphs) == FormatOptions::UseGlyphs);
 
 		default:
@@ -207,7 +203,7 @@ DWORD CEphemerisView::OnSubItemPrePaint(int, LPNMCUSTOMDRAW cd) {
 		lv->clrTextBk = RGB(mix(0), mix(8), mix(16));
 	}
 
-	bool glyphColumn = colType == ColumnType::Phenom || colType == ColumnType::MoonVoid || colType == ColumnType::Transits || colType >= ColumnType::Planet;
+	bool glyphColumn = colType == ColumnType::Phenom || colType == ColumnType::MoonVoid || colType >= ColumnType::Planet;
 	dc.SelectFont(glyphColumn && glyphs ? m_Font : m_StdFont);
 	return CDRF_NEWFONT | CDRF_SKIPPOSTPAINT;
 }
@@ -347,6 +343,21 @@ CString CEphemerisView::GetRowPhenom(int row, bool glyphs) const {
 					font.GetAspectGlyphAsString(eclipse.Solar ? AspectType::Conjunction : AspectType::Opposition) + L" " + font.GetPlanetGlyphAsString(Planet::Moon) + when;
 				item.PhenomText += CString(eclipse.Solar ? L"Solar " : L"Lunar ") + EclipseKindName(eclipse.Kind) + L" eclipse" + when;
 				item.HasEclipse = true;
+			}
+		}
+
+		//
+		// the exact aspects between the bodies, when they are asked for
+		//
+		if (m_ShowTransits) {
+			CalcExtras(row);
+			if (!item.TransitText.IsEmpty()) {
+				if (!item.PhenomGlyph.IsEmpty())
+					item.PhenomGlyph += L" | ";
+				if (!item.PhenomText.IsEmpty())
+					item.PhenomText += L" | ";
+				item.PhenomGlyph += item.TransitGlyph;
+				item.PhenomText += item.TransitText;
 			}
 		}
 	}
@@ -669,10 +680,6 @@ CString CEphemerisView::PlainCellText(int row, ColumnType type) {
 		CalcExtras(row);
 		return m_Items[row].VoidText;
 	}
-	if (type == ColumnType::Transits) {
-		CalcExtras(row);
-		return m_Items[row].TransitText;
-	}
 
 	auto& pp = m_Items[row].Planets[int(type) - int(ColumnType::Planet)];
 	auto longitude = pp.Position.Longitude;
@@ -735,8 +742,6 @@ void CEphemerisView::RebuildColumns() {
 	cm->AddColumn(L"Phenomena", LVCFMT_LEFT, 320, ColumnType::Phenom);
 	if (m_ShowVoid)
 		cm->AddColumn(L"Moon void of course", LVCFMT_LEFT, 200, ColumnType::MoonVoid);
-	if (m_ShowTransits)
-		cm->AddColumn(L"Transits", LVCFMT_LEFT, 320, ColumnType::Transits);
 	cm->UpdateColumns();
 }
 

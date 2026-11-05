@@ -39,7 +39,7 @@ struct AppSettings : Settings {
 		SETTING(EphemerisStep, 1, SettingType::Int32);		// days between rows
 		SETTING(EphemerisEclipses, 0, SettingType::Bool);
 		SETTING(EphemerisVoid, 0, SettingType::Bool);
-		SETTING(EphemerisTransits, 0, SettingType::Bool);		// the Transits column: exact aspects between the bodies
+		SETTING(EphemerisTransits, 0, SettingType::Bool);		// exact aspects between the bodies, in the Phenomena column
 		SETTING(EphemerisTransitsNoMoon, 0, SettingType::Bool);	// and the Moon left out of them
 		SETTING(EphemerisTransitsSunMoon, 0, SettingType::Bool);	// but the Sun/Moon aspects always in them
 		SETTING(VoidGlyphs, 1, SettingType::Bool);		// the void of course view shows glyphs (or words)

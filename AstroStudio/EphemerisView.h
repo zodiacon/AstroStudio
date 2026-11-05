@@ -102,7 +102,7 @@ protected:
 
 	// Planet is last: the columns of the bodies follow it, one value each
 	enum class ColumnType {
-		Time, SiderealTime, Phenom, MoonVoid, Transits, Planet
+		Time, SiderealTime, Phenom, MoonVoid, Planet
 	};
 
 	void UpdateUI(CUpdateUIBase& ui);
@@ -155,7 +155,7 @@ private:
 		mutable bool HasEclipse{ false };		// the Phenomena cell has an eclipse in it (which is then shown in colour)
 		mutable CString VoidText, VoidGlyph;
 		mutable double VoidFraction{ 0 };		// how much of the row's stretch of time the Moon is void of course (0 to 1)
-		mutable CString TransitText, TransitGlyph;		// the exact aspects between the bodies in the row's stretch of time
+		mutable CString TransitText, TransitGlyph;		// the exact aspects between the bodies in the row's stretch of time (part of Phenomena)
 		mutable bool ExtrasCalculated{ false };
 	};
 	// Handler prototypes (uncomment arguments if needed):

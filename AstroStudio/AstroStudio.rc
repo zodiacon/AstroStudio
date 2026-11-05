@@ -406,7 +406,7 @@ BEGIN
     LTEXT           "Also show:",IDC_STATIC,7,163,45,8
     CONTROL         "Eclipses (in Phenomena)",IDC_EPH_ECLIPSES,"Button",BS_AUTOCHECKBOX | WS_TABSTOP,52,162,100,10
     CONTROL         "Moon void of course",IDC_EPH_VOID,"Button",BS_AUTOCHECKBOX | WS_TABSTOP,52,176,100,10
-    CONTROL         "Transits (exact aspects between the bodies)",IDC_EPH_TRANSITS,
+    CONTROL         "Transits (exact aspects, in Phenomena)",IDC_EPH_TRANSITS,
                     "Button",BS_AUTOCHECKBOX | WS_TABSTOP,52,190,180,10
     CONTROL         "Without the Moon",IDC_EPH_TRANSITS_NOMOON,"Button",BS_AUTOCHECKBOX | WS_TABSTOP,64,204,120,10
     CONTROL         "Sun / Moon aspects (even without the Moon)",IDC_EPH_TRANSITS_SUNMOON,

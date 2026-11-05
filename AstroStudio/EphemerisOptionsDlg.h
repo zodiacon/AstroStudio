@@ -12,7 +12,7 @@ struct EphemerisSettings {
 	std::vector<Planet> Planets;	// the columns, in order
 	bool Eclipses{ false };			// a column with the eclipses of each row's stretch of time
 	bool VoidOfCourse{ false };		// and one with the Moon's void of course periods
-	bool Transits{ false };			// and one with the exact aspects between the bodies
+	bool Transits{ false };			// the exact aspects between the bodies, in the Phenomena column
 	bool TransitsNoMoon{ false };	// leaving out the Moon's
 	bool TransitsSunMoon{ false };	// but always the Sun/Moon aspects (the lunar phases), even without the Moon
 
