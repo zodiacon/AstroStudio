@@ -1,5 +1,7 @@
 #pragma once
 
+#include "Calendar.h"
+
 #include <VirtualListView.h>
 #include <FrameView.h>
 #include "resource.h"
@@ -143,6 +145,8 @@ private:
 	void UpdateHeaders(bool resetWidths);
 	void UpdateViewUI();
 	CString EventText(AnalysisEvent const& event) const;
+	// the events shown, as appointments (Export as .ics)
+	std::vector<CalendarEvent> CalendarEvents() const;
 	// a moment as the chart's own time is shown: in its zone
 	CString LocalText(DateTime const& ut, bool withTime) const;
 	// for the row that ends a stay within an orb: when it entered, was exact and left

@@ -100,6 +100,12 @@ struct IView {
 	virtual PCWSTR FilePath() const {
 		return nullptr;
 	}
+	// What a project's session keeps of the tab besides its file (a chart's overlay), as text that only the same kind of view
+	// reads back - after its file has been opened again; empty: nothing to keep. One line, no line breaks.
+	virtual std::wstring SessionState() const {
+		return {};
+	}
+	virtual void RestoreSessionState(std::wstring const& state) {}
 	// Shows the moment (UT) around the chart - the sky then, or the chart progressed or moved by the solar arc to it - as an overlay.
 	// False if the view is not a chart, or can't show that (a read-only chart has nothing to progress).
 	virtual bool ShowMoment(DateTime const& ut, MomentKind kind) {

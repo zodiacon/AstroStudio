@@ -561,7 +561,7 @@ bool ChartFile::LoadFile(PCWSTR path, Loaded& loaded, std::wstring& error) {
 	// the charts it was made from, as their files have them now
 	std::vector<std::wstring> unlinked;
 	auto link = [&](ChartData& chart, std::wstring& sourcePath, PCWSTR key) {
-		sourcePath = Resolve(path, Normalize(ini.GetString(L"Derived", key)));
+		sourcePath = Resolve(path, ini.GetString(L"Derived", key));		// (a path: spaces and capitals are its own)
 		if (sourcePath.empty() && chart.FileId().empty())
 			return;		// a chart that had no file: the copy is all there is
 		if (!FindSource(path, chart, sourcePath)) {

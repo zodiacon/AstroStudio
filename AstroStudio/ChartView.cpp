@@ -632,6 +632,59 @@ bool CChartView::ShowMoment(DateTime const& ut, MomentKind kind) {
 	return true;
 }
 
+// The overlay a project's session keeps for the chart: "overlay=transit;when=2461234.5;zone=Israel Standard Time;offset=120;live=1"
+// (overlay=progressed with method=secondary or solararc). A synastry overlay is a copy of another chart and isn't kept.
+std::wstring CChartView::SessionState() const {
+	if (!m_Overlay || !OverlayHasTime())
+		return {};
+	std::wstring state = m_Overlay->Kind == OverlayKind::Transit ? L"overlay=transit" :
+		m_Overlay->Method == ProgressionMethod::SolarArc ? L"overlay=progressed;method=solararc" : L"overlay=progressed;method=secondary";
+	wchar_t when[40];
+	swprintf_s(when, L";when=%.8f", m_Overlay->When.Julian());
+	state += when;
+	if (!m_Overlay->Zone.Name.empty())
+		state += L";zone=" + m_Overlay->Zone.Name;
+	state += L";offset=" + std::to_wstring(m_Overlay->Zone.OffsetUT);
+	if (m_Live)
+		state += L";live=1";
+	return state;
+}
+
+void CChartView::RestoreSessionState(std::wstring const& state) {
+	std::map<std::wstring, std::wstring> values;
+	for (size_t start = 0; start <= state.size();) {
+		auto end = state.find(L';', start);
+		if (end == std::wstring::npos)
+			end = state.size();
+		auto item = state.substr(start, end - start);
+		if (auto equals = item.find(L'='); equals != std::wstring::npos)
+			values[item.substr(0, equals)] = item.substr(equals + 1);
+		start = end + 1;
+	}
+	auto kind = values[L"overlay"];
+	bool transit = kind == L"transit";
+	if (!transit && kind != L"progressed")
+		return;
+	auto method = values[L"method"] == L"solararc" ? ProgressionMethod::SolarArc : ProgressionMethod::Secondary;
+	if (!ShowOverlay(transit ? OverlayKind::Transit : OverlayKind::Progressed, method) || !m_Overlay)
+		return;		// (a read-only chart can't be progressed)
+	if (values[L"live"] == L"1") {
+		SetLive(true);		// (it puts the overlay at the current time)
+		return;
+	}
+	wchar_t* end = nullptr;
+	auto const& whenText = values[L"when"];
+	double jd = wcstod(whenText.c_str(), &end);
+	if (whenText.empty() || end == whenText.c_str())
+		return;		// (now, as ShowOverlay left it)
+	m_Overlay->When = DateTime(jd, jd >= 2299160.5);		// (the calendar of the day: Julian before the 1582 reform)
+	if (values.contains(L"zone"))
+		m_Overlay->Zone.Name = values[L"zone"];
+	if (auto const& offset = values[L"offset"]; !offset.empty())
+		m_Overlay->Zone.OffsetUT = _wtoi(offset.c_str());
+	UpdateOverlay();
+}
+
 bool CChartView::PickOtherChart(OpenChart& chart, PCWSTR what) {
 	auto charts = Frame()->OpenCharts(this);
 	if (charts.empty()) {

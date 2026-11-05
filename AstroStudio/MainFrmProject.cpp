@@ -372,6 +372,8 @@ void CMainFrame::CaptureSession() {
 			continue;
 		if (auto item = m_Project->FindByPath(view->FilePath())) {
 			session.Open.push_back(item->Id);
+			if (auto state = view->SessionState(); !state.empty())
+				session.State[item->Id] = std::move(state);
 			if (i == active)
 				session.Active = item->Id;
 		}
@@ -385,8 +387,12 @@ void CMainFrame::RestoreSession() {
 	auto session = m_Project->Session();
 	for (auto const& id : session.Open)
 		if (auto item = m_Project->Find(id); item && !item->Missing &&
-			(item->Type == ProjectItemType::Chart || item->Type == ProjectItemType::Analysis))
+			(item->Type == ProjectItemType::Chart || item->Type == ProjectItemType::Analysis)) {
 			OpenChartFile(m_Project->Resolve(*item).c_str());
+			if (auto state = session.State.find(item->Id); state != session.State.end())
+				if (auto view = ViewForItem(*item))
+					view->RestoreSessionState(state->second);
+		}
 	if (auto item = m_Project->Find(session.Active))
 		if (auto view = ViewForItem(*item))
 			ActivateView(view);

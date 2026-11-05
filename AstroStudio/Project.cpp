@@ -262,6 +262,8 @@ bool Project::Remove(std::wstring_view id) {
 	m_Items.erase(it);
 	if (std::erase(m_Session.Open, std::wstring(id)) > 0)
 		m_SessionDirty = true;
+	if (m_Session.State.erase(std::wstring(id)) > 0)
+		m_SessionDirty = true;
 	if (m_Session.Active == id) {
 		m_Session.Active.clear();
 		m_SessionDirty = true;
@@ -471,7 +473,8 @@ void Project::Session(ProjectSession session) {
 	std::erase_if(session.Open, [&](auto const& id) { return !Find(id); });
 	if (!Find(session.Active))
 		session.Active.clear();
-	if (session.Open != m_Session.Open || session.Active != m_Session.Active) {
+	std::erase_if(session.State, [&](auto const& state) { return state.second.empty() || std::ranges::find(session.Open, state.first) == session.Open.end(); });
+	if (session.Open != m_Session.Open || session.Active != m_Session.Active || session.State != m_Session.State) {
 		m_Session = std::move(session);
 		m_SessionDirty = true;
 	}
@@ -541,6 +544,15 @@ bool Project::Load(fs::path const& path, std::wstring& error) {
 			loaded.m_Session.Open.push_back(id);
 	if (auto active = ini.GetString(L"Session", L"Active"); loaded.Find(active))
 		loaded.m_Session.Active = active;
+	for (auto const& key : ini.Keys(L"Session")) {
+		constexpr std::wstring_view statePrefix = L"State.";
+		if (key.size() <= statePrefix.size() || !SameText(std::wstring_view(key).substr(0, statePrefix.size()), statePrefix))
+			continue;
+		auto item = loaded.Find(key.substr(statePrefix.size()));
+		auto value = ini.GetString(L"Session", key);
+		if (item && !value.empty() && std::ranges::find(loaded.m_Session.Open, item->Id) != loaded.m_Session.Open.end())
+			loaded.m_Session.State[item->Id] = value;
+	}
 
 	// what isn't ours goes back when it is saved
 	for (auto const& section : ini.Sections()) {
@@ -598,6 +610,8 @@ bool Project::Write(fs::path const& path, std::wstring& error) {
 			open += (open.empty() ? L"" : L", ") + id;
 		ini.SetString(L"Session", L"Open", open);
 		ini.SetString(L"Session", L"Active", m_Session.Active);
+		for (auto const& [id, state] : m_Session.State)
+			ini.SetString(L"Session", L"State." + id, state);
 	}
 	for (auto const& section : m_Extra.Sections())
 		for (auto const& key : m_Extra.Keys(section))

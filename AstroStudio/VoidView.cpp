@@ -429,14 +429,42 @@ LRESULT CVoidView::OnEditCopy(WORD, WORD, HWND, BOOL&) {
 }
 
 LRESULT CVoidView::OnExport(WORD, WORD, HWND, BOOL&) {
-	static constexpr wchar_t filter[] = L"CSV files (*.csv)\0*.csv\0All files (*.*)\0*.*\0";
-	CSimpleFileDialog dlg(FALSE, L"csv", L"Void of course", OFN_OVERWRITEPROMPT | OFN_PATHMUSTEXIST | OFN_HIDEREADONLY | OFN_EXPLORER | OFN_ENABLESIZING, filter, m_hWnd);
+	// a CSV table, or the periods as appointments for a calendar program
+	static constexpr wchar_t filter[] = L"CSV files (*.csv)\0*.csv\0iCalendar files (*.ics)\0*.ics\0All files (*.*)\0*.*\0";
+	CSimpleFileDialog dlg(FALSE, nullptr, L"Void of course", OFN_OVERWRITEPROMPT | OFN_PATHMUSTEXIST | OFN_HIDEREADONLY | OFN_EXPLORER | OFN_ENABLESIZING, filter, m_hWnd);
 	WTLHelper::SuspendHook();
 	auto ok = dlg.DoModal(m_hWnd) == IDOK;
 	WTLHelper::ResumeHook();
-	if (ok)
-		Helpers::SaveTable(m_hWnd, Table(), dlg.m_szFileName, L"The void of course list");
+	if (!ok)
+		return 0;
+	CString path = dlg.m_szFileName;
+	if (Helpers::IsCalendarFile(path, dlg.m_ofn.nFilterIndex, 2)) {
+		if (*::PathFindExtensionW(path) == 0)
+			path += L".ics";
+		Helpers::SaveCalendar(m_hWnd, (PCWSTR)path, L"Moon void of course", CalendarEvents(), L"The void of course periods");
+		return 0;
+	}
+	if (*::PathFindExtensionW(path) == 0)
+		path += L".csv";
+	Helpers::SaveTable(m_hWnd, Table(), path, L"The void of course list");
 	return 0;
+}
+
+std::vector<CalendarEvent> CVoidView::CalendarEvents() const {
+	std::vector<CalendarEvent> events;
+	events.reserve(m_Periods.size());
+	for (int row = 0; row < (int)m_Periods.size(); row++) {
+		auto const& p = m_Periods[row];
+		CalendarEvent event;
+		event.Start = p.Start;
+		event.End = p.End;
+		event.Summary = std::wstring(L"Moon void of course (in ") + (PCWSTR)CellText(row, ColumnType::Sign, false) + L")";
+		event.Description = std::wstring(L"Last aspect: ") + (PCWSTR)CellText(row, ColumnType::LastAspect, false) +
+			L"\nThe Moon enters " + (PCWSTR)CellText(row, ColumnType::Enters, false) +
+			L"\nDuration: " + (PCWSTR)CellText(row, ColumnType::Duration, false);
+		events.push_back(std::move(event));
+	}
+	return events;
 }
 
 LRESULT CVoidView::OnPrint(WORD, WORD id, HWND, BOOL&) {

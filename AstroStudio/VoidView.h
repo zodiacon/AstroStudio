@@ -1,5 +1,7 @@
 #pragma once
 
+#include "Calendar.h"
+
 #include <VirtualListView.h>
 #include <FrameView.h>
 #include <DialogHelper.h>
@@ -110,6 +112,8 @@ private:
 	LRESULT OnRange(WORD, WORD, HWND, BOOL&);
 	LRESULT OnEditCopy(WORD, WORD, HWND, BOOL&);
 	LRESULT OnExport(WORD, WORD, HWND, BOOL&);
+	// the periods as appointments (Export as .ics)
+	std::vector<CalendarEvent> CalendarEvents() const;
 	LRESULT OnPrint(WORD, WORD, HWND, BOOL&);
 
 	// works the periods out for the range and shows them

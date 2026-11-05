@@ -60,7 +60,7 @@
       <ConformanceMode>true</ConformanceMode>
       <LanguageStandard>stdcpp20</LanguageStandard>
       <PrecompiledHeader>NotUsing</PrecompiledHeader>
-      <AdditionalIncludeDirectories>..\AstroCore;..\sweph;..\AstroStudio;..\WTLHelper\WTLHelper;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>..\AstroCore;..\sweph;..\AstroStudio;..\WTLHelper\WTLHelper;..\WTLHelper\WTL;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
@@ -107,6 +107,16 @@
     <ClCompile Include="PhenomenaTests.cpp" />
     <ClCompile Include="ProjectTests.cpp" />
     <ClCompile Include="..\AstroStudio\Project.cpp" />
+    <ClCompile Include="..\AstroStudio\ChartFile.cpp" />
+    <ClCompile Include="..\AstroStudio\Helpers.cpp" />
+    <ClCompile Include="..\AstroStudio\StringHelper.cpp" />
+    <ClCompile Include="..\AstroStudio\TimeControls.cpp" />
+    <ClCompile Include="..\AstroStudio\TimeZones.cpp" />
+    <ClCompile Include="..\AstroStudio\AspectOptions.cpp" />
+    <ClCompile Include="..\AstroStudio\AstroFont.cpp" />
+    <ClCompile Include="AppStubs.cpp" />
+    <ClCompile Include="ChartFileTests.cpp" />
+    <ClCompile Include="CalendarTests.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\AstroCore\AstroCore.vcxproj">

@@ -4,6 +4,7 @@
 #include <filesystem>
 #include <string>
 #include <vector>
+#include <map>
 
 // A project: a set of links to files - charts, analyses, aspect and colour sets - kept together in one small file (.astroproj) that
 // also remembers how the user arranged them (names, groups, tags, notes, the order) and what was open. It holds no data of its own and
@@ -15,7 +16,8 @@
 //   [Project]     Version, Name, Description
 //   [Groups]      G1, G2 ... : the groups (folders that exist only in the project), by path: "Clients/Smith"
 //   [Item.1] ...  one section for each linked file, in the order shown: Id, Type, Name, Path, FileId, Group, Tags, Notes
-//   [Session]     Open (the Ids of the items that were open, in tab order), Active
+//   [Session]     Open (the Ids of the items that were open, in tab order), Active, and State.<Id> for each open item whose
+//                 tab had something of its own to keep (a chart's overlay): text that only that kind of tab reads
 //
 // Path is relative to the folder of the project file when the file is on the same drive (so that a project and its charts can be
 // moved together), otherwise absolute. Id names the item inside the project (a GUID); FileId is the id kept inside the linked file
@@ -47,6 +49,7 @@ struct ProjectItem {
 struct ProjectSession {
 	std::vector<std::wstring> Open;		// item Ids
 	std::wstring Active;
+	std::map<std::wstring, std::wstring> State;		// item Id -> what its tab keeps of itself (IView::SessionState)
 };
 
 class Project {

@@ -156,6 +156,39 @@ TEST_CASE("What was open is saved with the project but does not make it dirty", 
 	CHECK(loaded.SessionDirty());
 }
 
+TEST_CASE("What an open tab keeps of itself is saved with the session", "[Project]") {
+	TempFolder folder;
+	auto path = folder / L"p.astroproj";
+	std::wstring error;
+	Project project;
+	auto a = project.Add(folder.Make(L"a.chart"))->Id;
+	auto b = project.Add(folder.Make(L"b.chart"))->Id;
+	auto c = project.Add(folder.Make(L"c.chart"))->Id;
+	ProjectSession session{ { a, b }, a };
+	session.State[a] = L"overlay=transit;when=2461234.5;zone=Israel Standard Time;offset=120";
+	session.State[b] = L"";				// nothing to keep: not written
+	session.State[c] = L"overlay=transit";		// not open: not kept
+	project.Session(session);
+	CHECK(project.Session().State.size() == 1);
+	REQUIRE(project.SaveAs(path, error));
+
+	Project loaded;
+	REQUIRE(loaded.Load(path, error));
+	REQUIRE(loaded.Session().State.size() == 1);
+	CHECK(loaded.Session().State.at(a) == L"overlay=transit;when=2461234.5;zone=Israel Standard Time;offset=120");
+	CHECK_FALSE(loaded.NeedsSave());
+
+	// a change of state alone is a change of the session
+	session = loaded.Session();
+	session.State[a] = L"overlay=progressed;method=secondary";
+	loaded.Session(session);
+	CHECK(loaded.SessionDirty());
+	CHECK_FALSE(loaded.Dirty());
+	// and an item taken out takes its state along
+	CHECK(loaded.Remove(a));
+	CHECK(loaded.Session().State.empty());
+}
+
 TEST_CASE("Names, tags, notes and order", "[Project]") {
 	TempFolder folder;
 	Project project;

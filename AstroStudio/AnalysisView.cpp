@@ -816,8 +816,9 @@ LRESULT CAnalysisView::OnPrint(WORD, WORD id, HWND, BOOL&) {
 }
 
 LRESULT CAnalysisView::OnExport(WORD, WORD, HWND, BOOL&) {
-	static constexpr wchar_t filter[] = L"CSV files (*.csv)\0*.csv\0All files (*.*)\0*.*\0";
-	CSimpleFileDialog dlg(FALSE, L"csv", L"Analysis", OFN_OVERWRITEPROMPT | OFN_PATHMUSTEXIST | OFN_HIDEREADONLY | OFN_EXPLORER | OFN_ENABLESIZING, filter, m_hWnd);
+	// a CSV table, or the events (those the filter shows) as appointments for a calendar program
+	static constexpr wchar_t filter[] = L"CSV files (*.csv)\0*.csv\0iCalendar files (*.ics)\0*.ics\0All files (*.*)\0*.*\0";
+	CSimpleFileDialog dlg(FALSE, nullptr, L"Analysis", OFN_OVERWRITEPROMPT | OFN_PATHMUSTEXIST | OFN_HIDEREADONLY | OFN_EXPLORER | OFN_ENABLESIZING, filter, m_hWnd);
 	WTLHelper::SuspendHook();
 	auto ok = dlg.DoModal(m_hWnd) == IDOK;
 	WTLHelper::ResumeHook();
@@ -825,9 +826,53 @@ LRESULT CAnalysisView::OnExport(WORD, WORD, HWND, BOOL&) {
 		return 0;
 
 	CWaitCursor wait;
+	CString path = dlg.m_szFileName;
+	if (Helpers::IsCalendarFile(path, dlg.m_ofn.nFilterIndex, 2)) {
+		if (*::PathFindExtensionW(path) == 0)
+			path += L".ics";
+		std::wstring name = L"Analysis: " + std::wstring((PCWSTR)m_Chart.Name);
+		Helpers::SaveCalendar(m_hWnd, (PCWSTR)path, name, CalendarEvents(), L"The events");
+		return 0;
+	}
+	if (*::PathFindExtensionW(path) == 0)
+		path += L".csv";
 	std::vector<int> rows(m_Shown.size());		// (what the filter lets through)
 	for (int i = 0; i < static_cast<int>(rows.size()); i++)
 		rows[i] = i;
-	Helpers::SaveTextFileUtf8(m_hWnd, dlg.m_szFileName, BuildTable(rows, true), L"The events");
+	Helpers::SaveTextFileUtf8(m_hWnd, path, BuildTable(rows, true), L"The events");
 	return 0;
+}
+
+std::vector<CalendarEvent> CAnalysisView::CalendarEvents() const {
+	// One appointment per event shown, at its moment: "Transit Saturn square natal Sun (exact)", "Transit Mars enters house 5".
+	std::vector<CalendarEvent> events;
+	events.reserve(m_Shown.size());
+	for (int row = 0; row < (int)m_Shown.size(); row++) {
+		auto const& e = *EventAt(row);
+		CString mover = CellText(e, ColumnType::Mover, false), what = EventText(e);
+		if (!what.IsEmpty())
+			what.SetAt(0, (wchar_t)towlower(what[0]));
+		CString summary;
+		if (e.Aspect != AspectType::None)
+			summary = mover + L" " + CellText(e, ColumnType::Aspect, false) + L" " + CellText(e, ColumnType::Target, false) + L" (" + what + L")";
+		else
+			summary = mover + L" " + what;
+
+		std::wstring description = L"Chart: " + std::wstring((PCWSTR)m_Chart.Name) + L"\nAnalysis: " + (PCWSTR)CellText(e, ColumnType::Analysis, false);
+		auto add = [&](PCWSTR label, ColumnType column) {
+			if (auto text = CellText(e, column, false); !text.IsEmpty())
+				description += std::wstring(L"\n") + label + L": " + (PCWSTR)text;
+		};
+		add(L"Position", ColumnType::Longitude);
+		add(L"Orb", ColumnType::Orb);
+		add(L"Pass", ColumnType::Pass);
+		add(L"Enter / Exact / Leave", ColumnType::Stay);
+
+		CalendarEvent event;
+		event.Start = e.Time;
+		event.Summary = (PCWSTR)summary;
+		event.Description = std::move(description);
+		events.push_back(std::move(event));
+	}
+	return events;
 }

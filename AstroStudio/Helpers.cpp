@@ -6,6 +6,8 @@
 #include "AppSettings.h"
 #include <cmath>
 #include <CommCtrl.h>
+#include <Shlwapi.h>
+#pragma comment(lib, "shlwapi.lib")
 
 bool Helpers::LoadAstroFont(UINT id) {
 	auto res = ::FindResource(nullptr, MAKEINTRESOURCE(id), L"TTF");
@@ -306,7 +308,21 @@ bool Helpers::SaveTextFileUtf8(HWND owner, PCWSTR path, CString const& text, PCW
 	std::string bytes("\xEF\xBB\xBF");
 	bytes.resize(3 + length);
 	::WideCharToMultiByte(CP_UTF8, 0, text, text.GetLength(), bytes.data() + 3, length, nullptr, nullptr);
+	return SaveBytes(owner, path, bytes, what);
+}
 
+bool Helpers::SaveCalendar(HWND owner, PCWSTR path, std::wstring const& name, std::vector<CalendarEvent> const& events, PCWSTR what) {
+	return SaveBytes(owner, path, ICalendar::ToText(name, events, DateTime::Now()), what);
+}
+
+bool Helpers::IsCalendarFile(PCWSTR path, DWORD filterIndex, DWORD calendarIndex) {
+	auto extension = ::PathFindExtensionW(path);
+	if (_wcsicmp(extension, L".ics") == 0)
+		return true;
+	return *extension == 0 && filterIndex == calendarIndex;
+}
+
+bool Helpers::SaveBytes(HWND owner, PCWSTR path, std::string const& bytes, PCWSTR what) {
 	DWORD error = ERROR_SUCCESS;
 	HANDLE file = ::CreateFileW(path, GENERIC_WRITE, 0, nullptr, CREATE_ALWAYS, FILE_ATTRIBUTE_NORMAL, nullptr);
 	if (file == INVALID_HANDLE_VALUE)

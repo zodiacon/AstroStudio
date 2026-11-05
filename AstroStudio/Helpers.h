@@ -1,5 +1,7 @@
 #pragma once
 
+#include "Calendar.h"
+
 #include "AstroPoint.h"
 #include "DefaultFont.h"
 #include "ChartData.h"
@@ -61,6 +63,12 @@ struct Helpers abstract final {
 	// Writes text as UTF-8 with a byte order mark (which is how Excel knows it is UTF-8: the degree signs need it). On failure says
 	// so in a message box - "<what> could not be saved to <path>: <reason>" - and returns false.
 	static bool SaveTextFileUtf8(HWND owner, PCWSTR path, CString const& text, PCWSTR what);
+	// Writes the bytes as they are, with the same message on failure.
+	static bool SaveBytes(HWND owner, PCWSTR path, std::string const& bytes, PCWSTR what);
+	// Writes the events as an iCalendar file (.ics: ICalendar::ToText; no byte order mark, which calendar programs don't want).
+	static bool SaveCalendar(HWND owner, PCWSTR path, std::wstring const& name, std::vector<CalendarEvent> const& events, PCWSTR what);
+	// whether a file chosen in an Export dialog is to be an iCalendar file: by its extension, or else by the type chosen (filterIndex)
+	static bool IsCalendarFile(PCWSTR path, DWORD filterIndex, DWORD calendarIndex);
 	// The text font the user chose with Options > Font (AppSettings::TextFont), as a font of a size in tenths of a point (0: the
 	// size they chose, or 9 points if that wasn't given). False, with nothing made, if they have not chosen one - the views then
 	// keep the fonts they have.
