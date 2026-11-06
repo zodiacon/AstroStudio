@@ -109,6 +109,7 @@ BEGIN
         BEGIN
             MENUITEM "&Solar Return",               ID_CHART_DERIVED_SOLARRETURN
             MENUITEM "&Lunar Return",               ID_CHART_DERIVED_LUNARRETURN
+            MENUITEM "&Relocated Chart...",         ID_CHART_DERIVED_RELOCATED
             MENUITEM SEPARATOR
             MENUITEM "&Progressed Chart...",        ID_CHART_DERIVED_PROGRESSED
             MENUITEM "Solar &Arc Chart...",         ID_CHART_DERIVED_SOLARARC
@@ -118,6 +119,7 @@ BEGIN
             MENUITEM "&Davison...",                 ID_CHART_DERIVED_DAVISON
         END
         MENUITEM "A&nalysis...",                ID_CHART_ANALYSIS
+        MENUITEM "Synastry &Report...",         ID_CHART_SYNASTRY_REPORT
     END
     POPUP "&Project"
     BEGIN
@@ -801,6 +803,11 @@ STRINGTABLE
 BEGIN
     ID_ZODIAC_TRUECHITRA    "Measure positions in the sidereal zodiac, with Spica at 0 Libra (true Chitrapaksha)"
     ID_ZODIAC_DELUCE        "Measure positions in the sidereal zodiac, with the De Luce ayanamsa"
+    ID_CHART_DERIVED_RELOCATED
+                            "Open this chart cast for another place: the same moment, with the angles and houses of that place \nRelocated Chart"
+    ID_CHART_SYNASTRY_REPORT
+                            "List the aspects between this chart and another open chart, and where each one's planets fall in the other's houses \nSynastry Report"
+    ID_SYNASTRY_SWAP        "Change the two charts' places in the report \nSwap"
 END
 
 STRINGTABLE

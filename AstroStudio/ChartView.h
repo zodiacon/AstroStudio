@@ -86,7 +86,9 @@ public:
 		NOTIFY_CODE_HANDLER(TBN_DROPDOWN, OnOverlayDropDown)
 		COMMAND_ID_HANDLER(ID_CHART_DERIVED_SOLARRETURN, OnDerived)
 		COMMAND_ID_HANDLER(ID_CHART_DERIVED_LUNARRETURN, OnDerived)
+		COMMAND_ID_HANDLER(ID_CHART_DERIVED_RELOCATED, OnDerived)
 		COMMAND_ID_HANDLER(ID_CHART_ANALYSIS, OnAnalysis)
+		COMMAND_ID_HANDLER(ID_CHART_SYNASTRY_REPORT, OnSynastryReport)
 		COMMAND_ID_HANDLER(ID_CHART_DERIVED_SOLARARC, OnDerived)
 		COMMAND_ID_HANDLER(ID_CHART_DERIVED_PROGRESSED, OnDerived)
 		COMMAND_ID_HANDLER(ID_CHART_DERIVED_PRIMARY, OnDerived)
@@ -111,7 +113,9 @@ public:
 		COMMAND_ID_HANDLER(ID_CHART_OVERLAY_DATE, OnOverlayDate)
 		COMMAND_ID_HANDLER(ID_CHART_DERIVED_SOLARRETURN, OnDerived)
 		COMMAND_ID_HANDLER(ID_CHART_DERIVED_LUNARRETURN, OnDerived)
+		COMMAND_ID_HANDLER(ID_CHART_DERIVED_RELOCATED, OnDerived)
 		COMMAND_ID_HANDLER(ID_CHART_ANALYSIS, OnAnalysis)
+		COMMAND_ID_HANDLER(ID_CHART_SYNASTRY_REPORT, OnSynastryReport)
 		COMMAND_ID_HANDLER(ID_CHART_DERIVED_SOLARARC, OnDerived)
 		COMMAND_ID_HANDLER(ID_CHART_DERIVED_PROGRESSED, OnDerived)
 		COMMAND_ID_HANDLER(ID_CHART_DERIVED_PRIMARY, OnDerived)
@@ -166,6 +170,10 @@ private:
 	bool CanMoveTime() const {
 		return !m_ReadOnly || OverlayHasTime();
 	}
+	// A chart of a birth (to progress, or to find returns from): an ordinary one, or one relocated - the same moment elsewhere.
+	bool HasBirth() const {
+		return !m_ReadOnly || (m_Recipe && m_Recipe->Kind == DerivedKind::Relocated);
+	}
 	// asks which of the other open charts to use (a popup at the cursor if several); false if there is none or the user cancelled
 	bool PickOtherChart(OpenChart& chart, PCWSTR what);
 	// New Derived Chart: the chart of the return of the Sun or the Moon to its natal place, opened by the New Chart dialog
@@ -174,9 +182,13 @@ private:
 	void NewDirectedChart(DerivedKind kind);
 	// ...and a composite or Davison chart of this and another open chart
 	void NewPairChart(bool davison);
+	// ...and this chart cast for another place (the place asked for with the New Chart dialog)
+	void NewRelocatedChart();
 	LRESULT OnDerived(WORD /*wNotifyCode*/, WORD wID, HWND /*hWndCtl*/, BOOL& /*bHandled*/);
 	// Chart > Analysis: the analysis dialog, on this chart
 	LRESULT OnAnalysis(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/);
+	// Chart > Synastry Report: this chart and another open one, compared in a tab of their own
+	LRESULT OnSynastryReport(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/);
 	// the menu's and the toolbar's marks for the overlay shown
 	void UpdateOverlayUI();
 	void StopTimeIfFixed();

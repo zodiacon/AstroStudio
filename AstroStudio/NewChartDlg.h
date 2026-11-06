@@ -17,6 +17,9 @@ public:
 	// the values the dialog opens with
 	void SetChartInfo(ChartInfo const& info);
 	void SetHouseSystem(HouseSystem system);
+	// Asks only for a place and a time zone: the moment (and everything else) is the chart's, and the date and time are shown
+	// as they were at the place chosen, in its zone. For a relocated chart.
+	void SetRelocation();
 
 	// valid after DoModal returned IDOK
 	ChartInfo const& GetChartInfo() const;
@@ -37,6 +40,8 @@ public:
 		COMMAND_HANDLER(IDC_YEAR, EN_KILLFOCUS, OnMonthOrYearChanged)
 		COMMAND_HANDLER(IDC_MANUALTZ, BN_CLICKED, OnManualToggled)
 		COMMAND_HANDLER(IDC_TIME, EN_KILLFOCUS, OnTimeKillFocus)
+		COMMAND_HANDLER(IDC_TIMEZONE, CBN_SELCHANGE, OnZoneChanged)
+		COMMAND_HANDLER(IDC_TZOFFSET, EN_KILLFOCUS, OnZoneChanged)
 	END_MSG_MAP()
 
 private:
@@ -51,11 +56,16 @@ private:
 	LRESULT OnMonthOrYearChanged(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/);
 	LRESULT OnTimeKillFocus(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/);
 	LRESULT OnManualToggled(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/);
+	LRESULT OnZoneChanged(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/);
+
+	// relocation: the chart's moment shown in the zone chosen now
+	void ShowFixedTime();
 
 	bool Fail(UINT control, PCWSTR message);
 
 	ChartInfo m_Info{};
 	HouseSystem m_HouseSystem{ HouseSystem::Koch };
+	bool m_Relocate{ false };
 	CString m_OriginalLocation;		// to tell whether the location text was edited
 	CLocationControls m_Location;
 	CTimeControls m_Time;

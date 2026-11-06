@@ -6,6 +6,7 @@
 #include "resource.h"
 #include "EphemerisView.h"
 #include "VoidView.h"
+#include "SynastryView.h"
 #include "AboutDlg.h"
 #include "MainFrm.h"
 #include "Printing.h"
@@ -135,7 +136,8 @@ LRESULT CMainFrame::OnCreate(UINT /*uMsg*/, WPARAM /*wParam*/, LPARAM /*lParam*/
 	UIEnable(ID_CHART_TRANSITS, FALSE);
 	UIEnable(ID_CHART_OVERLAY, FALSE);
 	UIEnable(ID_CHART_ANALYSIS, FALSE);
-	for (UINT id : { ID_CHART_DERIVED_SOLARRETURN, ID_CHART_DERIVED_LUNARRETURN, ID_CHART_DERIVED_SOLARARC, ID_CHART_DERIVED_PROGRESSED, ID_CHART_DERIVED_PRIMARY, ID_CHART_DERIVED_COMPOSITE, ID_CHART_DERIVED_DAVISON })
+	UIEnable(ID_CHART_SYNASTRY_REPORT, FALSE);
+	for (UINT id : { ID_CHART_DERIVED_SOLARRETURN, ID_CHART_DERIVED_LUNARRETURN, ID_CHART_DERIVED_SOLARARC, ID_CHART_DERIVED_PROGRESSED, ID_CHART_DERIVED_PRIMARY, ID_CHART_DERIVED_COMPOSITE, ID_CHART_DERIVED_DAVISON, ID_CHART_DERIVED_RELOCATED })
 		UIEnable(id, FALSE);
 	UIEnable(ID_CHART_OVERLAY_NONE, FALSE);
 	UIEnable(ID_CHART_OVERLAY_PROGRESSED, FALSE);
@@ -231,6 +233,13 @@ LRESULT CMainFrame::OnToolVoid(WORD, WORD, HWND, BOOL&) {
 	pView->Create(m_Tabs, rcDefault, nullptr, WS_CHILD | WS_VISIBLE | WS_CLIPCHILDREN | WS_CLIPSIBLINGS, 0);
 	m_Tabs.AddPage(pView->m_hWnd, L"Void of Course", 3, pView);
 	return 0;
+}
+
+void CMainFrame::NewSynastryReport(OpenChart a, OpenChart b) {
+	auto view = new CSynastryView(this);
+	view->SetCharts(std::move(a), std::move(b));
+	view->Create(m_Tabs, rcDefault, nullptr, WS_CHILD | WS_VISIBLE | WS_CLIPCHILDREN | WS_CLIPSIBLINGS, 0);
+	m_Tabs.AddPage(view->m_hWnd, view->Title(), 1, view);
 }
 
 LRESULT CMainFrame::OnToolAnalysis(WORD, WORD, HWND, BOOL&) {

@@ -99,6 +99,7 @@
     <ClInclude Include="DerivedCharts.h" />
     <ClInclude Include="Midpoints.h" />
     <ClInclude Include="Calendar.h" />
+    <ClInclude Include="Synastry.h" />
     <ClInclude Include="ArabicParts.h" />
     <ClInclude Include="pch.h" />
   </ItemGroup>
@@ -112,6 +113,7 @@
     <ClCompile Include="DerivedCharts.cpp" />
     <ClCompile Include="Midpoints.cpp" />
     <ClCompile Include="Calendar.cpp" />
+    <ClCompile Include="Synastry.cpp" />
     <ClCompile Include="ArabicParts.cpp" />
     <ClCompile Include="pch.cpp">
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Create</PrecompiledHeader>

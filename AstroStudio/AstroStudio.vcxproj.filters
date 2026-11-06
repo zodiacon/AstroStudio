@@ -45,6 +45,9 @@
     <ClCompile Include="VoidView.cpp">
       <Filter>Views</Filter>
     </ClCompile>
+    <ClCompile Include="SynastryView.cpp">
+      <Filter>Views</Filter>
+    </ClCompile>
     <ClCompile Include="EphemerisOptionsDlg.cpp">
       <Filter>Dialogs</Filter>
     </ClCompile>
@@ -171,6 +174,9 @@
       <Filter>Views</Filter>
     </ClInclude>
     <ClInclude Include="VoidView.h">
+      <Filter>Views</Filter>
+    </ClInclude>
+    <ClInclude Include="SynastryView.h">
       <Filter>Views</Filter>
     </ClInclude>
     <ClInclude Include="ViewBase.h">

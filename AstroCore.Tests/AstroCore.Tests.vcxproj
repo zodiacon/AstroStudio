@@ -117,6 +117,7 @@
     <ClCompile Include="AppStubs.cpp" />
     <ClCompile Include="ChartFileTests.cpp" />
     <ClCompile Include="CalendarTests.cpp" />
+    <ClCompile Include="SynastryTests.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\AstroCore\AstroCore.vcxproj">

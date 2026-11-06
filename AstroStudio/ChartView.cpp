@@ -3,6 +3,7 @@
 #include "Project.h"
 #include "TimeZones.h"
 #include "DirectionsDlg.h"
+#include "NewChartDlg.h"
 #include "Helpers.h"
 #include "Aspects.h"
 #include "DefaultFont.h"
@@ -278,12 +279,15 @@ void CChartView::PageActivated(bool active) {
 	ui.UIEnable(ID_CHART_AUTOSTEP, active && CanMoveTime());
 	ui.UIEnable(ID_CHART_LIVE, active && CanMoveTime());
 	// (charts worked out from others have nothing to progress, return to or combine)
-	ui.UIEnable(ID_CHART_OVERLAY_PROGRESSED, active && !m_ReadOnly);
-	ui.UIEnable(ID_CHART_OVERLAY_SOLARARC, active && !m_ReadOnly);
-	for (UINT id : { ID_CHART_DERIVED_SOLARRETURN, ID_CHART_DERIVED_LUNARRETURN, ID_CHART_DERIVED_SOLARARC, ID_CHART_DERIVED_PROGRESSED,
-		ID_CHART_DERIVED_PRIMARY, ID_CHART_DERIVED_COMPOSITE, ID_CHART_DERIVED_DAVISON })
+	// (a relocated chart is a birth too: it progresses and returns, at its own place)
+	ui.UIEnable(ID_CHART_OVERLAY_PROGRESSED, active && HasBirth());
+	ui.UIEnable(ID_CHART_OVERLAY_SOLARARC, active && HasBirth());
+	ui.UIEnable(ID_CHART_DERIVED_SOLARRETURN, active && HasBirth());
+	ui.UIEnable(ID_CHART_DERIVED_LUNARRETURN, active && HasBirth());
+	for (UINT id : { ID_CHART_DERIVED_SOLARARC, ID_CHART_DERIVED_PROGRESSED, ID_CHART_DERIVED_PRIMARY, ID_CHART_DERIVED_COMPOSITE,
+		ID_CHART_DERIVED_DAVISON, ID_CHART_DERIVED_RELOCATED })
 		ui.UIEnable(id, active && !m_ReadOnly);
-	for (UINT id : { ID_CHART_ANALYSIS, ID_CHART_OVERLAY, ID_CHART_TRANSITS, ID_CHART_OVERLAY_NONE, ID_CHART_OVERLAY_SYNASTRY })
+	for (UINT id : { ID_CHART_ANALYSIS, ID_CHART_OVERLAY, ID_CHART_TRANSITS, ID_CHART_OVERLAY_NONE, ID_CHART_OVERLAY_SYNASTRY, ID_CHART_SYNASTRY_REPORT })
 		ui.UIEnable(id, active);
 	ui.UIEnable(ID_FILE_SAVE, active && (!m_ReadOnly || m_Recipe));
 	ui.UIEnable(ID_FILE_SAVE_AS, active && (!m_ReadOnly || m_Recipe));
@@ -788,6 +792,32 @@ void CChartView::NewDirectedChart(DerivedKind kind) {
 		view->LinkSources(this, nullptr);
 }
 
+void CChartView::NewRelocatedChart() {
+	// the New Chart dialog asks for the place and its zone only; it shows the birth moment as it was there
+	CNewChartDlg dlg;
+	dlg.SetChartInfo(m_Data.Info());
+	dlg.SetHouseSystem(m_Data.GetHouseSystem());
+	dlg.SetRelocation();
+	if (dlg.DoModal(m_hWnd) != IDOK)
+		return;
+
+	DerivedRecipe recipe;
+	recipe.Kind = DerivedKind::Relocated;
+	recipe.A = m_Data;
+	recipe.Place = dlg.GetChartInfo();
+	recipe.Zone = dlg.GetChartInfo().TimeZone;
+	recipe.APath = m_FilePath;
+	auto chart = DerivedCharts::Build(m_Calc, recipe);
+
+	CString place = recipe.Place.City.empty() ? CLocationControls::FormatLocation(recipe.Place) : CString(recipe.Place.City.c_str());
+	if (place.IsEmpty())
+		place.Format(L"%.2f, %.2f", recipe.Place.Latitude, recipe.Place.Longitude);
+	CString title;
+	title.Format(L"Relocated to %s: %s", (PCWSTR)place, (PCWSTR)m_Title);
+	if (auto view = Frame()->AddDerivedChartView(std::move(chart), title, &recipe))
+		view->LinkSources(this, nullptr);
+}
+
 void CChartView::NewPairChart(bool davison) {
 	OpenChart other;
 	if (!PickOtherChart(other, davison ? L"a Davison chart is made from two charts" : L"a composite is made from two charts"))
@@ -812,12 +842,28 @@ LRESULT CChartView::OnAnalysis(WORD, WORD, HWND, BOOL&) {
 	return 0;
 }
 
+LRESULT CChartView::OnSynastryReport(WORD, WORD, HWND, BOOL&) {
+	OpenChart self;
+	if (!GetChart(self))
+		return 0;
+	self.View = this;
+	OpenChart other;
+	if (!PickOtherChart(other, L"a synastry report compares two charts"))
+		return 0;
+	Frame()->NewSynastryReport(std::move(self), std::move(other));
+	return 0;
+}
+
 LRESULT CChartView::OnDerived(WORD, WORD id, HWND, BOOL&) {
-	if (m_ReadOnly || m_Data.AllPlanets().empty())
+	if (m_Data.AllPlanets().empty())
+		return 0;
+	bool isReturn = id == ID_CHART_DERIVED_SOLARRETURN || id == ID_CHART_DERIVED_LUNARRETURN;
+	if (isReturn ? !HasBirth() : m_ReadOnly)
 		return 0;
 	switch (id) {
 		case ID_CHART_DERIVED_SOLARRETURN: NewReturnChart(Planet::Sun); break;
 		case ID_CHART_DERIVED_LUNARRETURN: NewReturnChart(Planet::Moon); break;
+		case ID_CHART_DERIVED_RELOCATED: NewRelocatedChart(); break;
 		case ID_CHART_DERIVED_SOLARARC: NewDirectedChart(DerivedKind::SolarArc); break;
 		case ID_CHART_DERIVED_PROGRESSED: NewDirectedChart(DerivedKind::Progressed); break;
 		case ID_CHART_DERIVED_PRIMARY: NewDirectedChart(DerivedKind::Primary); break;
@@ -835,7 +881,7 @@ bool CChartView::ShowOverlay(OverlayKind kind, ProgressionMethod method) {
 	if (kind == OverlayKind::Progressed && method == ProgressionMethod::SolarArc)
 		overlay.Label = L"Directed";
 
-	if (kind == OverlayKind::Progressed && m_ReadOnly)
+	if (kind == OverlayKind::Progressed && !HasBirth())
 		return false;		// (a chart worked out from others has no birth to progress from)
 
 	if (kind == OverlayKind::Synastry) {
@@ -1039,8 +1085,8 @@ LRESULT CChartView::OnOverlayDropDown(int, LPNMHDR pnmh, BOOL& handled) {
 	Choice choices[] = {
 		{ ID_CHART_OVERLAY_NONE, L"None", !m_Overlay },
 		{ ID_CHART_TRANSITS, L"Transits", kind == OverlayKind::Transit },
-		{ ID_CHART_OVERLAY_PROGRESSED, L"Secondary Progressions", kind == OverlayKind::Progressed && !solarArc, !m_ReadOnly },
-		{ ID_CHART_OVERLAY_SOLARARC, L"Solar Arc Directions", kind == OverlayKind::Progressed && solarArc, !m_ReadOnly },
+		{ ID_CHART_OVERLAY_PROGRESSED, L"Secondary Progressions", kind == OverlayKind::Progressed && !solarArc, HasBirth() },
+		{ ID_CHART_OVERLAY_SOLARARC, L"Solar Arc Directions", kind == OverlayKind::Progressed && solarArc, HasBirth() },
 		{ ID_CHART_OVERLAY_SYNASTRY, L"Synastry...", kind == OverlayKind::Synastry },
 	};
 	CMenu menu;

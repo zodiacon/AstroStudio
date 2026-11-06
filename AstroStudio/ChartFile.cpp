@@ -198,6 +198,81 @@ namespace {
 		return true;
 	}
 
+	// City, State, Country, Latitude, Longitude, Elevation
+	void WriteLocation(IniDocument& ini, std::wstring const& section, ChartInfo const& info) {
+		ini.SetString(section, L"City", info.City);
+		ini.SetString(section, L"State", info.State);
+		ini.SetString(section, L"Country", info.Country);
+		ini.SetDouble(section, L"Latitude", info.Latitude, 9);
+		ini.SetDouble(section, L"Longitude", info.Longitude, 9);
+		ini.SetDouble(section, L"Elevation", info.Elevation, 3);
+	}
+
+	bool ReadLocation(Reader const& r, std::wstring const& locationSection, ChartInfo& info) {
+		auto const& ini = r.Ini;
+		info.City = ini.GetString(locationSection, L"City");
+		info.State = ini.GetString(locationSection, L"State");
+		info.Country = ini.GetString(locationSection, L"Country");
+		auto latitude = ini.GetDouble(locationSection, L"Latitude");
+		if (!latitude)
+			return ini.Has(locationSection, L"Latitude") ? r.Problem(locationSection, L"Latitude", L"is not a number (decimal degrees, north positive)") : r.Missing(locationSection, L"Latitude");
+		auto longitude = ini.GetDouble(locationSection, L"Longitude");
+		if (!longitude)
+			return ini.Has(locationSection, L"Longitude") ? r.Problem(locationSection, L"Longitude", L"is not a number (decimal degrees, east positive)") : r.Missing(locationSection, L"Longitude");
+		if (std::abs(*latitude) > 90)
+			return r.Problem(locationSection, L"Latitude", L"must be between -90 and 90");
+		if (std::abs(*longitude) > 180)
+			return r.Problem(locationSection, L"Longitude", L"must be between -180 and 180");
+		info.Latitude = *latitude;
+		info.Longitude = *longitude;
+		info.Elevation = 0;
+		if (ini.Has(locationSection, L"Elevation")) {
+			auto elevation = ini.GetDouble(locationSection, L"Elevation");
+			if (!elevation)
+				return r.Problem(locationSection, L"Elevation", L"is not a number (meters)");
+			info.Elevation = *elevation;
+		}
+		return true;
+	}
+
+	// a zone without a time (a relocated chart's): TimeZone, and UtOffset - the offset at the moment ut - for a zone this computer
+	// doesn't have, or alone for a fixed offset
+	void WriteZone(IniDocument& ini, std::wstring const& section, DateTime const& ut, TimeZoneInfo const& zone) {
+		int offset = 0;
+		TimeZones::UtToLocal(ut, zone, &offset);
+		ini.SetString(section, L"TimeZone", zone.Name);
+		ini.SetString(section, L"UtOffset", (PCWSTR)TimeZones::FormatOffset(offset));
+	}
+
+	bool ReadZone(Reader const& r, std::wstring const& section, TimeZoneInfo& zone) {
+		auto const& ini = r.Ini;
+		std::optional<int> storedOffset;
+		if (auto text = ini.Get(section, L"UtOffset"); text && !text->empty()) {
+			int minutes;
+			if (!TimeZones::ParseOffset(text->c_str(), minutes))
+				return r.Problem(section, L"UtOffset", L"'" + *text + L"' is not an offset from UT; write it like +05:30 or -4");
+			storedOffset = minutes;
+		}
+		zone = {};
+		auto zoneName = ini.GetString(section, L"TimeZone");
+		if (!zoneName.empty()) {
+			if (auto known = TimeZones::Find(zoneName)) {
+				zone.Name = known->Key;
+				if (storedOffset)
+					zone.OffsetUT = *storedOffset;
+				return true;
+			}
+			if (!storedOffset)
+				return r.Problem(section, L"TimeZone", L"'" + zoneName + L"' is not a time zone on this computer; add a UtOffset to use a fixed offset");
+		}
+		else if (!storedOffset) {
+			r.Error = L"[" + section + L"] needs a TimeZone or a UtOffset";
+			return false;
+		}
+		zone.OffsetUT = *storedOffset;
+		return true;
+	}
+
 	// a chart in the four sections [<prefix>Chart], [<prefix>Person], [<prefix>Time], [<prefix>Location]
 	void WriteChart(IniDocument& ini, ChartData const& chart, std::wstring const& prefix) {
 		auto const& info = chart.Info();
@@ -227,12 +302,7 @@ namespace {
 
 		WriteWhen(ini, section(L"Time"), info.Time, info.TimeZone);
 
-		ini.SetString(section(L"Location"), L"City", info.City);
-		ini.SetString(section(L"Location"), L"State", info.State);
-		ini.SetString(section(L"Location"), L"Country", info.Country);
-		ini.SetDouble(section(L"Location"), L"Latitude", info.Latitude, 9);
-		ini.SetDouble(section(L"Location"), L"Longitude", info.Longitude, 9);
-		ini.SetDouble(section(L"Location"), L"Elevation", info.Elevation, 3);
+		WriteLocation(ini, section(L"Location"), info);
 	}
 
 	bool ReadChart(Reader const& r, std::wstring const& prefix, ChartData& chart) {
@@ -310,27 +380,8 @@ namespace {
 		//
 		// [Location]
 		//
-		info.City = ini.GetString(locationSection, L"City");
-		info.State = ini.GetString(locationSection, L"State");
-		info.Country = ini.GetString(locationSection, L"Country");
-		auto latitude = ini.GetDouble(locationSection, L"Latitude");
-		if (!latitude)
-			return ini.Has(locationSection, L"Latitude") ? r.Problem(locationSection, L"Latitude", L"is not a number (decimal degrees, north positive)") : r.Missing(locationSection, L"Latitude");
-		auto longitude = ini.GetDouble(locationSection, L"Longitude");
-		if (!longitude)
-			return ini.Has(locationSection, L"Longitude") ? r.Problem(locationSection, L"Longitude", L"is not a number (decimal degrees, east positive)") : r.Missing(locationSection, L"Longitude");
-		if (std::abs(*latitude) > 90)
-			return r.Problem(locationSection, L"Latitude", L"must be between -90 and 90");
-		if (std::abs(*longitude) > 180)
-			return r.Problem(locationSection, L"Longitude", L"must be between -180 and 180");
-		info.Latitude = *latitude;
-		info.Longitude = *longitude;
-		if (ini.Has(locationSection, L"Elevation")) {
-			auto elevation = ini.GetDouble(locationSection, L"Elevation");
-			if (!elevation)
-				return r.Problem(locationSection, L"Elevation", L"is not a number (meters)");
-			info.Elevation = *elevation;
-		}
+		if (!ReadLocation(r, locationSection, info))
+			return false;
 
 		//
 		// [Time]: the local date and time, then the zone
@@ -413,7 +464,7 @@ namespace {
 		DerivedKind Kind;
 	};
 	const KindName Kinds[] = { { L"Composite", DerivedKind::Composite }, { L"Davison", DerivedKind::Davison }, { L"SolarArc", DerivedKind::SolarArc },
-		{ L"Progressed", DerivedKind::Progressed }, { L"Primary", DerivedKind::Primary } };
+		{ L"Progressed", DerivedKind::Progressed }, { L"Primary", DerivedKind::Primary }, { L"Relocated", DerivedKind::Relocated } };
 	struct HousesName {
 		PCWSTR Name;
 		CompositeHouses Houses;
@@ -469,8 +520,12 @@ bool ChartFile::SaveDerived(DerivedRecipe const& recipe, PCWSTR path, std::wstri
 		for (auto const& mode : AngleModes)
 			if (mode.Angles == recipe.Angles)
 				ini.SetString(L"Derived", L"Angles", mode.Name);
-	if (!recipe.IsPair())
+	if (recipe.HasTarget())
 		WriteWhen(ini, L"Derived.Time", recipe.Target, recipe.Zone);
+	if (recipe.Kind == DerivedKind::Relocated) {
+		WriteLocation(ini, L"Derived.Location", recipe.Place);
+		WriteZone(ini, L"Derived.Location", recipe.A.Info().Time, recipe.Zone);
+	}
 	WriteChart(ini, recipe.A, L"A.");
 	if (recipe.IsPair())
 		WriteChart(ini, recipe.B, L"B.");
@@ -514,7 +569,7 @@ bool ChartFile::LoadFile(PCWSTR path, Loaded& loaded, std::wstring& error) {
 			found = true;
 		}
 	if (!found)
-		return r.Problem(L"Derived", L"Kind", L"'" + *kindName + L"' is not a kind of derived chart; use Composite, Davison, SolarArc, Progressed or Primary");
+		return r.Problem(L"Derived", L"Kind", L"'" + *kindName + L"' is not a kind of derived chart; use Composite, Davison, SolarArc, Progressed, Primary or Relocated");
 
 	if (recipe.Kind == DerivedKind::Composite)
 		if (auto name = ini.Get(L"Derived", L"Houses")) {
@@ -549,7 +604,9 @@ bool ChartFile::LoadFile(PCWSTR path, Loaded& loaded, std::wstring& error) {
 			if (!found)
 				return r.Problem(L"Derived", L"Angles", L"must be Calculated, SolarArc or Natal");
 		}
-	if (!recipe.IsPair() && !ReadWhen(r, L"Derived.Time", recipe.Target, recipe.Zone))
+	if (recipe.HasTarget() && !ReadWhen(r, L"Derived.Time", recipe.Target, recipe.Zone))
+		return false;
+	if (recipe.Kind == DerivedKind::Relocated && (!ReadLocation(r, L"Derived.Location", recipe.Place) || !ReadZone(r, L"Derived.Location", recipe.Zone)))
 		return false;
 
 	if (!ReadChart(r, L"A.", recipe.A))
@@ -586,7 +643,7 @@ bool ChartFile::Load(PCWSTR path, ChartData& chart, std::wstring& error) {
 	if (!LoadFile(path, loaded, error))
 		return false;
 	if (loaded.Derived) {
-		error = L"this is a chart worked out from others (a composite, a Davison, solar arc, progressed or primary directions chart), not an ordinary one";
+		error = L"this is a chart worked out from others (a composite, a Davison, solar arc, progressed, primary directions or relocated chart), not an ordinary one";
 		return false;
 	}
 	chart = std::move(loaded.Chart);

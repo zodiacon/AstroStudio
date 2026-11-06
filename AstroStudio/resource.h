@@ -259,13 +259,16 @@
 #define ID_ZODIAC_YUKTESHWAR            32863
 #define ID_ZODIAC_TRUECHITRA            32864
 #define ID_ZODIAC_DELUCE                32865
+#define ID_CHART_DERIVED_RELOCATED      32866
+#define ID_CHART_SYNASTRY_REPORT        32867
+#define ID_SYNASTRY_SWAP                32868
 
 // Next default values for new objects
 // 
 #ifdef APSTUDIO_INVOKED
 #ifndef APSTUDIO_READONLY_SYMBOLS
 #define _APS_NEXT_RESOURCE_VALUE        247
-#define _APS_NEXT_COMMAND_VALUE         32866
+#define _APS_NEXT_COMMAND_VALUE         32869
 #define _APS_NEXT_CONTROL_VALUE         1120
 #define _APS_NEXT_SYMED_VALUE           108
 #endif

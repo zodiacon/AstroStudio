@@ -16,14 +16,16 @@
 // the computer, and it settles which of the two identical local times of a DST change is meant.
 // Only what is needed to recreate the chart is stored - positions are always recalculated.
 //
-// A chart worked out from others (a composite, a Davison chart, a solar arc, progressed or primary directions chart) is saved as its *recipe*: the charts it was
+// A chart worked out from others (a composite, a Davison chart, a solar arc, progressed, primary directions or relocated chart) is saved as its *recipe*: the charts it was
 // made from, each in the four sections above under a prefix, and what was chosen. Loading rebuilds the chart from them.
 //
-//   [Derived]        Version, Id, Kind (Composite, Davison, SolarArc, Progressed or Primary), Houses (MidpointMC or MidpointARMC:
+//   [Derived]        Version, Id, Kind (Composite, Davison, SolarArc, Progressed, Primary or Relocated), Houses (MidpointMC or MidpointARMC:
 //                    composite), ArcKey (Actual, Naibod or Ptolemy: solar arc and primary), Angles (Calculated, SolarArc or
 //                    Natal: progressed), ASource and BSource (the files of the charts it was made from, relative to this
 //                    file's folder when they are on the same drive)
 //   [Derived.Time]   solar arc, progressed, primary: the date it is moved to, like [Time]
+//   [Derived.Location]  relocated: the place it is cast for, like [Location], and the zone it is shown in (TimeZone, and UtOffset
+//                    at the birth moment - used alone for a fixed offset or a zone this computer doesn't have)
 //   [A.Chart] [A.Person] [A.Time] [A.Location]     the first chart (the only one when a chart is moved on to a date)
 //   [B.Chart] [B.Person] [B.Time] [B.Location]     the second chart (composite and Davison)
 //

@@ -59,6 +59,8 @@ struct IMainFrame abstract {
 	// Asks what to analyse (the analysis dialog, starting on this chart - or on the one showing, if none is given) and opens the
 	// result in a new tab.
 	virtual void NewAnalysis(IView* chart = nullptr) = 0;
+	// Opens a synastry report of two charts (copies; View is the tab each came from, which the report then follows) in a new tab.
+	virtual void NewSynastryReport(OpenChart a, OpenChart b) = 0;
 	// A chart page's chart changed (edit = by the user, rather than a Live tick): the charts made from it follow (IView::SourceChartChanged).
 	virtual void ChartChanged(IView* chart, bool edit) = 0;
 	// a chart page is closing: nothing may keep pointing at it (IView::SourceChartClosing)

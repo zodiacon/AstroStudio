@@ -207,9 +207,22 @@ TEST_CASE("Every kind of derived chart reads back", "[ChartFile]") {
 		if (recipe.Kind == DerivedKind::Progressed)
 			CHECK(r.Angles == recipe.Angles);
 		CHECK(_wcsicmp(r.Id.c_str(), recipe.Id.c_str()) == 0);
-		if (!recipe.IsPair()) {
+		if (recipe.HasTarget()) {
 			CHECK(r.Target.Julian() == Approx(recipe.Target.Julian()).margin(1.0 / 86400));
 			CHECK(r.Zone.OffsetUT == recipe.Zone.OffsetUT);
+		}
+		if (recipe.Kind == DerivedKind::Relocated) {
+			CHECK(r.Place.Latitude == Approx(recipe.Place.Latitude));
+			CHECK(r.Place.Longitude == Approx(recipe.Place.Longitude));
+			CHECK(r.Place.Elevation == Approx(recipe.Place.Elevation));
+			CHECK(r.Place.City == recipe.Place.City);
+			CHECK(r.Place.Country == recipe.Place.Country);
+			CHECK(r.Zone.Name == recipe.Zone.Name);
+			if (recipe.Zone.Name.empty())
+				CHECK(r.Zone.OffsetUT == recipe.Zone.OffsetUT);
+			// the birth stays the source's
+			CHECK(r.A.Info().Time.Julian() == Approx(recipe.A.Info().Time.Julian()).margin(1.0 / 86400));
+			CHECK(r.A.Info().Latitude == Approx(recipe.A.Info().Latitude));
 		}
 	};
 	DerivedRecipe recipe;
@@ -234,6 +247,41 @@ TEST_CASE("Every kind of derived chart reads back", "[ChartFile]") {
 	recipe.Kind = DerivedKind::Progressed;
 	recipe.Angles = ProgressedAngles::SolarArc;
 	check(recipe);
+
+	recipe.Kind = DerivedKind::Relocated;
+	recipe.Place.Latitude = -33.8688;
+	recipe.Place.Longitude = 151.2093;
+	recipe.Place.Elevation = 58;
+	recipe.Place.City = L"Sydney";
+	recipe.Place.Country = L"Australia";
+	recipe.Zone = {};
+	recipe.Zone.OffsetUT = 600;		// a fixed offset
+	check(recipe);
+	recipe.Zone.Name = L"Tokyo Standard Time";		// a zone of its own
+	recipe.Zone.OffsetUT = 540;
+	check(recipe);
+}
+
+TEST_CASE("A relocated chart's file needs its place", "[ChartFile]") {
+	TempFolder folder;
+	DerivedRecipe recipe;
+	recipe.Kind = DerivedKind::Relocated;
+	recipe.A = Person(L"Jo", 1990, 40.0);
+	recipe.Place.Latitude = 10;
+	recipe.Place.Longitude = 20;
+	recipe.Zone.OffsetUT = 60;
+	auto path = folder / L"Relocated.chart";
+	SaveDerived(recipe, path);
+	auto text = Read(path);
+	auto at = text.find("Latitude=");		// (the first is the new place's: [Derived.Location] comes before the source chart)
+	REQUIRE(at != std::string::npos);
+	REQUIRE(text.rfind("[Derived.Location]", at) != std::string::npos);
+	text.insert(at + 9, "north ");
+	Write(path, text);
+	ChartFile::Loaded loaded;
+	std::wstring error;
+	CHECK_FALSE(ChartFile::LoadFile(path.c_str(), loaded, error));
+	CHECK(error.find(L"[Derived.Location] Latitude") != std::wstring::npos);
 }
 
 TEST_CASE("A derived chart reads its sources from their files", "[ChartFile]") {

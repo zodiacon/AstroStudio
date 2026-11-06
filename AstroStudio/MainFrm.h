@@ -104,6 +104,7 @@ private:
 	bool IsLocationPending() const override;
 	std::vector<OpenChart> OpenCharts(IView* except = nullptr) override;
 	void NewAnalysis(IView* chart = nullptr) override;
+	void NewSynastryReport(OpenChart a, OpenChart b) override;
 	void ChartChanged(IView* chart, bool edit) override;
 	void ChartClosing(IView* chart) override;
 

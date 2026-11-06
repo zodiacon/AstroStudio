@@ -60,6 +60,7 @@ enum class DerivedKind {
 	SolarArc,		// of A, moved to a date by the solar arc
 	Progressed,		// of A, secondary progressed to a date
 	Primary,		// of A, primary directions to a date (the planets stay, the angles and houses move)
+	Relocated,		// of A, cast for another place: the same moment, so the same planets, but the angles and houses of that place
 };
 
 struct DerivedRecipe {
@@ -70,6 +71,8 @@ struct DerivedRecipe {
 	TimeZoneInfo Zone;						// ... and the zone it is shown in
 	ArcKey Key{ ArcKey::Actual };			// solar arc and primary directions
 	ProgressedAngles Angles{ ProgressedAngles::Calculated };		// progressed
+	// relocated: the place (Latitude, Longitude, Elevation, City, State, Country; the rest is unused); Zone is the zone it is shown in
+	ChartInfo Place{};
 	// The files A and B are kept in (full paths; empty: a chart that had no file, of which the copy is all there is), so that the
 	// chart is made from them as they are now. Their ids are A's and B's FileId. Id is the derived chart's own file's.
 	std::wstring APath, BPath;
@@ -78,6 +81,10 @@ struct DerivedRecipe {
 	// made of two charts (A and B) rather than moved on to a date from one (A)
 	bool IsPair() const {
 		return Kind == DerivedKind::Composite || Kind == DerivedKind::Davison;
+	}
+	// moved on to a date (Target, in Zone) from A: solar arc, progressed, primary
+	bool HasTarget() const {
+		return Kind == DerivedKind::SolarArc || Kind == DerivedKind::Progressed || Kind == DerivedKind::Primary;
 	}
 };
 
@@ -113,6 +120,9 @@ struct DerivedCharts abstract final {
 	// The Davison relationship chart: an ordinary chart cast for the midpoint of the two births in time and in place (the
 	// planets are where they really were then). It has the first chart's house system, harmonic and planets.
 	static ChartData Davison(AstroCalculator& calc, ChartData const& a, ChartData const& b);
+	// The chart cast for the same moment at another place (place: its Latitude, Longitude, Elevation, City, State and Country),
+	// shown in zone. The planets are where they are in the chart; the angles and houses are the new place's.
+	static ChartData Relocate(AstroCalculator& calc, ChartData const& chart, ChartInfo const& place, TimeZoneInfo const& zone);
 	// the midpoint of two charts' times and places, as chart details (no names, no time zone)
 	static ChartInfo MidpointInfo(ChartInfo const& a, ChartInfo const& b);
 

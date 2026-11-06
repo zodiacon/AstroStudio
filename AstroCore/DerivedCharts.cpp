@@ -282,7 +282,23 @@ std::vector<int> DerivedCharts::HouseOverlay(HouseData const& houses, std::vecto
 	return result;
 }
 
+ChartData DerivedCharts::Relocate(AstroCalculator& calc, ChartData const& chart, ChartInfo const& place, TimeZoneInfo const& zone) {
+	ChartData result = chart;
+	auto& info = result.Info();
+	info.Latitude = place.Latitude;
+	info.Longitude = place.Longitude;
+	info.Elevation = place.Elevation;
+	info.City = place.City;
+	info.State = place.State;
+	info.Country = place.Country;
+	info.TimeZone = zone;
+	calc.Calculate(result);
+	return result;
+}
+
 ChartData DerivedCharts::Build(AstroCalculator& calc, DerivedRecipe const& recipe) {
+	if (recipe.Kind == DerivedKind::Relocated)
+		return Relocate(calc, recipe.A, recipe.Place, recipe.Zone);
 	ChartData a = recipe.A;
 	calc.Calculate(a);
 	if (!recipe.IsPair()) {

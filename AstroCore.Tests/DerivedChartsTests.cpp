@@ -536,9 +536,39 @@ TEST_CASE("A recipe builds the same chart as making it directly", "[Derived]") {
 	CHECK(Diff(primary.Houses().MC.Value, a.Houses().MC.Value) > 1);
 	CHECK(primary.Info().Time.Julian() == Approx(a.Info().Time.Julian()));
 
-	// which kinds are made of two charts
+	// relocated: the same moment and planets, the angles of the new place
+	recipe.Kind = DerivedKind::Relocated;
+	recipe.Place.Latitude = 35.68;
+	recipe.Place.Longitude = 139.69;
+	recipe.Place.City = L"Tokyo";
+	recipe.Zone = {};
+	recipe.Zone.OffsetUT = 540;
+	auto relocated = DerivedCharts::Build(calc, recipe);
+	CHECK(relocated.Info().Time.Julian() == Approx(a.Info().Time.Julian()));
+	CHECK(relocated.Info().Latitude == 35.68);
+	CHECK(relocated.Info().Longitude == 139.69);
+	CHECK(relocated.Info().City == L"Tokyo");
+	CHECK(relocated.Info().TimeZone.OffsetUT == 540);
+	CHECK(relocated.Info().FirstName == a.Info().FirstName);
+	REQUIRE(relocated.AllPlanets().size() == a.AllPlanets().size());
+	for (size_t i = 0; i < relocated.AllPlanets().size(); i++)
+		CHECK(Diff(relocated.AllPlanets()[i].Longitude.Value, a.AllPlanets()[i].Longitude.Value) < MicroDegree);
+	// the Midheaven moves by the difference in longitude, measured on the equator (roughly: 214 degrees east of 74 west)
+	CHECK(Diff(relocated.Houses().MC.Value, a.Houses().MC.Value) > 30);
+	auto direct = a;
+	direct.Info().Latitude = 35.68;
+	direct.Info().Longitude = 139.69;
+	calc.Calculate(direct);
+	CHECK(Diff(relocated.Houses().Asc.Value, direct.Houses().Asc.Value) < MicroDegree);
+	CHECK(Diff(relocated.Houses().MC.Value, direct.Houses().MC.Value) < MicroDegree);
+
+	// which kinds are made of two charts, and which are moved to a date
 	CHECK(DerivedRecipe{ .Kind = DerivedKind::Composite }.IsPair());
 	CHECK(DerivedRecipe{ .Kind = DerivedKind::Davison }.IsPair());
-	for (auto kind : { DerivedKind::SolarArc, DerivedKind::Progressed, DerivedKind::Primary })
+	for (auto kind : { DerivedKind::SolarArc, DerivedKind::Progressed, DerivedKind::Primary, DerivedKind::Relocated })
 		CHECK_FALSE(DerivedRecipe{ .Kind = kind }.IsPair());
+	for (auto kind : { DerivedKind::SolarArc, DerivedKind::Progressed, DerivedKind::Primary })
+		CHECK(DerivedRecipe{ .Kind = kind }.HasTarget());
+	for (auto kind : { DerivedKind::Composite, DerivedKind::Davison, DerivedKind::Relocated })
+		CHECK_FALSE(DerivedRecipe{ .Kind = kind }.HasTarget());
 }

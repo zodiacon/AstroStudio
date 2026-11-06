@@ -36,6 +36,10 @@ void CNewChartDlg::SetHouseSystem(HouseSystem system) {
 	m_HouseSystem = system;
 }
 
+void CNewChartDlg::SetRelocation() {
+	m_Relocate = true;
+}
+
 ChartInfo const& CNewChartDlg::GetChartInfo() const {
 	return m_Info;
 }
@@ -73,7 +77,31 @@ LRESULT CNewChartDlg::OnInitDialog(UINT, WPARAM, LPARAM, BOOL&) {
 	m_Location.Set(m_Info);
 	m_OriginalLocation = CLocationControls::FormatLocation(m_Info);
 	m_Time.Set(m_Info.Time, m_Info.TimeZone);
+
+	if (m_Relocate) {
+		// the place and the zone are all there is to choose
+		SetWindowText(L"Relocated Chart");
+		for (UINT id : { IDC_NAME, IDC_CHARTTYPE, IDC_DAY, IDC_MONTH, IDC_YEAR, IDC_TIME, IDC_NOW, IDC_HOUSESYSTEM })
+			GetDlgItem(id).EnableWindow(FALSE);
+		GotoDlgCtrl(GetDlgItem(IDC_LOCATION));
+		return FALSE;
+	}
 	return TRUE;
+}
+
+void CNewChartDlg::ShowFixedTime() {
+	if (!m_Relocate)
+		return;
+	DateTime ut;
+	TimeZoneInfo tz;
+	if (m_Time.Get(ut, tz) != CTimeControls::Error::None)
+		return;		// (an offset that isn't one yet: OK says so)
+	m_Time.Set(m_Info.Time, tz);
+}
+
+LRESULT CNewChartDlg::OnZoneChanged(WORD, WORD, HWND, BOOL&) {
+	ShowFixedTime();
+	return 0;
 }
 
 LRESULT CNewChartDlg::OnHere(WORD, WORD, HWND, BOOL&) {
@@ -119,6 +147,7 @@ LRESULT CNewChartDlg::OnLookupResult(UINT, WPARAM wParam, LPARAM lParam, BOOL&) 
 		AtlMessageBox(m_hWnd, L"The place was found, but its time zone could not be matched to one of Windows' zones. Choose the time zone yourself.",
 			L"New Chart", MB_ICONINFORMATION);
 	}
+	ShowFixedTime();
 	return 0;
 }
 
@@ -144,6 +173,7 @@ LRESULT CNewChartDlg::OnTimeKillFocus(WORD, WORD, HWND, BOOL&) {
 
 LRESULT CNewChartDlg::OnManualToggled(WORD, WORD, HWND, BOOL&) {
 	m_Time.ManualToggled();
+	ShowFixedTime();
 	return 0;
 }
 
@@ -192,6 +222,13 @@ LRESULT CNewChartDlg::OnOK(WORD, WORD, HWND, BOOL&) {
 	auto error = m_Time.Get(ut, tz);
 	if (error != CTimeControls::Error::None)
 		return Fail(CTimeControls::ControlFor(error), CTimeControls::Message(error)), 0;
+	if (m_Relocate) {
+		// the moment is the chart's; the zone's offset is the one then
+		ut = m_Info.Time;
+		int offset = tz.OffsetUT;
+		TimeZones::UtToLocal(ut, tz, &offset);
+		tz.OffsetUT = offset;
+	}
 	info.Time = ut;
 	info.TimeZone = tz;
 
