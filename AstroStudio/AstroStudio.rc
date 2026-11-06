@@ -808,6 +808,7 @@ BEGIN
     ID_CHART_SYNASTRY_REPORT
                             "List the aspects between this chart and another open chart, and where each one's planets fall in the other's houses \nSynastry Report"
     ID_SYNASTRY_SWAP        "Change the two charts' places in the report \nSwap"
+    ID_ANALYSIS_TIMELINE    "Show each stay of an aspect within its orb as a bar along the dates, instead of the list \nTimeline"
 END
 
 STRINGTABLE

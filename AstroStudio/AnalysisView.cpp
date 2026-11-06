@@ -30,12 +30,16 @@ LRESULT CAnalysisView::OnCreate(UINT, WPARAM, LPARAM, BOOL&) {
 	m_List.SetExtendedListViewStyle(LVS_EX_FULLROWSELECT | LVS_EX_DOUBLEBUFFER);
 	CreateFonts();
 	m_List.SetFont(m_StdFont);
+	if (m_Timeline.IsWindow())
+		m_Timeline.SetTextFont(m_StdFont);
 
 	ToolBarButtonInfo buttons[] = {
 		{ ID_VIEW_GLYPHS, IDI_GLYPH, BTNS_CHECK, L"Glyphs" },
 		{ ID_FONT_BIGGER, IDI_FONT_BIGGER },
 		{ ID_FONT_SMALLER, IDI_FONT_SMALLER },
 		{ ID_FONT_SIZE_DEFAULT, IDI_FONT_SIZE_DEFAULT },
+		{ 0 },
+		{ ID_ANALYSIS_TIMELINE, IDI_EVENT, BTNS_CHECK, L"Timeline" },
 		{ 0 },
 		{ ID_ANALYSIS_OPTIONS, IDI_OPTIONS, 0, L"Options" },
 		{ ID_ANALYSIS_REFRESH, IDI_CLOCK_REFRESH, 0, L"Refresh" },
@@ -49,6 +53,8 @@ LRESULT CAnalysisView::OnCreate(UINT, WPARAM, LPARAM, BOOL&) {
 	int filterSlot = m_Strip.AddSeparator(190);
 	AddSimpleReBarBand(tb);
 	Frame()->AddToolBarToUI(tb);
+	// (the toolbars share one UI map, which updates a button only when its state there changes: a new tab starts with the list)
+	CToolBarCtrl(tb).CheckButton(ID_ANALYSIS_TIMELINE, FALSE);
 
 	m_Filter.Create(tb, rcDefault, nullptr, WS_CHILD | WS_VISIBLE | WS_TABSTOP | ES_AUTOHSCROLL, WS_EX_CLIENTEDGE, IDC_AN_FILTER);
 	m_Strip.Place(m_Filter, filterSlot);
@@ -95,6 +101,8 @@ void CAnalysisView::OnDpiChanged(UINT) {
 	// the fonts for the new DPI (the list has scaled its columns itself), the toolbar and its filter box
 	CreateFonts();
 	m_List.SetFont(m_StdFont);
+	if (m_Timeline.IsWindow())
+		m_Timeline.SetTextFont(m_StdFont);
 	m_Strip.Update();
 	UpdateLayout();
 	m_List.Invalidate();
@@ -104,6 +112,8 @@ void CAnalysisView::ApplyFontSize(int oldSize) {
 	AppSettings::Get().AnalysisFontSize(m_FontSize);
 	CreateFonts();
 	m_List.SetFont(m_StdFont);
+	if (m_Timeline.IsWindow())
+		m_Timeline.SetTextFont(m_StdFont);
 	// the columns grow and shrink with the text
 	for (int column = 0; column < _countof(ColumnNames); column++)
 		if (int width = m_List.GetColumnWidth(column); width > 0 && oldSize > 0)
@@ -133,6 +143,7 @@ void CAnalysisView::TextFontChanged() {
 void CAnalysisView::UpdateViewUI() {
 	auto& ui = Frame()->GetUI();
 	ui.UISetCheck(ID_VIEW_GLYPHS, m_Glyphs);
+	ui.UISetCheck(ID_ANALYSIS_TIMELINE, m_ShowTimeline);
 	ui.UIEnable(ID_FONT_BIGGER, m_FontSize < 180);
 	ui.UIEnable(ID_FONT_SMALLER, m_FontSize > 70);
 }
@@ -168,6 +179,8 @@ LRESULT CAnalysisView::OnViewGlyphs(WORD, WORD, HWND, BOOL&) {
 
 LRESULT CAnalysisView::OnThemeChanged(UINT, WPARAM, LPARAM, BOOL&) {
 	m_List.RedrawWindow();
+	if (m_Timeline.IsWindow())
+		m_Timeline.Invalidate();
 	return 0;
 }
 
@@ -403,11 +416,15 @@ LRESULT CAnalysisView::OnDoubleClick(int, LPNMHDR pnmh, BOOL& handled) {
 	auto event = EventAt(row);
 	if (!event)
 		return 0;
+	ShowInChart(*event, event->Time);
+	return 0;
+}
 
+void CAnalysisView::ShowInChart(AnalysisEvent const& event, DateTime const& when) {
 	MomentKind kind = MomentKind::Transits;
-	if (event->Type == AnalysisType::SolarArcToNatal)
+	if (event.Type == AnalysisType::SolarArcToNatal)
 		kind = MomentKind::SolarArc;
-	else if (event->Type == AnalysisType::ProgressedToNatal || event->Type == AnalysisType::ProgressedToProgressed)
+	else if (event.Type == AnalysisType::ProgressedToNatal || event.Type == AnalysisType::ProgressedToProgressed)
 		kind = MomentKind::Progressions;
 
 	// the chart's own tab if it is still open, otherwise a new tab with the copy this one was made from
@@ -421,9 +438,93 @@ LRESULT CAnalysisView::OnDoubleClick(int, LPNMHDR pnmh, BOOL& handled) {
 		m_Chart.View = chart;
 	}
 	Frame()->ActivateView(chart);
-	if (!chart->ShowMoment(event->Time, kind))
+	if (!chart->ShowMoment(when, kind))
 		AtlMessageBox(m_hWnd, L"That chart can't show this moment around it.", L"Astro Studio", MB_ICONINFORMATION);
+}
+
+//
+// the timeline
+//
+
+LRESULT CAnalysisView::OnTimeline(WORD, WORD, HWND, BOOL&) {
+	ShowTimeline(!m_ShowTimeline);
 	return 0;
+}
+
+void CAnalysisView::ShowTimeline(bool show) {
+	if (show && !m_Timeline.IsWindow()) {
+		m_Timeline.Create(m_hWnd, rcDefault, nullptr, WS_CHILD | WS_VSCROLL | WS_CLIPSIBLINGS);
+		m_Timeline.SetTextFont(m_StdFont);
+		m_Timeline.Activated = [this](CAnalysisTimeline::Lane const& lane, double jd) {
+			// the exact moment nearest the click, or the moment clicked if the stay has none
+			auto const& event = m_Events[lane.Tag];
+			double when = std::clamp(jd, lane.Start, lane.End);
+			if (!lane.Exacts.empty())
+				when = *std::ranges::min_element(lane.Exacts, {}, [jd](double x) { return std::abs(x - jd); });
+			ShowInChart(event, DateTime(when, DateTime::AfterPapalReform(when)));
+		};
+		UpdateTimeline();
+	}
+	m_ShowTimeline = show;
+	CWindow shown = show ? (HWND)m_Timeline : (HWND)m_List;
+	CWindow hidden = show ? (HWND)m_List : (HWND)m_Timeline;
+	if (hidden.IsWindow())
+		hidden.ShowWindow(SW_HIDE);
+	shown.ShowWindow(SW_SHOW);
+	m_hWndClient = shown;
+	UpdateLayout();
+	shown.SetFocus();
+	UpdateViewUI();
+}
+
+CString CAnalysisView::StayLabel(AnalysisEvent const& event) const {
+	return CellText(event, ColumnType::Mover, false) + L" " + CellText(event, ColumnType::Aspect, false) + L" " +
+		CellText(event, ColumnType::Target, false);
+}
+
+COLORREF CAnalysisView::BarColor(AspectType aspect) {
+	bool dark = WTLHelper::IsDarkMode();
+	switch (aspect) {
+		case AspectType::Conjunction: return dark ? RGB(70, 165, 90) : RGB(60, 160, 80);
+		case AspectType::Square:
+		case AspectType::Opposition: return dark ? RGB(205, 80, 80) : RGB(215, 70, 70);
+		case AspectType::Trine:
+		case AspectType::Sextile: return dark ? RGB(90, 135, 225) : RGB(70, 120, 220);
+	}
+	return dark ? RGB(145, 120, 185) : RGB(160, 130, 200);
+}
+
+void CAnalysisView::UpdateTimeline() {
+	double from = m_Settings.From.Julian(), to = m_Settings.To.Julian();
+	std::vector<CAnalysisTimeline::Lane> lanes;
+	for (int index : m_Shown) {
+		auto const& event = m_Events[index];
+		if (!event.Window)
+			continue;		// (only the row that ends a stay has it)
+		auto const& window = *event.Window;
+		CAnalysisTimeline::Lane lane;
+		lane.Label = StayLabel(event);
+		lane.OpenStart = !window.HasEnter;
+		lane.OpenEnd = !window.HasLeave;
+		lane.Start = window.HasEnter ? window.Enter.Julian() : from;
+		lane.End = window.HasLeave ? window.Leave.Julian() : to;
+		for (auto const& exact : window.Exacts)
+			lane.Exacts.push_back(exact.Julian());
+		lane.Color = BarColor(event.Aspect);
+		CString orb;
+		orb.Format(L"Orb up to %.2f%c", event.Orb, 0xb0);
+		lane.Tip = L"Enter / Exact / Leave: " + StayText(event) + L"\n" + orb;
+		if (event.Pass > 0) {
+			CString pass;
+			pass.Format(L", pass %d", event.Pass);
+			lane.Tip += pass;
+		}
+		lane.Tag = index;
+		lanes.push_back(std::move(lane));
+	}
+	std::ranges::stable_sort(lanes, [](auto const& a, auto const& b) { return a.Start < b.Start; });
+	m_Timeline.SetRange(from, to);
+	m_Timeline.SetLanes(std::move(lanes));
 }
 
 void CAnalysisView::ZodiacChanged() {
@@ -514,6 +615,8 @@ void CAnalysisView::ApplyFilter() {
 	m_List.SetItemCount(static_cast<int>(m_Shown.size()));
 	m_List.Invalidate();
 	ShowCount();
+	if (m_Timeline.IsWindow())
+		UpdateTimeline();
 }
 
 void CAnalysisView::ShowCount() {

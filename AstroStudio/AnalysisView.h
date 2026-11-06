@@ -11,6 +11,7 @@
 #include "WTLHelper.h"
 #include "DpiAware.h"
 #include "ToolbarStrip.h"
+#include "AnalysisTimeline.h"
 #include <atomic>
 #include <memory>
 #include <thread>
@@ -65,6 +66,7 @@ public:
 		COMMAND_HANDLER(IDC_AN_FILTER, EN_CHANGE, OnFilterChanged)
 		NOTIFY_CODE_HANDLER(NM_DBLCLK, OnDoubleClick)
 		COMMAND_ID_HANDLER(ID_VIEW_GLYPHS, OnViewGlyphs)
+		COMMAND_ID_HANDLER(ID_ANALYSIS_TIMELINE, OnTimeline)
 		COMMAND_ID_HANDLER(ID_FONT_BIGGER, OnChangeFontSize)
 		COMMAND_ID_HANDLER(ID_FONT_SMALLER, OnChangeFontSize)
 		COMMAND_ID_HANDLER(ID_FONT_SIZE_DEFAULT, OnChangeFontSize)
@@ -93,6 +95,17 @@ private:
 	LRESULT OnOptions(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/);
 	LRESULT OnRefresh(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/);
 	LRESULT OnViewGlyphs(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/);
+	// the Timeline button: the stays as bars along the dates in place of the list, or the list again
+	LRESULT OnTimeline(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/);
+	void ShowTimeline(bool show);
+	// the timeline's lanes from the events the list shows (those that end a stay), in the order the stays begin
+	void UpdateTimeline();
+	// "Transit Saturn square natal Sun", in words
+	CString StayLabel(AnalysisEvent const& event) const;
+	// the bars' colours, stronger than the rows': green conjunctions, red squares and oppositions, blue trines and sextiles
+	static COLORREF BarColor(AspectType aspect);
+	// the event's chart (its tab, or a new one with the copy) showing the moment around it, as the event's analysis sees it
+	void ShowInChart(AnalysisEvent const& event, DateTime const& when);
 	LRESULT OnCancel(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/);
 	LRESULT OnFilterChanged(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/);
 	// a double click on an event opens its chart (a copy, if it was closed) with the moment around it
@@ -167,6 +180,8 @@ private:
 	static constexpr UINT_PTR ProgressTimer = 1, FilterTimer = 2;
 
 	CListViewCtrl m_List;
+	CAnalysisTimeline m_Timeline;		// made when it is first shown
+	bool m_ShowTimeline{ false };
 	CFont m_StdFont, m_SymbolFont;
 	ToolbarStrip m_Strip;
 	int m_FontSize{ 90 };			// tenths of a point

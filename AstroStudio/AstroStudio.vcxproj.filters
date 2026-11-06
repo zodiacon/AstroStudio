@@ -156,6 +156,9 @@
     <ClCompile Include="AnalysisView.cpp">
       <Filter>Views</Filter>
     </ClCompile>
+    <ClCompile Include="AnalysisTimeline.cpp">
+      <Filter>Views</Filter>
+    </ClCompile>
     <ClCompile Include="AnalysisDlg.cpp">
       <Filter>Dialogs</Filter>
     </ClCompile>
@@ -348,6 +351,9 @@
       <Filter>Dialogs</Filter>
     </ClInclude>
     <ClInclude Include="AnalysisView.h">
+      <Filter>Views</Filter>
+    </ClInclude>
+    <ClInclude Include="AnalysisTimeline.h">
       <Filter>Views</Filter>
     </ClInclude>
     <ClInclude Include="AnalysisDlg.h">

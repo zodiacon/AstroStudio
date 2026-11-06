@@ -153,6 +153,7 @@
     <ClCompile Include="MidpointOptionsDlg.cpp" />
     <ClCompile Include="AnalysisDlg.cpp" />
     <ClCompile Include="AnalysisView.cpp" />
+    <ClCompile Include="AnalysisTimeline.cpp" />
     <ClCompile Include="DirectionsDlg.cpp" />
     <ClCompile Include="ChartColors.cpp" />
     <ClCompile Include="ChartColorsDlg.cpp" />
@@ -219,6 +220,7 @@
     <ClInclude Include="AnalysisNames.h" />
     <ClInclude Include="AnalysisDlg.h" />
     <ClInclude Include="AnalysisView.h" />
+    <ClInclude Include="AnalysisTimeline.h" />
     <ClInclude Include="DirectionsDlg.h" />
     <ClInclude Include="ChartColors.h" />
     <ClInclude Include="ChartColorsDlg.h" />
