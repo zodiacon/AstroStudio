@@ -1,8 +1,8 @@
 # Builds the solution (Debug and Release, x64) and runs AstroCore.Tests on every push and pull request.
 #
-# The projects use toolset v145 (Visual Studio 2026), which the windows-2025 image has. Catch2 comes from the runner's own
-# vcpkg (classic mode, like on a developer's machine), installed for the x64-windows-static triplet that the test project links
-# against; the built packages are cached between runs.
+# The projects use toolset v145 (Visual Studio 2026), which the windows-2025 image has. The libraries come from the runner's own
+# vcpkg (classic mode, like on a developer's machine), for the x64-windows-static triplet: Catch2 for the tests, and Detours and WIL
+# for WTLHelper. The built packages are cached between runs.
 name: Build
 
 on:
@@ -31,13 +31,13 @@ jobs:
         uses: actions/cache@v4
         with:
           path: ${{ github.workspace }}\vcpkg-cache
-          key: vcpkg-catch2-x64-windows-static-${{ runner.os }}-v1
+          key: vcpkg-x64-windows-static-catch2-detours-wil-${{ runner.os }}-v1
 
-      - name: Install Catch2
+      - name: Install the libraries
         shell: pwsh
         run: |
           New-Item -ItemType Directory -Force "${{ github.workspace }}\vcpkg-cache" | Out-Null
-          & "$env:VCPKG_INSTALLATION_ROOT\vcpkg.exe" install catch2:x64-windows-static
+          & "$env:VCPKG_INSTALLATION_ROOT\vcpkg.exe" install catch2:x64-windows-static detours:x64-windows-static wil:x64-windows-static
           if ($LASTEXITCODE) { exit $LASTEXITCODE }
           # makes $(VcpkgRoot) and the vcpkg MSBuild integration known to every project
           & "$env:VCPKG_INSTALLATION_ROOT\vcpkg.exe" integrate install
