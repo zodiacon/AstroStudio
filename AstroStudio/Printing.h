@@ -101,6 +101,24 @@ namespace Printing {
 	};
 	std::unique_ptr<Document> MakeChartDocument(ChartSheet sheet);
 
+	// A report: a title and some lines, a picture (the wheel) on the first page, then headings, lines of text (indented by level,
+	// wrapped at the margin) and tables, flowing from page to page (a table that doesn't fit goes on with its headers repeated).
+	struct ReportBlock {
+		enum class Kind { Heading, Line, Table };
+		Kind Type{ Kind::Line };
+		CString Text;
+		int Level{ 0 };
+		bool Bold{ false };
+		std::optional<Helpers::TableSource> Table;
+	};
+	struct Report {
+		CString Title;
+		std::vector<CString> Lines;
+		std::vector<BYTE> Picture;		// a packed DIB (see ChartImage::ToDib); empty: none
+		std::vector<ReportBlock> Blocks;
+	};
+	std::unique_ptr<Document> MakeReportDocument(Report report);
+
 	// a table from rows of cells (which it keeps)
 	Helpers::TableSource TableFromRows(std::vector<CString> headers, std::vector<std::vector<CString>> rows);
 

@@ -135,6 +135,12 @@
     <ClCompile Include="MainFrmProject.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="ChartAnalysisView.cpp">
+      <Filter>Views</Filter>
+    </ClCompile>
+    <ClCompile Include="AnalysisReport.cpp">
+      <Filter>Views</Filter>
+    </ClCompile>
     <ClCompile Include="PartListView.cpp">
       <Filter>Views</Filter>
     </ClCompile>
@@ -331,6 +337,12 @@
     </ClInclude>
     <ClInclude Include="ProjectItemDlg.h">
       <Filter>Dialogs</Filter>
+    </ClInclude>
+    <ClInclude Include="ChartAnalysisView.h">
+      <Filter>Views</Filter>
+    </ClInclude>
+    <ClInclude Include="AnalysisReport.h">
+      <Filter>Views</Filter>
     </ClInclude>
     <ClInclude Include="PartListView.h">
       <Filter>Views</Filter>

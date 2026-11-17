@@ -95,6 +95,9 @@ public:
 	// Draws this planet's aspects as usual and fades all the others (none: no fading).
 	D2DChartDrawing& Highlight(std::optional<ChartSelection> planet);
 	std::optional<ChartSelection> Highlight() const;
+	// Marks a group of the chart's planets (a pattern picked in the Chart Analysis tab): their glyphs are ringed and the aspects
+	// between them drawn as usual, the others faded (with one planet: its aspects, as Highlight). A highlighted planet wins.
+	D2DChartDrawing& HighlightGroup(std::vector<Planet> planets);
 
 	// An overlay (transits, progressions, another chart): a bi-wheel with the chart shrunk inside a band holding the
 	// overlay's planets. The aspects drawn are the overlay's (its planets are Planet1, the chart's Planet2); the chart's own
@@ -122,6 +125,9 @@ private:
 	std::vector<AspectData>* m_aspects{ nullptr };
 	double m_rotation{ 0 };
 	std::optional<ChartSelection> m_highlight;
+	std::vector<Planet> m_group;
+	// whether a planet of the chart is the highlighted one, or (without one) in the highlighted group
+	bool InHighlight(Planet planet) const;
 	ChartOverlay const* m_overlay{ nullptr };
 	float m_scale{ 1 };
 

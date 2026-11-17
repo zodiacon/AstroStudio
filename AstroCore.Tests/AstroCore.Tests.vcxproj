@@ -104,6 +104,7 @@
     <ClCompile Include="DerivedChartsTests.cpp" />
     <ClCompile Include="MidpointTests.cpp" />
     <ClCompile Include="ArabicPartsTests.cpp" />
+    <ClCompile Include="ChartAnalysisTests.cpp" />
     <ClCompile Include="PhenomenaTests.cpp" />
     <ClCompile Include="ProjectTests.cpp" />
     <ClCompile Include="..\AstroStudio\Project.cpp" />

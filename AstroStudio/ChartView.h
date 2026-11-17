@@ -15,6 +15,7 @@
 #include "Printing.h"
 #include "PartListView.h"
 #include "MidpointTreeView.h"
+#include "ChartAnalysisView.h"
 #include "TimeStep.h"
 #include "ChartFile.h"
 #include <CustomSplitterWindow.h>
@@ -89,6 +90,7 @@ public:
 		COMMAND_ID_HANDLER(ID_CHART_DERIVED_RELOCATED, OnDerived)
 		COMMAND_ID_HANDLER(ID_CHART_ANALYSIS, OnAnalysis)
 		COMMAND_ID_HANDLER(ID_CHART_SYNASTRY_REPORT, OnSynastryReport)
+		COMMAND_ID_HANDLER(ID_CHART_ANALYSIS_REPORT, OnAnalysisReport)
 		COMMAND_ID_HANDLER(ID_CHART_DERIVED_SOLARARC, OnDerived)
 		COMMAND_ID_HANDLER(ID_CHART_DERIVED_PROGRESSED, OnDerived)
 		COMMAND_ID_HANDLER(ID_CHART_DERIVED_PRIMARY, OnDerived)
@@ -116,6 +118,7 @@ public:
 		COMMAND_ID_HANDLER(ID_CHART_DERIVED_RELOCATED, OnDerived)
 		COMMAND_ID_HANDLER(ID_CHART_ANALYSIS, OnAnalysis)
 		COMMAND_ID_HANDLER(ID_CHART_SYNASTRY_REPORT, OnSynastryReport)
+		COMMAND_ID_HANDLER(ID_CHART_ANALYSIS_REPORT, OnAnalysisReport)
 		COMMAND_ID_HANDLER(ID_CHART_DERIVED_SOLARARC, OnDerived)
 		COMMAND_ID_HANDLER(ID_CHART_DERIVED_PROGRESSED, OnDerived)
 		COMMAND_ID_HANDLER(ID_CHART_DERIVED_PRIMARY, OnDerived)
@@ -217,7 +220,14 @@ private:
 	};
 	std::optional<ListTab> ActiveListTab();
 	// the chart as pages for the printer or the preview: the wheel and the details, then the list of the tab that is showing, if any
+	// on the Chart Analysis tab the analysis is printed and exported as a report
 	std::unique_ptr<Printing::Document> MakePrintDocument();
+	// the lines under the title of a print-out: the moment, the place, the houses (and the overlay, if one shows and it is wanted)
+	std::vector<CString> DescriptionLines(bool withOverlay) const;
+	bool AnalysisTabActive();
+	CString AnalysisReportTitle() const;
+	// Chart > Chart Analysis Report: the Chart Analysis tab, and its report in Print Preview
+	LRESULT OnAnalysisReport(WORD /*wNotifyCode*/, WORD /*wID*/, HWND /*hWndCtl*/, BOOL& /*bHandled*/);
 	// puts the Part of Fortune among the chart's planets, or takes it out, as AppSettings::ShowPartOfFortune says
 	void SyncPartOfFortune();
 	// puts the extra bodies the user asked for in the wheel options (Ceres, Pallas, Juno, Vesta...) among the chart's planets, and takes
@@ -248,6 +258,7 @@ private:
 	CMidpointListView m_MidpointList;
 	CMidpointTreeView m_MidpointTree;
 	CPartListView m_PartList;
+	CChartAnalysisView m_ChartAnalysis;
 	CGraphicChartView m_ChartDrawing;
 	// the "Step: [count] [unit]" controls, which sit inside the toolbar
 	CStatic m_StepLabel;

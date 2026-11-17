@@ -43,6 +43,38 @@ CComPtr<IWICBitmap> ChartImage::Render(D2DChartDrawing& drawing, int size) {
 	return bitmap;
 }
 
+namespace {
+	// the bitmap as PNG into a stream
+	HRESULT WritePng(IWICImagingFactory* wic, IStream* stream, IWICBitmap* bitmap) {
+		CComPtr<IWICBitmapEncoder> encoder;
+		if (HRESULT hr = wic->CreateEncoder(GUID_ContainerFormatPng, nullptr, &encoder); FAILED(hr))
+			return hr;
+		if (HRESULT hr = encoder->Initialize(stream, WICBitmapEncoderNoCache); FAILED(hr))
+			return hr;
+
+		CComPtr<IWICBitmapFrameEncode> frame;
+		CComPtr<IPropertyBag2> options;
+		if (HRESULT hr = encoder->CreateNewFrame(&frame, &options); FAILED(hr))
+			return hr;
+		if (HRESULT hr = frame->Initialize(options); FAILED(hr))
+			return hr;
+
+		UINT width, height;
+		bitmap->GetSize(&width, &height);
+		if (HRESULT hr = frame->SetSize(width, height); FAILED(hr))
+			return hr;
+		WICPixelFormatGUID format = GUID_WICPixelFormat32bppBGRA;
+		if (HRESULT hr = frame->SetPixelFormat(&format); FAILED(hr))
+			return hr;
+		// the picture is premultiplied BGRA; WriteSource converts it to the format the encoder settled on
+		if (HRESULT hr = frame->WriteSource(bitmap, nullptr); FAILED(hr))
+			return hr;
+		if (HRESULT hr = frame->Commit(); FAILED(hr))
+			return hr;
+		return encoder->Commit();
+	}
+}
+
 bool ChartImage::SavePng(IWICBitmap* bitmap, PCWSTR path, std::wstring& error) {
 	auto fail = [&](HRESULT hr) {
 		error = Describe(hr);
@@ -58,35 +90,30 @@ bool ChartImage::SavePng(IWICBitmap* bitmap, PCWSTR path, std::wstring& error) {
 		return fail(hr);
 	if (HRESULT hr = stream->InitializeFromFilename(path, GENERIC_WRITE); FAILED(hr))
 		return fail(hr);
-
-	CComPtr<IWICBitmapEncoder> encoder;
-	if (HRESULT hr = wic->CreateEncoder(GUID_ContainerFormatPng, nullptr, &encoder); FAILED(hr))
-		return fail(hr);
-	if (HRESULT hr = encoder->Initialize(stream, WICBitmapEncoderNoCache); FAILED(hr))
-		return fail(hr);
-
-	CComPtr<IWICBitmapFrameEncode> frame;
-	CComPtr<IPropertyBag2> options;
-	if (HRESULT hr = encoder->CreateNewFrame(&frame, &options); FAILED(hr))
-		return fail(hr);
-	if (HRESULT hr = frame->Initialize(options); FAILED(hr))
-		return fail(hr);
-
-	UINT width, height;
-	bitmap->GetSize(&width, &height);
-	if (HRESULT hr = frame->SetSize(width, height); FAILED(hr))
-		return fail(hr);
-	WICPixelFormatGUID format = GUID_WICPixelFormat32bppBGRA;
-	if (HRESULT hr = frame->SetPixelFormat(&format); FAILED(hr))
-		return fail(hr);
-	// the picture is premultiplied BGRA; WriteSource converts it to the format the encoder settled on
-	if (HRESULT hr = frame->WriteSource(bitmap, nullptr); FAILED(hr))
-		return fail(hr);
-	if (HRESULT hr = frame->Commit(); FAILED(hr))
-		return fail(hr);
-	if (HRESULT hr = encoder->Commit(); FAILED(hr))
+	if (HRESULT hr = WritePng(wic, stream, bitmap); FAILED(hr))
 		return fail(hr);
 	return true;
+}
+
+std::vector<BYTE> ChartImage::EncodePng(IWICBitmap* bitmap) {
+	std::vector<BYTE> result;
+	CComPtr<IWICImagingFactory> wic;
+	CComPtr<IStream> stream;
+	if (!bitmap || FAILED(wic.CoCreateInstance(CLSID_WICImagingFactory)) || FAILED(::CreateStreamOnHGlobal(nullptr, TRUE, &stream)))
+		return result;
+	if (FAILED(WritePng(wic, stream, bitmap)))
+		return result;
+	HGLOBAL memory{};
+	if (FAILED(::GetHGlobalFromStream(stream, &memory)))
+		return result;
+	STATSTG stat{};
+	if (FAILED(stream->Stat(&stat, STATFLAG_NONAME)))
+		return result;
+	if (auto data = static_cast<BYTE const*>(::GlobalLock(memory))) {
+		result.assign(data, data + static_cast<size_t>(stat.cbSize.QuadPart));
+		::GlobalUnlock(memory);
+	}
+	return result;
 }
 
 bool ChartImage::CopyToClipboard(HWND owner, IWICBitmap* bitmap) {

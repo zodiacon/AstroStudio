@@ -120,6 +120,7 @@ BEGIN
         END
         MENUITEM "A&nalysis...",                ID_CHART_ANALYSIS
         MENUITEM "Synastry &Report...",         ID_CHART_SYNASTRY_REPORT
+        MENUITEM "Chart Analysis Re&port...",   ID_CHART_ANALYSIS_REPORT
     END
     POPUP "&Project"
     BEGIN
@@ -809,6 +810,9 @@ BEGIN
                             "List the aspects between this chart and another open chart, and where each one's planets fall in the other's houses \nSynastry Report"
     ID_SYNASTRY_SWAP        "Change the two charts' places in the report \nSwap"
     ID_ANALYSIS_TIMELINE    "Show each stay of an aspect within its orb as a bar along the dates, instead of the list \nTimeline"
+    ID_CHART_ANALYSIS_REPORT
+                            "Show the structure of this chart - aspect patterns, the balance of elements and modalities, dignities and dispositors - as a report 
+Chart Analysis Report"
 END
 
 STRINGTABLE

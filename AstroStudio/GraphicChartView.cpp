@@ -86,6 +86,7 @@ void CGraphicChartView::ApplyState(bool forPaper) {
 		params.BackColor = D2D1::ColorF(D2D1::ColorF::White);
 	m_Drawing.DrawingParameters(params);
 	m_Drawing.Rotation(m_Rotation).Highlight(m_Selected);
+	m_Drawing.HighlightGroup(forPaper ? std::vector<Planet>() : m_Group);		// (a group picked in a list is for the screen, not for paper)
 	m_Drawing.Overlay(m_Overlay);
 }
 
@@ -100,6 +101,15 @@ void CGraphicChartView::ClearOverlay() {
 		m_Selected.reset();
 	m_Hover = {};
 	HideTip();
+	Invalidate();
+}
+
+void CGraphicChartView::SetGroupHighlight(std::vector<Planet> planets) {
+	if (planets == m_Group)
+		return;
+	m_Group = std::move(planets);
+	if (!m_Group.empty())
+		m_Selected.reset();		// (a planet picked on the wheel would hide the group)
 	Invalidate();
 }
 
@@ -343,9 +353,11 @@ LRESULT CGraphicChartView::OnLButtonUp(UINT, WPARAM, LPARAM lp, BOOL&) {
 		bool overlay = hit.Type == ChartHit::Kind::OverlayPlanet;
 		ChartSelection picked{ (overlay ? m_Overlay->Data : *m_ChartData).AllPlanets()[hit.Index].Planet, overlay };
 		m_Selected = m_Selected == picked ? std::nullopt : std::optional<ChartSelection>(picked);
+		m_Group.clear();
 	}
 	else if (hit.Type == ChartHit::Kind::None) {
 		m_Selected.reset();
+		m_Group.clear();
 		// two clicks on an empty spot turn the wheel back
 		DWORD now = ::GetMessageTime();
 		if (now - m_LastClickTime <= ::GetDoubleClickTime() && abs(pt.x - m_LastClickPoint.x) <= DpiHelper::GetSystemMetrics(SM_CXDOUBLECLK, m_hWnd) / 2 && abs(pt.y - m_LastClickPoint.y) <= DpiHelper::GetSystemMetrics(SM_CYDOUBLECLK, m_hWnd) / 2) {

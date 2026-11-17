@@ -16,6 +16,8 @@ struct AppSettings : Settings {
 		SETTING(AlwaysOnTop, 0, SettingType::Bool);
 		SETTING(TextFont, LOGFONT{}, SettingType::Binary);		// the font for text that is not astrological symbols (empty face: Consolas); lfHeight in tenths of a point
 		SETTING(MidpointTreeGlyphs, 0, SettingType::Bool);		// the midpoint tree is written in astrological symbols (its toolbar's Glyphs button) rather than names
+		SETTING(ChartAnalysisModernRulers, 0, SettingType::Bool);		// the Chart Analysis tab uses the modern rulers (Pluto, Uranus, Neptune) rather than the traditional ones
+		SETTING(ChartAnalysisWeighted, 1, SettingType::Bool);		// ...and counts the Sun, the Moon, the Ascendant and the Midheaven twice in the balance
 		SETTING_STRING(MidpointSettingsText, L"");		// what the midpoint list and tree work with (MidpointSettings), as text; empty: the defaults
 		SETTING(ProjectPaneWidth, 240, SettingType::Int32);		// the width of the pane with the project, in pixels
 		SETTING(OpenLastProject, 1, SettingType::Bool);		// open the last project again at the start (its path is kept either way)
@@ -65,6 +67,8 @@ struct AppSettings : Settings {
 	DEF_SETTING(OpenLastProject, int)
 	DEF_SETTING_STRING(LastProject)
 	DEF_SETTING(MidpointTreeGlyphs, int)
+	DEF_SETTING(ChartAnalysisModernRulers, int)
+	DEF_SETTING(ChartAnalysisWeighted, int)
 	DEF_SETTING_STRING(MidpointSettingsText)
 	DEF_SETTING(ChartStepCount, int)
 	DEF_SETTING(ChartStepUnit, int)

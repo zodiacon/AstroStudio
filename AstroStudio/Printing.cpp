@@ -344,6 +344,196 @@ namespace Printing {
 		return std::make_unique<ChartDocument>(std::move(sheet));
 	}
 
+	//
+	// a report
+	//
+
+	namespace {
+		class ReportDocument : public Document {
+		public:
+			explicit ReportDocument(Report report) : m_Report(std::move(report)) {
+			}
+			CString Title() const override {
+				return m_Report.Title;
+			}
+
+			int PageCount(Page const& page) override {
+				m_Placed.clear();
+				m_Layouts.clear();
+				CDCHandle dc(page.Dc);
+				CRect a = page.Area;
+				int pageIndex = 0;
+				int y = a.top + HeaderHeight(page);
+				if (!m_Report.Picture.empty())
+					y += PictureSide(page) + page.Pt(10);
+				auto newPage = [&] {
+					pageIndex++;
+					y = a.top;
+				};
+
+				for (int i = 0; i < static_cast<int>(m_Report.Blocks.size()); i++) {
+					auto const& block = m_Report.Blocks[i];
+					switch (block.Type) {
+						case ReportBlock::Kind::Heading: {
+							int h = HeadingHeight(page);
+							// (a heading is not left alone at the foot of a page: it wants a few lines under it)
+							if (y + h + page.Pt(9.5 * 1.4) * 3 > a.bottom && y > a.top)
+								newPage();
+							if (y > a.top)
+								y += page.Pt(6);
+							m_Placed.push_back({ pageIndex, i, y, h });
+							y += h;
+							break;
+						}
+						case ReportBlock::Kind::Line: {
+							int h = LineHeight(page, block);
+							if (y + h > a.bottom && y > a.top)
+								newPage();
+							m_Placed.push_back({ pageIndex, i, y, h });
+							y += h;
+							break;
+						}
+						case ReportBlock::Kind::Table: {
+							auto layout = std::make_unique<TableLayout>();
+							layout->Measure(page, *block.Table, a.Width());
+							int first = 0;
+							int rows = block.Table->Rows;
+							while (first < rows || (rows == 0 && first == 0)) {
+								int fit = layout->RowsIn(a.bottom - y);
+								if (fit < std::min(2, rows - first) && y > a.top) {
+									newPage();
+									continue;
+								}
+								fit = std::max(1, fit);
+								int count = std::min(fit, rows - first);
+								int h = layout->RowHeight() * (count + 1);
+								m_Placed.push_back({ pageIndex, i, y, h, first, count, static_cast<int>(m_Layouts.size()) });
+								y += h + page.Pt(6);
+								first += count;
+								if (rows == 0)
+									break;
+								if (first < rows)
+									newPage();
+							}
+							m_Layouts.push_back(std::move(layout));
+							break;
+						}
+					}
+				}
+				return pageIndex + 1;
+			}
+
+			void Draw(Page const& page, int index) override {
+				CDCHandle dc(page.Dc);
+				dc.SetBkMode(TRANSPARENT);
+				dc.SetTextColor(RGB(0, 0, 0));
+				CRect a = page.Area;
+				if (index == 0)
+					DrawHeader(page);
+				for (auto const& placed : m_Placed) {
+					if (placed.Page != index)
+						continue;
+					auto const& block = m_Report.Blocks[placed.Block];
+					switch (block.Type) {
+						case ReportBlock::Kind::Heading: {
+							CFont font; MakeFont(font, page, 12, true);
+							auto old = dc.SelectFont(font);
+							dc.SetTextColor(RGB(30, 60, 110));
+							CRect rc(a.left, placed.Y, a.right, placed.Y + placed.Height);
+							dc.DrawText(block.Text, -1, &rc, DT_LEFT | DT_VCENTER | DT_SINGLELINE | DT_END_ELLIPSIS | DT_NOPREFIX);
+							CPen pen;
+							pen.CreatePen(PS_SOLID, std::max(1, page.Pt(0.5)), RGB(170, 180, 200));
+							auto oldPen = dc.SelectPen(pen);
+							dc.MoveTo(a.left, placed.Y + placed.Height - page.Pt(2));
+							dc.LineTo(a.right, placed.Y + placed.Height - page.Pt(2));
+							dc.SelectPen(oldPen);
+							dc.SetTextColor(RGB(0, 0, 0));
+							dc.SelectFont(old);
+							break;
+						}
+						case ReportBlock::Kind::Line: {
+							CFont font; MakeFont(font, page, 9.5, block.Bold);
+							auto old = dc.SelectFont(font);
+							CRect rc(a.left + Indent(page, block), placed.Y, a.right, placed.Y + placed.Height);
+							dc.DrawText(block.Text, -1, &rc, DT_LEFT | DT_TOP | DT_WORDBREAK | DT_NOPREFIX);
+							dc.SelectFont(old);
+							break;
+						}
+						case ReportBlock::Kind::Table:
+							m_Layouts[placed.Layout]->Draw(page, *block.Table, a.left, placed.Y, placed.First, placed.Count);
+							break;
+					}
+				}
+			}
+
+		private:
+			struct Placed {
+				int Page, Block, Y, Height;
+				int First{ 0 }, Count{ 0 }, Layout{ -1 };
+			};
+
+			int HeaderHeight(Page const& page) const {
+				return page.Pt(15 * 1.35) + static_cast<int>(m_Report.Lines.size()) * page.Pt(9.5 * 1.45) + page.Pt(6);
+			}
+			int PictureSide(Page const& page) const {
+				return std::min<int>(page.Area.Width() * 55 / 100, page.Area.Height() * 42 / 100);
+			}
+			static int HeadingHeight(Page const& page) {
+				return page.Pt(12 * 1.6);
+			}
+			static int Indent(Page const& page, ReportBlock const& block) {
+				return page.Pt(14) * block.Level;
+			}
+			int LineHeight(Page const& page, ReportBlock const& block) const {
+				CDCHandle dc(page.Dc);
+				CFont font; MakeFont(font, page, 9.5, block.Bold);
+				auto old = dc.SelectFont(font);
+				CRect rc(0, 0, page.Area.Width() - Indent(page, block), 0);
+				dc.DrawText(block.Text, -1, &rc, DT_LEFT | DT_TOP | DT_WORDBREAK | DT_NOPREFIX | DT_CALCRECT);
+				dc.SelectFont(old);
+				return rc.Height() + page.Pt(2.5);
+			}
+
+			void DrawHeader(Page const& page) {
+				CDCHandle dc(page.Dc);
+				CRect a = page.Area;
+				int y = a.top;
+				CFont bold; MakeFont(bold, page, 15, true);
+				auto old = dc.SelectFont(bold);
+				CRect rc(a.left, y, a.right, y + page.Pt(15 * 1.35));
+				dc.DrawText(m_Report.Title, -1, &rc, DT_LEFT | DT_TOP | DT_SINGLELINE | DT_END_ELLIPSIS | DT_NOPREFIX);
+				y += page.Pt(15 * 1.35);
+				CFont smallFont; MakeFont(smallFont, page, 9.5, false);
+				dc.SelectFont(smallFont);
+				for (auto const& line : m_Report.Lines) {
+					CRect lr(a.left, y, a.right, y + page.Pt(9.5 * 1.45));
+					dc.DrawText(line, -1, &lr, DT_LEFT | DT_TOP | DT_SINGLELINE | DT_END_ELLIPSIS | DT_NOPREFIX);
+					y += page.Pt(9.5 * 1.45);
+				}
+				dc.SelectFont(old);
+				y += page.Pt(6);
+				if (m_Report.Picture.size() > sizeof(BITMAPINFOHEADER)) {
+					int side = PictureSide(page);
+					CRect box(a.left + (a.Width() - side) / 2, y, a.left + (a.Width() - side) / 2 + side, y + side);
+					auto header = reinterpret_cast<BITMAPINFO const*>(m_Report.Picture.data());
+					auto bits = m_Report.Picture.data() + sizeof(BITMAPINFOHEADER);
+					dc.SetStretchBltMode(HALFTONE);
+					::SetBrushOrgEx(dc, 0, 0, nullptr);
+					::StretchDIBits(dc, box.left, box.top, box.Width(), box.Height(), 0, 0, header->bmiHeader.biWidth,
+						header->bmiHeader.biHeight, bits, header, DIB_RGB_COLORS, SRCCOPY);
+				}
+			}
+
+			Report m_Report;
+			std::vector<Placed> m_Placed;
+			std::vector<std::unique_ptr<TableLayout>> m_Layouts;
+		};
+	}
+
+	std::unique_ptr<Document> MakeReportDocument(Report report) {
+		return std::make_unique<ReportDocument>(std::move(report));
+	}
+
 	Helpers::TableSource TableFromRows(std::vector<CString> headers, std::vector<std::vector<CString>> rows) {
 		auto shared = std::make_shared<std::vector<std::vector<CString>>>(std::move(rows));
 		Helpers::TableSource table;

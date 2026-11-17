@@ -90,6 +90,7 @@ void CChartView::UpdateAspects() {
 	m_MidpointList.SetChartData(&m_Data);
 	m_MidpointTree.SetChartData(&m_Data);
 	m_PartList.SetChartData(&m_Data, AspectOptions::Current().Chart);
+	m_ChartAnalysis.SetChartData(&m_Data, AspectOptions::Current().Chart);
 	m_AspectList.SetAspects(aspects);
 	m_AspectList.Refresh();
 	m_AspectGrid.SetAspects(aspects);
@@ -152,6 +153,7 @@ void CChartView::TextFontChanged() {
 	m_MidpointList.ApplyTextFont();
 	m_MidpointTree.ApplyTextFont();
 	m_PartList.ApplyTextFont();
+	m_ChartAnalysis.ApplyTextFont();
 	m_AspectGrid.Refresh();		// (its text is in the same family)
 	m_ChartDrawing.Refresh();
 }
@@ -287,7 +289,7 @@ void CChartView::PageActivated(bool active) {
 	for (UINT id : { ID_CHART_DERIVED_SOLARARC, ID_CHART_DERIVED_PROGRESSED, ID_CHART_DERIVED_PRIMARY, ID_CHART_DERIVED_COMPOSITE,
 		ID_CHART_DERIVED_DAVISON, ID_CHART_DERIVED_RELOCATED })
 		ui.UIEnable(id, active && !m_ReadOnly);
-	for (UINT id : { ID_CHART_ANALYSIS, ID_CHART_OVERLAY, ID_CHART_TRANSITS, ID_CHART_OVERLAY_NONE, ID_CHART_OVERLAY_SYNASTRY, ID_CHART_SYNASTRY_REPORT })
+	for (UINT id : { ID_CHART_ANALYSIS, ID_CHART_OVERLAY, ID_CHART_TRANSITS, ID_CHART_OVERLAY_NONE, ID_CHART_OVERLAY_SYNASTRY, ID_CHART_SYNASTRY_REPORT, ID_CHART_ANALYSIS_REPORT })
 		ui.UIEnable(id, active);
 	ui.UIEnable(ID_FILE_SAVE, active && (!m_ReadOnly || m_Recipe));
 	ui.UIEnable(ID_FILE_SAVE_AS, active && (!m_ReadOnly || m_Recipe));
@@ -1218,12 +1220,17 @@ LRESULT CChartView::OnCreate(UINT, WPARAM, LPARAM, BOOL&) {
 	m_PartList.Create(m_DetailsTabs, rcDefault, nullptr, WS_CHILD | WS_CLIPCHILDREN | WS_CLIPSIBLINGS);
 	m_PartList.SetStatic();
 
+	m_ChartAnalysis.Create(m_DetailsTabs, rcDefault, nullptr, WS_CHILD | WS_CLIPCHILDREN | WS_CLIPSIBLINGS);
+	// (an item of the analysis that names planets marks them on the wheel)
+	m_ChartAnalysis.Highlight = [this](std::vector<Planet> const& planets) { m_ChartDrawing.SetGroupHighlight(planets); };
+
 	m_DetailsTabs.AddPage(m_DetailsView.m_hWnd, L"Details");
 	m_DetailsTabs.AddPage(m_AspectGridScroll.m_hWnd, L"Aspect Grid");
 	m_DetailsTabs.AddPage(m_AspectList.m_hWnd, L"Aspect List");
 	m_DetailsTabs.AddPage(m_MidpointList.m_hWnd, L"Midpoints");
 	m_DetailsTabs.AddPage(m_MidpointTree.m_hWnd, L"Midpoint Tree");
 	m_DetailsTabs.AddPage(m_PartList.m_hWnd, L"Arabic Parts");
+	m_DetailsTabs.AddPage(m_ChartAnalysis.m_hWnd, L"Chart Analysis");
 	m_DetailsTabs.SetActivePage(0);
 
 	m_Splitter.SetSplitterPanes(m_ChartDrawing, m_DetailsTabs);
@@ -1275,32 +1282,53 @@ LRESULT CChartView::OnPrint(WORD, WORD id, HWND, BOOL&) {
 	return 0;
 }
 
-std::unique_ptr<Printing::Document> CChartView::MakePrintDocument() {
-	Printing::ChartSheet sheet;
-	sheet.Title = m_Title.IsEmpty() ? CString(L"Chart") : m_Title;
-
+std::vector<CString> CChartView::DescriptionLines(bool withOverlay) const {
 	// what the chart is: the moment (as the chart's own zone shows it), the place, the houses
+	std::vector<CString> lines;
 	auto& info = m_Data.Info();
 	int offset = info.TimeZone.OffsetUT;
 	auto local = TimeZones::UtToLocal(info.Time, info.TimeZone, &offset);
 	CString line;
 	line.Format(L"%04ld/%02ld/%02ld  %02ld:%02ld:%02ld  (UTC%s)", local.Year, local.Month, local.Day, local.Hour, local.Minute, local.Second,
 		(PCWSTR)TimeZones::FormatOffset(offset));
-	sheet.Lines.push_back(line);
+	lines.push_back(line);
 	CString place;
 	for (auto const* part : { &info.City, &info.State, &info.Country })
 		if (!part->empty())
 			place += (place.IsEmpty() ? L"" : L", ") + CString(part->c_str());
 	line.Format(L"%s%s%.4f%c%c  %.4f%c%c", (PCWSTR)place, place.IsEmpty() ? L"" : L"   ", std::fabs(info.Latitude), 0xb0, info.Latitude >= 0 ? L'N' : L'S',
 		std::fabs(info.Longitude), 0xb0, info.Longitude >= 0 ? L'E' : L'W');
-	sheet.Lines.push_back(line);
+	lines.push_back(line);
 	line.Format(L"House system: %s", StringHelper::HouseSystemToString(m_Data.GetHouseSystem()));
 	if (m_Data.Harmonic() > 1)
 		line.AppendFormat(L"   Harmonic: %d", m_Data.Harmonic());
 	line.AppendFormat(L"   Zodiac: %s", (PCWSTR)Helpers::ZodiacText(m_Zodiac));
-	sheet.Lines.push_back(line);
-	if (m_Overlay)
-		sheet.Lines.push_back(CString(m_Overlay->Caption.c_str()));
+	lines.push_back(line);
+	if (withOverlay && m_Overlay)
+		lines.push_back(CString(m_Overlay->Caption.c_str()));
+	return lines;
+}
+
+bool CChartView::AnalysisTabActive() {
+	return m_ChartAnalysis.m_hWnd && m_DetailsTabs.GetPageHWND(m_DetailsTabs.GetActivePage()) == m_ChartAnalysis.m_hWnd;
+}
+
+CString CChartView::AnalysisReportTitle() const {
+	return L"Chart Analysis: " + (m_Title.IsEmpty() ? CString(L"Chart") : m_Title);
+}
+
+std::unique_ptr<Printing::Document> CChartView::MakePrintDocument() {
+	if (AnalysisTabActive()) {
+		// the analysis as a report: the wheel, then its sections
+		std::vector<BYTE> wheel;
+		if (auto image = m_ChartDrawing.RenderImage(2400, true))
+			wheel = ChartImage::ToDib(image);
+		return Printing::MakeReportDocument(AnalysisReport::ToReport(m_ChartAnalysis.Sections(), AnalysisReportTitle(), DescriptionLines(false), std::move(wheel)));
+	}
+
+	Printing::ChartSheet sheet;
+	sheet.Title = m_Title.IsEmpty() ? CString(L"Chart") : m_Title;
+	sheet.Lines = DescriptionLines(true);
 
 	// the wheel, on white whatever the program looks like
 	if (auto image = m_ChartDrawing.RenderImage(2400, true))
@@ -1349,23 +1377,38 @@ std::optional<CChartView::ListTab> CChartView::ActiveListTab() {
 		return ListTab{ nullptr, m_MidpointTree.Table(), L"Midpoint Tree" };		// (a tree: it has no rows to select, so Copy stays with the wheel)
 	if (page == m_PartList.m_hWnd)
 		return ListTab{ m_PartList.ListWindow(), m_PartList.Table(), L"Arabic Parts" };
+	if (page == m_ChartAnalysis.m_hWnd)
+		return ListTab{ nullptr, m_ChartAnalysis.Table(), L"Chart Analysis" };		// (a tree, like the midpoint tree)
 	return std::nullopt;
 }
 
 LRESULT CChartView::OnExport(WORD, WORD, HWND, BOOL&) {
 	// the tab's list as a CSV file (offered first), or the wheel as a picture: the file type chosen says which
+	// (on the Chart Analysis tab a report as a web page comes first)
 	auto tab = ActiveListTab();
+	bool analysis = AnalysisTabActive();
 	static constexpr wchar_t pictureFilter[] = L"PNG pictures (*.png)\0*.png\0";
 	static constexpr wchar_t listFilter[] = L"CSV files (*.csv)\0*.csv\0PNG pictures (the chart wheel) (*.png)\0*.png\0";
+	static constexpr wchar_t reportFilter[] = L"Report as a web page (*.html)\0*.html\0CSV files (*.csv)\0*.csv\0PNG pictures (the chart wheel) (*.png)\0*.png\0";
 	CString suggestion = tab ? CString(tab->Name) + L" " + SafeFileName(m_Title) : SafeFileName(m_Title);
-	CSimpleFileDialog dlg(FALSE, tab ? L"csv" : L"png", suggestion, OFN_OVERWRITEPROMPT | OFN_PATHMUSTEXIST | OFN_HIDEREADONLY | OFN_EXPLORER | OFN_ENABLESIZING,
-		tab ? listFilter : pictureFilter, m_hWnd);
+	CSimpleFileDialog dlg(FALSE, analysis ? L"html" : tab ? L"csv" : L"png", suggestion, OFN_OVERWRITEPROMPT | OFN_PATHMUSTEXIST | OFN_HIDEREADONLY | OFN_EXPLORER | OFN_ENABLESIZING,
+		analysis ? reportFilter : tab ? listFilter : pictureFilter, m_hWnd);
 	WTLHelper::SuspendHook();
 	auto ok = dlg.DoModal(m_hWnd) == IDOK;
 	WTLHelper::ResumeHook();
 	if (!ok)
 		return 0;
-	if (tab && _wcsicmp(std::filesystem::path(dlg.m_szFileName).extension().c_str(), L".png") != 0) {
+	auto extension = std::filesystem::path(dlg.m_szFileName).extension();
+	if (analysis && (_wcsicmp(extension.c_str(), L".html") == 0 || _wcsicmp(extension.c_str(), L".htm") == 0)) {
+		CWaitCursor wait;
+		std::vector<BYTE> png;
+		if (auto image = m_ChartDrawing.RenderImage(ChartImage::DefaultSize, true))
+			png = ChartImage::EncodePng(image);
+		auto html = AnalysisReport::ToHtml(m_ChartAnalysis.Sections(), AnalysisReportTitle(), DescriptionLines(false), png);
+		Helpers::SaveTextFileUtf8(m_hWnd, dlg.m_szFileName, html, L"report");
+		return 0;
+	}
+	if (tab && _wcsicmp(extension.c_str(), L".png") != 0) {
 		Helpers::SaveTable(m_hWnd, tab->Table, dlg.m_szFileName, tab->Name);
 		return 0;
 	}
@@ -1484,3 +1527,14 @@ void CChartView::SourceChartChanged(IView* chart, bool edit) {
 		SetModified(true);
 }
 
+
+LRESULT CChartView::OnAnalysisReport(WORD, WORD, HWND, BOOL&) {
+	if (m_Data.AllPlanets().empty())
+		return 0;
+	// the tab that shows the analysis, and the report of it
+	for (int i = 0; i < m_DetailsTabs.GetPageCount(); i++)
+		if (m_DetailsTabs.GetPageHWND(i) == m_ChartAnalysis.m_hWnd)
+			m_DetailsTabs.SetActivePage(i);
+	BOOL handled;
+	return OnPrint(0, ID_FILE_PRINT_PREVIEW, nullptr, handled);
+}

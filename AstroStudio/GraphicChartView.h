@@ -20,6 +20,8 @@ public:
 	// The wheel can be turned by dragging it and a planet picked with a click, which fades the aspects that
 	// are not its own. Neither belongs to the chart itself.
 	void ResetRotation();
+	// rings these planets of the chart and fades the aspects that are not between them (empty: none); a click on the wheel lets go
+	void SetGroupHighlight(std::vector<Planet> planets);
 	std::optional<ChartSelection> SelectedPlanet() const noexcept {
 		return m_Selected;
 	}
@@ -80,6 +82,7 @@ private:
 
 	double m_Rotation{ 0 };
 	std::optional<ChartSelection> m_Selected;
+	std::vector<Planet> m_Group;		// the planets marked by SetGroupHighlight
 	ChartOverlay const* m_Overlay{ nullptr };
 	ChartHit m_Hover;
 	// the left button: pressed, and moved far enough to count as a drag

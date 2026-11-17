@@ -184,14 +184,14 @@ HRESULT D2DChartDrawing::DrawNatal(ID2D1RenderTarget* rt) {
 		drawGlyph(DefaultFont::Get().GetPlanetGlyph(pp.Planet), resources.PlanetFormat(), pt);
 		if (auto it = std::find_if(planets.begin(), planets.end(), [&](auto& p) { return p.Planet == pp.Planet; }); it != planets.end())
 			m_planetSpots.push_back({ Map(pt), int(it - planets.begin()) });
-		if (m_highlight && !m_highlight->Overlay && m_highlight->Planet == pp.Planet)
+		if (InHighlight(pp.Planet))
 			rt->DrawEllipse(D2D1::Ellipse(pt, 22, 22), use(D2D1::ColorF(D2D1::ColorF::DarkOrange)), 3);
 	}
 
 	r = 395;
 	for (auto& pp : visible) {
 		auto pt = PointByAngle(center, r, pp.Longitude);
-		bool highlighted = m_highlight && !m_highlight->Overlay && m_highlight->Planet == pp.Planet;
+		bool highlighted = InHighlight(pp.Planet);
 		rt->FillEllipse(D2D1::Ellipse(pt, highlighted ? 6.f : 3.f, highlighted ? 6.f : 3.f), use(highlighted ? D2D1::ColorF(D2D1::ColorF::DarkOrange) : m_params.DotColor));
 	}
 
@@ -230,8 +230,14 @@ HRESULT D2DChartDrawing::DrawNatal(ID2D1RenderTarget* rt) {
 			auto middle = D2D1::Point2F((pt1.x + pt2.x) / 2, (pt1.y + pt2.y) / 2);
 			m_aspectLines.push_back({ Map(pt1), Map(pt2), Map(middle), index });
 
-			if (m_highlight) {
-				bool involved = !m_highlight->Overlay && (aspect.Planet1.Planet == m_highlight->Planet || aspect.Planet2.Planet == m_highlight->Planet);
+			if (m_highlight || !m_group.empty()) {
+				bool involved;
+				if (m_highlight)
+					involved = !m_highlight->Overlay && (aspect.Planet1.Planet == m_highlight->Planet || aspect.Planet2.Planet == m_highlight->Planet);
+				else if (m_group.size() == 1)
+					involved = aspect.Planet1.Planet == m_group[0] || aspect.Planet2.Planet == m_group[0];
+				else
+					involved = InHighlight(aspect.Planet1.Planet) && InHighlight(aspect.Planet2.Planet);
 				if (!involved) {
 					// not the highlighted planet's: a faint line, no glyph
 					color.a = 0.12f;
@@ -291,6 +297,17 @@ D2DChartDrawing& D2DChartDrawing::Highlight(std::optional<ChartSelection> planet
 
 std::optional<ChartSelection> D2DChartDrawing::Highlight() const {
 	return m_highlight;
+}
+
+D2DChartDrawing& D2DChartDrawing::HighlightGroup(std::vector<Planet> planets) {
+	m_group = std::move(planets);
+	return *this;
+}
+
+bool D2DChartDrawing::InHighlight(Planet planet) const {
+	if (m_highlight)
+		return !m_highlight->Overlay && m_highlight->Planet == planet;
+	return std::find(m_group.begin(), m_group.end(), planet) != m_group.end();
 }
 
 D2DChartDrawing& D2DChartDrawing::Overlay(ChartOverlay const* overlay) {
