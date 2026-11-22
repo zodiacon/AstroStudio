@@ -31,7 +31,7 @@ LRESULT CAnalysisView::OnCreate(UINT, WPARAM, LPARAM, BOOL&) {
 	CreateFonts();
 	m_List.SetFont(m_StdFont);
 	if (m_Timeline.IsWindow())
-		m_Timeline.SetTextFont(m_StdFont);
+		m_Timeline.SetFonts(m_StdFont, m_SymbolFont);
 
 	ToolBarButtonInfo buttons[] = {
 		{ ID_VIEW_GLYPHS, IDI_GLYPH, BTNS_CHECK, L"Glyphs" },
@@ -102,7 +102,7 @@ void CAnalysisView::OnDpiChanged(UINT) {
 	CreateFonts();
 	m_List.SetFont(m_StdFont);
 	if (m_Timeline.IsWindow())
-		m_Timeline.SetTextFont(m_StdFont);
+		m_Timeline.SetFonts(m_StdFont, m_SymbolFont);
 	m_Strip.Update();
 	UpdateLayout();
 	m_List.Invalidate();
@@ -113,7 +113,7 @@ void CAnalysisView::ApplyFontSize(int oldSize) {
 	CreateFonts();
 	m_List.SetFont(m_StdFont);
 	if (m_Timeline.IsWindow())
-		m_Timeline.SetTextFont(m_StdFont);
+		m_Timeline.SetFonts(m_StdFont, m_SymbolFont);
 	// the columns grow and shrink with the text
 	for (int column = 0; column < _countof(ColumnNames); column++)
 		if (int width = m_List.GetColumnWidth(column); width > 0 && oldSize > 0)
@@ -174,6 +174,8 @@ LRESULT CAnalysisView::OnViewGlyphs(WORD, WORD, HWND, BOOL&) {
 	UpdateViewUI();
 	UpdateHeaders(true);
 	m_List.Invalidate();
+	if (m_Timeline.IsWindow())
+		UpdateTimeline();
 	return 0;
 }
 
@@ -454,7 +456,7 @@ LRESULT CAnalysisView::OnTimeline(WORD, WORD, HWND, BOOL&) {
 void CAnalysisView::ShowTimeline(bool show) {
 	if (show && !m_Timeline.IsWindow()) {
 		m_Timeline.Create(m_hWnd, rcDefault, nullptr, WS_CHILD | WS_VSCROLL | WS_CLIPSIBLINGS);
-		m_Timeline.SetTextFont(m_StdFont);
+		m_Timeline.SetFonts(m_StdFont, m_SymbolFont);
 		m_Timeline.Activated = [this](CAnalysisTimeline::Lane const& lane, double jd) {
 			// the exact moment nearest the click, or the moment clicked if the stay has none
 			auto const& event = m_Events[lane.Tag];
@@ -482,6 +484,18 @@ CString CAnalysisView::StayLabel(AnalysisEvent const& event) const {
 		CellText(event, ColumnType::Target, false);
 }
 
+std::vector<CAnalysisTimeline::LabelPart> CAnalysisView::StayGlyphs(AnalysisEvent const& event) const {
+	// the glyph font has no letters, so what the planets are - transit, progressed, natal - stays in words
+	CString target = event.TargetKind == AnalysisTarget::Planet ? CString(AnalysisNames::TargetLabel(event.Type)) : CString(L"natal");
+	return {
+		{ AnalysisNames::MoverLabel(event.Type), false },
+		{ CellText(event, ColumnType::Mover, true), true },
+		{ CellText(event, ColumnType::Aspect, true), true },
+		{ target, false },
+		{ CellText(event, ColumnType::Target, true), true },
+	};
+}
+
 COLORREF CAnalysisView::BarColor(AspectType aspect) {
 	bool dark = WTLHelper::IsDarkMode();
 	switch (aspect) {
@@ -504,6 +518,8 @@ void CAnalysisView::UpdateTimeline() {
 		auto const& window = *event.Window;
 		CAnalysisTimeline::Lane lane;
 		lane.Label = StayLabel(event);
+		if (m_Glyphs)
+			lane.Parts = StayGlyphs(event);
 		lane.OpenStart = !window.HasEnter;
 		lane.OpenEnd = !window.HasLeave;
 		lane.Start = window.HasEnter ? window.Enter.Julian() : from;

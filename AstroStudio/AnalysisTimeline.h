@@ -11,8 +11,15 @@ class CAnalysisTimeline : public CWindowImpl<CAnalysisTimeline> {
 public:
 	DECLARE_WND_CLASS_EX(L"AstroStudioTimeline", CS_DBLCLKS, -1)
 
+	// a piece of a lane's label, in the text font or the glyph font
+	struct LabelPart {
+		CString Text;
+		bool Glyph{ false };
+	};
+
 	struct Lane {
 		CString Label;				// at the left: "Transit Saturn square natal Sun"
+		std::vector<LabelPart> Parts;	// if not empty, drawn in place of Label: words and glyphs ("Transit" ♄ □ "natal" ☉)
 		CString Tip;				// the tooltip (lines separated by \n)
 		COLORREF Color{ RGB(128, 128, 128) };
 		double Start{ 0 }, End{ 0 };	// Julian days (UT): the stay as far as the range shows it
@@ -25,7 +32,8 @@ public:
 	void SetRange(double from, double to);
 	// the lanes, top to bottom; the scroll position is kept if it can be
 	void SetLanes(std::vector<Lane> lanes);
-	void SetTextFont(HFONT font);
+	// the text font, and the glyph font for the labels' glyph parts
+	void SetFonts(HFONT text, HFONT glyphs);
 	int LaneCount() const {
 		return static_cast<int>(m_Lanes.size());
 	}
@@ -86,10 +94,14 @@ private:
 	};
 	// the ticks of the axis for the range: days, months, years or decades by how long it is
 	std::vector<Tick> Ticks() const;
+	// the width of a lane's label as drawn
+	int LabelWidth(CDCHandle dc, Lane const& lane) const;
+	// a lane's label in the rectangle, cut off at its right
+	void DrawLabel(CDCHandle dc, Lane const& lane, CRect const& rect) const;
 
 	std::vector<Lane> m_Lanes;
 	double m_From{ 0 }, m_To{ 1 };
-	HFONT m_Font{ nullptr };
+	HFONT m_Font{ nullptr }, m_GlyphFont{ nullptr };
 	int m_LaneHeight{ 20 }, m_AxisHeight{ 26 }, m_LabelWidth{ 200 };
 	int m_Scroll{ 0 };			// pixels scrolled down
 	int m_TipLane{ -1 };

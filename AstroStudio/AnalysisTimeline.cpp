@@ -60,8 +60,9 @@ void CAnalysisTimeline::SetLanes(std::vector<Lane> lanes) {
 	}
 }
 
-void CAnalysisTimeline::SetTextFont(HFONT font) {
-	m_Font = font;
+void CAnalysisTimeline::SetFonts(HFONT text, HFONT glyphs) {
+	m_Font = text;
+	m_GlyphFont = glyphs;
 	if (IsWindow()) {
 		Measure();
 		UpdateScrollBar();
@@ -89,14 +90,17 @@ void CAnalysisTimeline::Measure() {
 	auto old = dc.SelectFont(m_Font ? m_Font : AtlGetDefaultGuiFont());
 	TEXTMETRIC tm;
 	dc.GetTextMetrics(&tm);
-	m_LaneHeight = tm.tmHeight + DpiHelper::Scale(8, m_hWnd);
+	int height = tm.tmHeight;
 	m_AxisHeight = tm.tmHeight + DpiHelper::Scale(12, m_hWnd);
-	int widest = 0;
-	for (auto const& lane : m_Lanes) {
-		CSize size;
-		dc.GetTextExtent(lane.Label, lane.Label.GetLength(), &size);
-		widest = std::max(widest, (int)size.cx);
+	if (m_GlyphFont && std::ranges::any_of(m_Lanes, [](auto const& lane) { return !lane.Parts.empty(); })) {
+		dc.SelectFont(m_GlyphFont);
+		dc.GetTextMetrics(&tm);
+		height = std::max(height, (int)tm.tmHeight);
 	}
+	m_LaneHeight = height + DpiHelper::Scale(8, m_hWnd);
+	int widest = 0;
+	for (auto const& lane : m_Lanes)
+		widest = std::max(widest, LabelWidth(dc.m_hDC, lane));
 	dc.SelectFont(old);
 	CRect rc;
 	GetClientRect(&rc);
@@ -266,6 +270,55 @@ LRESULT CAnalysisTimeline::OnDoubleClick(UINT, WPARAM, LPARAM lp, BOOL&) {
 	return 0;
 }
 
+int CAnalysisTimeline::LabelWidth(CDCHandle dc, Lane const& lane) const {
+	HFONT text = m_Font ? m_Font : AtlGetDefaultGuiFont();
+	auto old = dc.SelectFont(text);
+	CSize size;
+	int width = 0;
+	if (lane.Parts.empty() || !m_GlyphFont) {
+		dc.GetTextExtent(lane.Label, lane.Label.GetLength(), &size);
+		width = size.cx;
+	}
+	else {
+		dc.GetTextExtent(L" ", 1, &size);
+		int space = size.cx;
+		for (size_t i = 0; i < lane.Parts.size(); i++) {
+			auto const& part = lane.Parts[i];
+			dc.SelectFont(part.Glyph ? m_GlyphFont : text);
+			dc.GetTextExtent(part.Text, part.Text.GetLength(), &size);
+			width += size.cx + (i ? space : 0);
+		}
+	}
+	dc.SelectFont(old);
+	return width;
+}
+
+void CAnalysisTimeline::DrawLabel(CDCHandle dc, Lane const& lane, CRect const& rect) const {
+	HFONT text = m_Font ? m_Font : AtlGetDefaultGuiFont();
+	auto old = dc.SelectFont(text);
+	if (lane.Parts.empty() || !m_GlyphFont) {
+		CRect rc(rect);
+		dc.DrawText(lane.Label, lane.Label.GetLength(), &rc, DT_SINGLELINE | DT_VCENTER | DT_END_ELLIPSIS | DT_NOPREFIX);
+	}
+	else {
+		// the parts one after another, a space apart, each centred in the lane in its own font; cut off at the label column's edge
+		CSize size;
+		dc.GetTextExtent(L" ", 1, &size);
+		int space = size.cx;
+		int x = rect.left;
+		for (auto const& part : lane.Parts) {
+			if (x >= rect.right)
+				break;
+			dc.SelectFont(part.Glyph ? m_GlyphFont : text);
+			CRect rc(x, rect.top, rect.right, rect.bottom);
+			dc.DrawText(part.Text, part.Text.GetLength(), &rc, DT_SINGLELINE | DT_VCENTER | DT_END_ELLIPSIS | DT_NOPREFIX);
+			dc.GetTextExtent(part.Text, part.Text.GetLength(), &size);
+			x += size.cx + space;
+		}
+	}
+	dc.SelectFont(old);
+}
+
 std::vector<CAnalysisTimeline::Tick> CAnalysisTimeline::Ticks() const {
 	std::vector<Tick> ticks;
 	double span = m_To - m_From;
@@ -368,7 +421,7 @@ LRESULT CAnalysisTimeline::OnPaint(UINT, WPARAM, LPARAM, BOOL&) {
 		int top = m_AxisHeight + i * m_LaneHeight - m_Scroll;
 		CRect label(pad, top, m_LabelWidth, top + m_LaneHeight);
 		dc.SetTextColor(colors.Text);
-		dc.DrawText(lane.Label, lane.Label.GetLength(), &label, DT_SINGLELINE | DT_VCENTER | DT_END_ELLIPSIS | DT_NOPREFIX);
+		DrawLabel(dc.m_hDC, lane, label);
 
 		// the bar, a little thinner than the lane, and the exact moments across it
 		int barTop = top + m_LaneHeight / 4, barBottom = top + m_LaneHeight - m_LaneHeight / 4;

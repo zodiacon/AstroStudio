@@ -102,6 +102,8 @@ private:
 	void UpdateTimeline();
 	// "Transit Saturn square natal Sun", in words
 	CString StayLabel(AnalysisEvent const& event) const;
+	// the same with the planets and the aspect as glyphs (for the timeline while Glyphs is on)
+	std::vector<CAnalysisTimeline::LabelPart> StayGlyphs(AnalysisEvent const& event) const;
 	// the bars' colours, stronger than the rows': green conjunctions, red squares and oppositions, blue trines and sextiles
 	static COLORREF BarColor(AspectType aspect);
 	// the event's chart (its tab, or a new one with the copy) showing the moment around it, as the event's analysis sees it
