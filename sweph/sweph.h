@@ -62,7 +62,7 @@
  * move over from swephexp.h
  */
 
-#define SE_VERSION      "2.10.02" 
+#define SE_VERSION      "2.10.04" 
 
 #define J2000           2451545.0  	/* 2000 January 1.5 */
 #define B1950           2433282.42345905  	/* 1950 January 0.923 */
@@ -190,6 +190,7 @@
 #define SEI_FILE_EFPOSBEGIN      500
 
 #define SE_FILE_SUFFIX	"se1"
+#define SE3_FILE_SUFFIX	"se3"
 
 #define SEI_NEPHFILES   7
 #define SEI_CURR_FPOS   -1
@@ -348,7 +349,7 @@ struct aya_init {double t0;
                  double ayan_t0; 
 		 AS_BOOL t0_is_UT;
 		 int prec_offset;};
-static const struct aya_init ayanamsa[] = {
+static const struct aya_init ayanamsa[SE_NSIDM_PREDEF] = {
 /* 0: Fagan/Bradley (Default) 
      "The American Sidereal Ephemeris, 1976-2000" (Astro Computing Services, 1981)
      states on S.V.P. ("Synetic Vernal Point"):
@@ -445,14 +446,14 @@ static const struct aya_init ayanamsa[] = {
 /*************************/
 /* 8: J.N. Bhasin; (David Cochrane) 
      We don't have any sources or detailed information about this ayanamsha. */
-{J1900, 360 - 338.634444, FALSE, -1}, // Bhasin
+{J1900, 360 - 338.634444, FALSE, -1}, // 8: Bhasin
 /*************************/
 /* 14 Sept. 2018: the following three ayanamshas have been wrong for
    many years */
 /* 9 - 11: Babylonian, Kugler */
-{1684532.5, -5.66667, TRUE, -1},     /*  9: Babylonian, Kugler 1 */
-{1684532.5, -4.26667, TRUE, -1},     /* 10: Babylonian, Kugler 2 */
-{1684532.5, -3.41667, TRUE, -1},     /* 11: Babylonian, Kugler 3 */
+{1684532.5, -5.66667, TRUE, -1},     //  9: Babylonian, Kugler 1
+{1684532.5, -4.26667, TRUE, -1},     // 10: Babylonian, Kugler 2
+{1684532.5, -3.41667, TRUE, -1},     // 11: Babylonian, Kugler 3 
 /*************************/
 /* 12: Babylonian, Huber 
       P. Huber, "Über den Nullpunkt der babylonischen Ekliptik", in: Centaurus
@@ -464,7 +465,7 @@ static const struct aya_init ayanamsa[] = {
 {1673941, -5.079167, TRUE, -1},      // 13: Babylonian, Mercier
 /*************************/
 /* 14: t0 is defined by Aldebaran at 15 Taurus in year -100 */
-{1684532.5, -4.44138598, TRUE, 0},  
+{1684532.5, -4.44138598, TRUE, 0},  // 14: Babylonian/Aldebaran = 15 Tau
 /*************************/
 /* 15: Hipparchos */
 {1674484.0, -9.33333, TRUE, -1},       // 15: Hipparchos
@@ -476,34 +477,34 @@ static const struct aya_init ayanamsa[] = {
 {0, 0, FALSE, 0},                    // 17: Galactic Center at 0 Sagittarius 
 /*************************/
 /* 18: J2000 */
-{J2000, 0, FALSE, 0},	             /* 18: J2000 */
+{J2000, 0, FALSE, 0},	             // 18: J2000
 /*************************/
 /* 19: J1900 */
-{J1900, 0, FALSE, 0},	             /* 19: J1900 */
+{J1900, 0, FALSE, 0},	             // 19: J1900
 /*************************/
 /* 20: B1950 */
-{B1950, 0, FALSE, 0},	             /* 20: B1950 */
+{B1950, 0, FALSE, 0},	             // 20: B1950
 /*************************/
 /* 21: Suryasiddhanta, assuming ingress of mean Sun into Aries at point of mean
       equinox of date on 21.3.499, near noon, Ujjain (75.7684565 E) 
       = 7:30:31.57 UT = 12:33:36 LMT*/
-{1903396.8128654, 0, TRUE, 0},	     // 21: 
+{1903396.8128654, 0, TRUE, 0},	     // 21: Suryasiddhanta
 /*************************/
 /* 22: Suryasiddhanta, assuming ingress of mean Sun into Aries at true position
       of mean Sun at same epoch */
-{1903396.8128654,-0.21463395, TRUE, 0}, // 22: 
+{1903396.8128654,-0.21463395, TRUE, 0}, // 22: Suryasiddhanta, mean Sun
 /*************************/
 /* 23: Aryabhata, same date, but UT 6:56:55.57 analogous to 21 */
-{1903396.7895321, 0, TRUE, 0},	     // 23: 
+{1903396.7895321, 0, TRUE, 0},	     // 23: Aryabhata
 /*************************/
 /* 24: Aryabhata, analogous 22 */
-{1903396.7895321,-0.23763238, TRUE, 0}, // 24: 
+{1903396.7895321,-0.23763238, TRUE, 0}, // 24: Aryabhata, mean Sun
 /*************************/
 /* 25: Suryasiddhanta, Revati/zePsc at polar long. 359°50'*/
-{1903396.8128654,-0.79167046, TRUE, 0}, // 25: 
+{1903396.8128654,-0.79167046, TRUE, 0}, // 25: SS Revati
 /*************************/
 /* 26: Suryasiddhanta, Citra/Spica at polar long. 180° */
-{1903396.8128654, 2.11070444, TRUE, 0}, // 26: 
+{1903396.8128654, 2.11070444, TRUE, 0}, // 26: SS Citra
 /*************************/
 /* 27: True Citra (Spica exactly at 0 Libra) */
 {0, 0, FALSE, 0},	             // 27: True Citra 
@@ -591,11 +592,8 @@ static const struct aya_init ayanamsa[] = {
       true ayanamshas. A deviation of around 0.1" remains,
       for unknown reasons. The difference between Lahiri (1) and
       Lahiri ICRC (45) amounts to 1.1". */
-{2435553.5, 23.25 - 0.00464207, FALSE, SEMOD_PREC_NEWCOMB}, 
+{2435553.5, 23.25 - 0.00464207, FALSE, SEMOD_PREC_NEWCOMB}, // 46: SE_SIDM_LAHIRI_ICRC
 /*************************/
-/*{2061539.789532065, 6.83333333, TRUE, -1}, *41: Manjula's Laghumanasa, 10 March 932, 12 PM LMT Ujjain (75.7684565 E), ayanamsha = 6°50' */
-/* */
-{J1900, 0, FALSE, -1},	                     /*46: - */
     };
 
 #define PLAN_DATA struct plan_data
@@ -717,6 +715,8 @@ struct file_data {
   FILE *fptr;		/* ephemeris file pointer */
   double tfstart;       /* file may be used from this date */
   double tfend;         /*      through this date          */
+  double tnom0;         /* dates this open file serves, [tnom0, tnom1):  */
+  double tnom1;         /* its nominal range, with the first-day rule    */
   int32 iflg; 		/* byte reorder flag and little/bigendian flag */
   short npl;		/* how many planets in file */
   int ipl[SEI_FILE_NMAXPLAN];	/* planet numbers */

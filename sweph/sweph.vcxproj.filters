@@ -85,11 +85,5 @@
     <None Include="swemini.c">
       <Filter>Source Files</Filter>
     </None>
-    <None Include="sweclips.c">
-      <Filter>Source Files</Filter>
-    </None>
-    <None Include="sweasp.c">
-      <Filter>Source Files</Filter>
-    </None>
   </ItemGroup>
 </Project>

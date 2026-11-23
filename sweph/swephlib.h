@@ -68,8 +68,11 @@
  * the earth orientation parameters related to the IAU 1980 nutation
  * theory. 
  * Download the file 
- * datacenter.iers.org/eop/-/somos/5Rgv/document/tx13iers.u24/eopc04_08.62-now
- * and rename it as eop_1962_today.txt. For current data and estimations for
+ * https://datacenter.iers.org/data/latestVersion/EOP_14_C04_IAU1980_one_file_1962-now.txt
+ * and rename it as eop_1962_today.txt. 
+ * (Note, this file differs from earlier versions after 31 Dec. 1984 because  
+ * the terrestrial reference frame ITRF2008 was replaced by ITRF2014.)
+ * For current data and estimations for
  * the near future, also download maia.usno.navy.mil/ser7/finals.all and 
  * rename it as eop_finals.txt */
 #define DPSI_DEPS_IAU1980_FILE_EOPC04   "eop_1962_today.txt"
@@ -160,8 +163,6 @@ extern void swi_gen_filename(double tjd, int ipli, char *fname);
 
 /* cyclic redundancy checksum (CRC), 32 bit */
 extern uint32 swi_crc32(unsigned char *buf, int len);
-
-extern size_t swi_strnlen(const char *str, size_t n);
 
 extern int swi_cutstr(char *s, char *cutlist, char *cpos[], int nmax);
 extern char *swi_right_trim(char *s);
